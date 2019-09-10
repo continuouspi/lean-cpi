@@ -1,0 +1,12 @@
+# LaTeX
+*.pdf
+*.log
+*.aux
+*.gz
+
+# Lean
+*.olean
+/_target
+
+# Misc (possibly Lean?)
+/node_modules
