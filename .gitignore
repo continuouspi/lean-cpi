@@ -1,0 +1,15 @@
+# LaTeX
+*.pdf
+*.log
+*.aux
+*.gz
+
+# Lean and Agda
+*.olean
+/_target
+*.agdai
+
+# Misc (possibly Lean?)
+/node_modules
+/.vscode
+/.ionide
