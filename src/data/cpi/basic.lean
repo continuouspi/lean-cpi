@@ -1,6 +1,7 @@
 /- The primary definitions for the continuous-π calculus-/
 
 import data.non_neg
+import tactic.sanity_check
 
 namespace cpi
 
@@ -82,3 +83,7 @@ namespace tactic
 end tactic
 
 end cpi
+
+-- | For sanity checking only. This takes a long time to run normally.
+-- run_cmd sanity_check
+-- #sanity_check

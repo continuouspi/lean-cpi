@@ -219,3 +219,7 @@ namespace species
 end species
 
 end cpi
+
+-- | For sanity checking only. This takes a long time to run normally.
+-- run_cmd sanity_check
+-- #sanity_check

@@ -189,7 +189,13 @@ namespace species
       end
     | Γ Δ ._ ._ ρ ξ_choice_nil :=
       by { unfold subst subst.choice, from ξ_choice_nil }
-    | Γ Δ ._ ._ ρ (ξ_choice_cons π eq_a eq_as) := sorry
+    | Γ Δ ._ ._ ρ (@ξ_choice_cons _ f π A A' As As' eq_a eq_as) := begin
+        simp [subst, subst.choice],
+        have as : choice (subst.choice ρ As) ~ choice (subst.choice ρ As'),
+          have h : subst ρ (choice As) ~ subst ρ (choice As') := subst_pres ρ eq_as,
+          unfold subst at h, assumption,
+        from ξ_choice_cons _ (subst_pres (prefix_expr.ext π ρ) eq_a) as,
+      end
 
     | Γ Δ ._ ._ ρ (nil_parallel₁ eq) :=
       by { unfold subst, from nil_parallel₁ (subst_pres ρ eq) }
@@ -240,89 +246,132 @@ namespace species
         from ν_swap M N a
       end
 
-    --   /-- Equivalence is symmetric. -/
-    --   protected theorem symm : ∀ {Γ} {A B : species Γ}, A ~ B → B ~ A
-    --   | Γ ._ ._ ξ_nil := ξ_nil
-    --   | Γ ._ ._ (ξ_parallel eq_a eq_b) := ξ_parallel (symm eq_a) (symm eq_b)
-    --   | Γ ._ ._ (ξ_restriction M eq) := ξ_restriction M (symm eq)
-    --   | Γ ._ ._ ξ_choice_nil := ξ_choice_nil
-    --   | Γ ._ ._ (ξ_choice_cons π eq_a eq_as) := ξ_choice_cons π (symm eq_a) (symm eq_as)
+      /-- Equivalence is symmetric. -/
+      protected theorem symm : ∀ {Γ} {A B : species Γ}, A ~ B → B ~ A
+      | Γ ._ ._ ξ_nil := ξ_nil
+      | Γ ._ ._ (ξ_parallel eq_a eq_b) := ξ_parallel (symm eq_a) (symm eq_b)
+      | Γ ._ ._ (ξ_restriction M eq) := ξ_restriction M (symm eq)
+      | Γ ._ ._ ξ_choice_nil := ξ_choice_nil
+      | Γ ._ ._ (ξ_choice_cons π eq_a eq_as) := ξ_choice_cons π (symm eq_a) (symm eq_as)
 
-    --   | Γ ._ ._ (nil_parallel₁ eq) := nil_parallel₂ eq
-    --   | Γ ._ ._ (nil_parallel₂ eq) := nil_parallel₁ eq
+      | Γ ._ ._ (nil_parallel₁ eq) := nil_parallel₂ eq
+      | Γ ._ ._ (nil_parallel₂ eq) := nil_parallel₁ eq
 
-    --   | Γ ._ ._ (parallel_symm eq_a eq_b) := parallel_symm (symm eq_b) (symm eq_a)
-    --   | Γ ._ ._ (parallel_assoc₁ eq_a eq_b eq_c) := parallel_assoc₂ eq_a eq_b eq_c
-    --   | Γ ._ ._ (parallel_assoc₂ eq_a eq_b eq_c) := parallel_assoc₁ eq_a eq_b eq_c
+      | Γ ._ ._ (parallel_symm eq_a eq_b) := parallel_symm (symm eq_b) (symm eq_a)
+      | Γ ._ ._ (parallel_assoc₁ eq_a eq_b eq_c) := parallel_assoc₂ eq_a eq_b eq_c
+      | Γ ._ ._ (parallel_assoc₂ eq_a eq_b eq_c) := parallel_assoc₁ eq_a eq_b eq_c
 
-    --   | Γ ._ ._ (ν_parallel₁ M eq_a eq_b) := ν_parallel₂ M eq_a eq_b
-    --   | Γ ._ ._ (ν_parallel₂ M eq_a eq_b) := ν_parallel₁ M eq_a eq_b
-    --   | Γ ._ ._ (ν_drop₁ M eq_a) := ν_drop₂ M eq_a
-    --   | Γ ._ ._ (ν_drop₂ M eq_a) := ν_drop₁ M eq_a
-    --   | Γ ._ ._ (@ν_swap _ M N A A' eq) :=
-    --       let eq' := symm eq in
-    --       let eql :=
-    --       calc  subst name.swap (subst name.swap A') ~ subst name.swap A
-    --           = subst (name.swap ∘ name.swap) A' ~ subst name.swap A
-    --             : by rw subst_compose name.swap name.swap A'
-    --       ... = subst id A' ~ subst name.swap A : by rw name.swap.twice_id
-    --       ... = A' ~ subst name.swap A : by rw subst_id
-    --       in
-    --       ν_swap N M (eql ▸ equiv.subst_pres name.swap eq')
-    --   using_well_founded {
-    --     rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ s, sizeof s.snd )⟩ ],
-    --     dec_tac := tactic.fst_dec_tac,
-    --   }
+      | Γ ._ ._ (ν_parallel₁ M eq_a eq_b) := ν_parallel₂ M eq_a eq_b
+      | Γ ._ ._ (ν_parallel₂ M eq_a eq_b) := ν_parallel₁ M eq_a eq_b
+      | Γ ._ ._ (ν_drop₁ M eq_a) := ν_drop₂ M eq_a
+      | Γ ._ ._ (ν_drop₂ M eq_a) := ν_drop₁ M eq_a
+      | Γ ._ ._ (@ν_swap _ M N A A' eq) :=
+        let eql :=
+          calc  subst name.swap (subst name.swap A') ~ subst name.swap A
+              = subst (name.swap ∘ name.swap) A' ~ subst name.swap A
+                : by rw subst_compose name.swap name.swap A'
+          ... = subst id A' ~ subst name.swap A : by rw name.swap.twice_id
+          ... = A' ~ subst name.swap A : by rw subst_id
+        in begin
+          have a := equiv.subst_pres name.swap (symm eq),
+          rw eql at a,
+          from ν_swap N M a
+        end
 
-    --   -- instance : ∀ {Γ}, is_symm (species Γ) equiv := λ Γ, ⟨ @equiv.symm Γ ⟩
+      protected theorem trans : ∀ {Γ} {A B C : species Γ}, A ~ B → B ~ C → A ~ C
+      | Γ ._ ._ _ ξ_nil eql := eql
+      | Γ ._ ._ _ ξ_choice_nil eql := eql
 
-    -- --   -- protected theorem trans : ∀ {A B C : species}, A ~ B → B ~ C → A ~ C
-    -- --   -- -- -- We have to unroll each case, as otherwise the totality checker times out.
-    -- --   -- -- | nil s2 s3 eq_12 eq_23 :=
-    -- --   -- --   match s2, s3, eq_12, eq_23 with
-    -- --   -- --   | nil, nil, ξ_nil, ξ_nil := ξ_nil
-    -- --   -- --   end
-    -- --   -- -- | (_ |ₛ _) s2 s3 eq_12 eq_23 :=
-    -- --   -- --   match s2, s3, eq_12, eq_23 with
-    -- --   -- --   | _ |ₛ _, _ |ₛ _, ξ_parallel eq_a12 eq_b12, ξ_parallel eq_a23 eq_b23 :=
-    -- --   -- --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
-    -- --   -- --   -- | _, _, eq_12, eq_23 with
-    -- --   -- --   end
-    -- --   -- -- | (ν(_)_) s2 s3 eq_12 eq_23 :=
-    -- --   -- --     match s2, s3, eq_12, eq_23 with
-    -- --   -- --     | ν(_)_, ν(_)_, ξ_restriction M eq_12, ξ_restriction _ eq_23 :=
-    -- --   -- --          ξ_restriction M (trans eq_12 eq_23)
-    -- --   -- --     end
-    -- --   -- -- | (choice []) s2 s3 eq_12 eq_23 :=
-    -- --   -- --   match s2, s3, eq_12, eq_23 with
-    -- --   -- --   | choice [], choice [], ξ_choice_nil, ξ_choice_nil := ξ_choice_nil
-    -- --   -- --   end
-    -- --   -- -- | (choice ((π, A1) :: As)) s2 s3 eq_12 eq_23 :=
-    -- --   -- --     match s2, s3, eq_12, eq_23 with
-    -- --   -- --     | choice ((_, _)::_), choice ((_, _)::_), ξ_choice_cons _ eq_a12 eq_as12, ξ_choice_cons _ eq_a23 eq_as23 :=
-    -- --   -- --       ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
-    -- --   -- --     end
+      -- | Γ ._ ._ s (@ξ_parallel _ A A' B B' eq_a eq_b) eql := by
+
+      | Γ .(_ |ₛ _) .(_ |ₛ _) .(_ |ₛ _)
+        (@ξ_parallel _ A A' B B' eq_a eq_b)
+        (@ξ_parallel _ B1 B1' C C' eq_b1 eq_c) := by sorry
+      | Γ .(_ |ₛ _) .(_ |ₛ _) s
+        (@ξ_parallel _ A A' B B' eq_a eq_b)
+        eq := by sorry
+
+      | Γ ._ ._ s (ξ_restriction M eq) eql := by sorry
+      | Γ ._ ._ s (ξ_choice_cons π eq_a eq_as) eql := by sorry
+
+      | Γ ._ ._ s (nil_parallel₁ eq) eql := by sorry
+      | Γ ._ ._ s (nil_parallel₂ eq) eql := by sorry
+
+      | Γ ._ ._ s (parallel_symm eq_a eq_b) eql := by sorry
+      | Γ ._ ._ s (parallel_assoc₁ eq_a eq_b eq_c) eql := by sorry
+      | Γ ._ ._ s (parallel_assoc₂ eq_a eq_b eq_c) eql := by sorry
+
+      | Γ ._ ._ s (ν_parallel₁ M eq_a eq_b) eql := by sorry
+      | Γ ._ ._ s (ν_parallel₂ M eq_a eq_b) eql := by sorry
+      | Γ ._ ._ s (ν_drop₁ M eq_a) eql := by sorry
+      | Γ ._ ._ s (ν_drop₂ M eq_a) eql := by sorry
+      | Γ ._ ._ s (@ν_swap _ M N A A' eq) eql := by sorry
+      -- begin
+      --   intros Γ s1 s2 s3 eq_12 eq_23,
+      --   cases eq_12,
+      --     case cpi.species.equiv.ξ_nil { from eq_23 },
+      --     case cpi.species.equiv.ξ_parallel : a12 a12' b12 b12' eq12_a eq12_b {
+      --       -- induction eq_23,
+      --     },
+      --     repeat { sorry }
+      -- end
+      -- | Γ nil s2 s3 eq_12 eq_23 :=
+      --   match s2, s3, eq_12, eq_23 with
+      --   | nil, nil, ξ_nil, ξ_nil := ξ_nil
+      --   end
+      -- | Γ (A1 |ₛ B1) s2 s3 eq_12 eq_23 := sorry
+      -- | Γ (ν(M1)A1) s2 s3 eq_12 eq_23 := sorry
+      -- | Γ (choice choices.nil) s2 s3 eq_12 eq_23 := sorry
+      -- | Γ (choice (choices.cons π1 A1 As1)) s2 s3 eq_12 eq_23 := sorry
+      --   intros Γ s1 s2 s3 eq_s1 eq_s2,
+      --   cases s1,
+      -- end
+      -- -- We have to unroll each case, as otherwise the totality checker times out.
+      -- | nil s2 s3 eq_12 eq_23 :=
+      --   match s2, s3, eq_12, eq_23 with
+      --   | nil, nil, ξ_nil, ξ_nil := ξ_nil
+      --   end
+      -- | (_ |ₛ _) s2 s3 eq_12 eq_23 :=
+      --   match s2, s3, eq_12, eq_23 with
+      --   | _ |ₛ _, _ |ₛ _, ξ_parallel eq_a12 eq_b12, ξ_parallel eq_a23 eq_b23 :=
+      --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
+      --   -- | _, _, eq_12, eq_23 with
+      --   end
+      -- | (ν(_)_) s2 s3 eq_12 eq_23 :=
+      --     match s2, s3, eq_12, eq_23 with
+      --     | ν(_)_, ν(_)_, ξ_restriction M eq_12, ξ_restriction _ eq_23 :=
+      --          ξ_restriction M (trans eq_12 eq_23)
+      --     end
+      -- | (choice []) s2 s3 eq_12 eq_23 :=
+      --   match s2, s3, eq_12, eq_23 with
+      --   | choice [], choice [], ξ_choice_nil, ξ_choice_nil := ξ_choice_nil
+      --   end
+      -- | (choice ((π, A1) :: As)) s2 s3 eq_12 eq_23 :=
+      --     match s2, s3, eq_12, eq_23 with
+      --     | choice ((_, _)::_), choice ((_, _)::_), ξ_choice_cons _ eq_a12 eq_as12, ξ_choice_cons _ eq_a23 eq_as23 :=
+      --       ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
+      --     end
 
 
-    -- --   -- -- | nil nil nil ξ_nil ξ_nil := ξ_nil
-    -- --   -- -- | (A1 |ₛ B1) (A2 |ₛ B2) (A3 |ₛ B3) (ξ_parallel eq_a12 eq_b12) (ξ_parallel eq_a23 eq_b23) :=
-    -- --   -- --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
-    -- --   -- -- | (ν(_)A1) (ν(_)A2) (ν(_)A3) (ξ_restriction M eq_12) (ξ_restriction _ eq_23) :=
-    -- --   -- --     ξ_restriction M (trans eq_12 eq_23)
-    -- --   -- -- | (choice []) (choice []) (choice[]) ξ_choice_nil ξ_choice_nil := ξ_choice_nil
-    -- --   -- -- | (choice ((_, A1)::As1)) (choice ((_, A2)::As2)) (choice ((_, A3)::As3))
-    -- --   -- --   (ξ_choice_cons π eq_a12 eq_as12) (ξ_choice_cons _ eq_a23 eq_as23) :=
-    -- --   -- --     ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
-    -- --   -- -- | _ _ _ _ _ := sorry
+      -- | nil nil nil ξ_nil ξ_nil := ξ_nil
+      -- | (A1 |ₛ B1) (A2 |ₛ B2) (A3 |ₛ B3) (ξ_parallel eq_a12 eq_b12) (ξ_parallel eq_a23 eq_b23) :=
+      --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
+      -- | (ν(_)A1) (ν(_)A2) (ν(_)A3) (ξ_restriction M eq_12) (ξ_restriction _ eq_23) :=
+      --     ξ_restriction M (trans eq_12 eq_23)
+      -- | (choice []) (choice []) (choice[]) ξ_choice_nil ξ_choice_nil := ξ_choice_nil
+      -- | (choice ((_, A1)::As1)) (choice ((_, A2)::As2)) (choice ((_, A3)::As3))
+      --   (ξ_choice_cons π eq_a12 eq_as12) (ξ_choice_cons _ eq_a23 eq_as23) :=
+      --     ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
+      -- | _ _ _ _ _ := sorry
 
-    -- --   -- | ._ ._ ._ ξ_nil ξ_nil := ξ_nil
-    -- --   -- | ._ ._ ._ (ξ_parallel eq_a12 eq_b12) (ξ_parallel eq_a23 eq_b23) :=
-    -- --   --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
-    -- --   -- | ._ ._ ._ (ξ_restriction M eq_12) (ξ_restriction _ eq_23) :=
-    -- --   --     ξ_restriction M (trans eq_12 eq_23)
-    -- --   -- | ._ ._ ._ ξ_choice_nil ξ_choice_nil := ξ_choice_nil
-    -- --   -- | ._ ._ ._ (ξ_choice_cons π eq_a12 eq_as12) (ξ_choice_cons _ eq_a23 eq_as23) :=
-    -- --   --     ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
+      -- | ._ ._ ._ ξ_nil ξ_nil := ξ_nil
+      -- | ._ ._ ._ (ξ_parallel eq_a12 eq_b12) (ξ_parallel eq_a23 eq_b23) :=
+      --     ξ_parallel (trans eq_a12 eq_a23) (trans eq_b12 eq_b23)
+      -- | ._ ._ ._ (ξ_restriction M eq_12) (ξ_restriction _ eq_23) :=
+      --     ξ_restriction M (trans eq_12 eq_23)
+      -- | ._ ._ ._ ξ_choice_nil ξ_choice_nil := ξ_choice_nil
+      -- | ._ ._ ._ (ξ_choice_cons π eq_a12 eq_as12) (ξ_choice_cons _ eq_a23 eq_as23) :=
+      --     ξ_choice_cons π (trans eq_a12 eq_a23) (trans eq_as12 eq_as23)
   end equiv
 end species
 
