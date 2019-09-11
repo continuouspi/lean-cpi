@@ -17,14 +17,21 @@ inductive name : context → Type
 | extend : Π {Γ} {n : ℕ},   name Γ → name (context.extend n Γ)
 
 /-- A prefix expression. This can either be one of:
+
   - A communication prefix (send a series of variables on a channel, and then
     recieve, binding $n$ variables).
+
   - A spontanious or silent prefix: a spontanious reaction with some rate $k$.
     Used to model when a molecule may decompose into a simpler one.
+
+  The prefix is parameterised by two contexts: the context it exists in, and the
+  context resulting from binding this prefix expression. While it would be
+  possible to do this with some "augment" function, it ends up complicating the
+  type system a little, as you end up with weird unification constraints.
 -/
-inductive prefix_expr : context → Type
-| communicate : Π {Γ}, name Γ → list (name Γ) → ℕ → prefix_expr Γ
-| spontanious : Π {Γ}, ℝ≥0 → prefix_expr Γ
+inductive prefix_expr : context → (context → context) → Type
+| communicate : Π {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ), prefix_expr Γ (context.extend y)
+| spontanious : Π {Γ} (k : ℝ≥0), prefix_expr Γ id
 
 -- Define some additional notation, and sugar
 notation a `#(` b ` ; ` y `)` := prefix_expr.communicate a b y
@@ -33,13 +40,6 @@ notation a `#<` b `>` := prefix_expr.communicate a b 0
 notation a `#` := prefix_expr.communicate a [] 0
 
 notation `τ@` k := prefix_expr.spontanious k
-
-namespace prefix_expr
-  /-- Augment a context to be within this term. -/
-  def augment : ∀ {Γ}, prefix_expr Γ → context → context
-  | ._ (_#(_; y)) Γ := context.extend y Γ
-  | ._ (τ@_) Γ := Γ
-end prefix_expr
 
 /-- An affinity network.
 
@@ -61,7 +61,7 @@ with species : context → Type
 | restriction : Π {Γ} (M : affinity), species (context.extend M.arity Γ) → species Γ
 with species.choices : context → Type
 | nil : Π {Γ}, species.choices Γ
-| cons : Π {Γ} (π : prefix_expr Γ), species (prefix_expr.augment π Γ) → species.choices Γ → species.choices Γ
+| cons : Π {Γ} {f} (π : prefix_expr Γ f), species (f Γ) → species.choices Γ → species.choices Γ
 
 reserve infixr ` |ₛ ` :50
 infixr ` |ₛ ` := species.parallel
