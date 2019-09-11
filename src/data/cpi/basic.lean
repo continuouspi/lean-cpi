@@ -16,7 +16,6 @@ inductive name : context → Type
 | nil    : Π {Γ} {i n : ℕ},  i < n → name (context.extend n Γ)
 | extend : Π {Γ} {n : ℕ},   name Γ → name (context.extend n Γ)
 
-
 /-- A prefix expression. This can either be one of:
   - A communication prefix (send a series of variables on a channel, and then
     recieve, binding $n$ variables).
@@ -27,15 +26,15 @@ inductive prefix_expr : context → Type
 | communicate : Π {Γ}, name Γ → list (name Γ) → ℕ → prefix_expr Γ
 | spontanious : Π {Γ}, ℝ≥0 → prefix_expr Γ
 
+-- Define some additional notation, and sugar
+notation a `#(` b ` ; ` y `)` := prefix_expr.communicate a b y
+notation a `#(` y `)` := prefix_expr.communicate a [] y
+notation a `#<` b `>` := prefix_expr.communicate a b 0
+notation a `#` := prefix_expr.communicate a [] 0
+
+notation `τ@` k := prefix_expr.spontanious k
+
 namespace prefix_expr
-  -- Define some additional notation, and sugar
-  notation a `#(` b ` ; ` y `)` := communicate a b y
-  notation a `#(` y `)` := communicate a [] y
-  notation a `#<` b `>` := communicate a b 0
-  notation a `#` := communicate a [] 0
-
-  notation `τ@` k := spontanious k
-
   /-- Augment a context to be within this term. -/
   def augment : ∀ {Γ}, prefix_expr Γ → context → context
   | ._ (_#(_; y)) Γ := context.extend y Γ
@@ -64,11 +63,22 @@ with species.choices : context → Type
 | nil : Π {Γ}, species.choices Γ
 | cons : Π {Γ} (π : prefix_expr Γ), species (prefix_expr.augment π Γ) → species.choices Γ → species.choices Γ
 
-namespace species
-  reserve infixr ` |ₛ ` :50
-  infixr ` |ₛ ` := parallel
+reserve infixr ` |ₛ ` :50
+infixr ` |ₛ ` := species.parallel
 
-  notation `ν(` m `) ` a := restriction m a
-end species
+notation `ν(` m `) ` a := species.restriction m a
+
+namespace tactic
+  /-- An alternative version of dec_tac which also unfolds .fst indexing.
+
+      This is required for the various proofs which skip the implicit context
+      argument. -/
+  meta def fst_dec_tac := do
+    well_founded_tactics.unfold_wf_rel,
+    well_founded_tactics.unfold_sizeof,
+    tactic.dunfold_target [``psigma.fst],
+    tactic.try well_founded_tactics.cancel_nat_add_lt,
+    well_founded_tactics.trivial_nat_lt
+end tactic
 
 end cpi
