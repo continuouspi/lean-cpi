@@ -46,6 +46,16 @@ namespace name
     ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) {n : ℕ}
     , (ext σ ∘ ext ρ) = @ext _ _ (σ ∘ ρ) n
   | Γ Δ η ρ σ n := funext (ext_compose ρ σ)
+
+  /-- Extending then renaming with an extended function, is equivalent to
+      renaming then extending. -/
+  theorem ext_extend :
+    ∀ {Γ Δ} {n : ℕ} (ρ : name Γ → name Δ)
+    , (name.ext ρ ∘ name.extend) = (@name.extend Δ n ∘ ρ)
+  | Γ Δ n ρ :=
+    let h : ∀ α, (name.ext ρ ∘ name.extend) α = (@name.extend Δ n ∘ ρ) α :=
+      by simp [ext]
+    in funext h
 end name
 
 namespace prefix_expr
