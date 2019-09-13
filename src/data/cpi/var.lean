@@ -4,15 +4,6 @@ import tactic.basic
 
 namespace cpi
 
-/-- Create an equality for the identity function. -/
-private def lift_id {α : Type} {f : α → α} (eq : ∀ x, f x = x) : f = id := begin
-  have h : (λ x, f x) = id,
-    simp only [eq],
-    from rfl,
-  simp only [] at h,
-  from h
-end
-
 namespace name
   /-- Scope extension for names. Given a renaming function, return the same
       function lifted one level.-/
@@ -27,19 +18,19 @@ namespace name
   theorem ext_identity :
     ∀ {Γ : context} {n : ℕ} (α : name (context.extend n Γ))
     , ext id α = α
-  | Γ n (name.nil p) := by unfold ext
-  | Γ n (name.extend α) := by unfold ext id
+  | Γ n (name.nil p) := rfl
+  | Γ n (name.extend α) := rfl
 
   /-- Extending with the identity yields the identity function. -/
   theorem ext_id : ∀ {Γ : context} {n : ℕ}, @ext Γ Γ id n = id
-  | Γ n := lift_id ext_identity
+  | Γ n := funext ext_identity
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_compose :
     ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) {n : ℕ} (α : name (context.extend n Γ))
     , ext σ (ext ρ α) = ext (σ ∘ ρ) α
-  | Γ Δ η ρ σ n (name.nil p) := by simp only [ext]
-  | Γ Δ η ρ σ n (name.extend α) := by simp only [ext]
+  | Γ Δ η ρ σ n (name.nil p) := rfl
+  | Γ Δ η ρ σ n (name.extend α) := rfl
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_comp :
@@ -52,10 +43,7 @@ namespace name
   theorem ext_extend :
     ∀ {Γ Δ} {n : ℕ} (ρ : name Γ → name Δ)
     , (name.ext ρ ∘ name.extend) = (@name.extend Δ n ∘ ρ)
-  | Γ Δ n ρ :=
-    let h : ∀ α, (name.ext ρ ∘ name.extend) α = (@name.extend Δ n ∘ ρ) α :=
-      by simp [ext]
-    in funext h
+  | Γ Δ n ρ := funext (λ x, rfl)
 end name
 
 namespace prefix_expr
@@ -77,26 +65,20 @@ namespace prefix_expr
   theorem ext_identity :
     ∀ {Γ η : context} {f} (π : prefix_expr η f) (α : name (f Γ))
     , ext π id α = α
-  | Γ η ._ (a#(b; y)) α := begin
-      dunfold ext,
-      rw name.ext_identity
-    end
-  | Γ η ._ (τ@k) name := by unfold ext id
+  | Γ η ._ (a#(b; y)) α := name.ext_identity α
+  | Γ η ._ (τ@k) name := rfl
 
   /-- Extending with the identity yields the identity function. -/
   theorem ext_id : ∀ {Γ η : context} {f} (π : prefix_expr η f), @ext Γ Γ η f π id = id
-  | Γ η f π := lift_id (ext_identity π)
+  | Γ η f π := funext (ext_identity π)
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_compose :
     ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η)
       (π : prefix_expr φ f) (α : name (f Γ))
     , ext π σ (ext π ρ α) = ext π (σ ∘ ρ) α
-  | Γ Δ η φ f ρ σ (a#(b; y)) α := begin
-      dunfold ext,
-      rw name.ext_compose ρ σ
-    end
-  | Γ Δ η φ f ρ σ (τ@k) α := by unfold ext
+  | Γ Δ η φ f ρ σ (a#(b; y)) α := name.ext_compose ρ σ α
+  | Γ Δ η φ f ρ σ (τ@k) α := rfl
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_comp :
@@ -108,26 +90,20 @@ namespace prefix_expr
   theorem subst_ext :
     ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name η → name φ) (π : prefix_expr Γ f)
     , @ext η φ Γ f π σ = (ext (subst ρ π) σ)
-  | Γ Δ η φ f ρ σ (a#(b; y)) :=
-      let h : ∀ α, ext (a#(b; y)) σ α = (ext (subst ρ (a#(b; y))) σ) α :=
-        by simp [ext, subst]
-      in funext h
-  | Γ Δ η φ f ρ σ (τ@k) :=
-      let h : ∀ α, @ext η φ Γ f (τ@k) σ α = ext (subst ρ (τ@k)) σ α :=
-        by simp [ext, subst]
-      in funext h
+  | Γ Δ η φ f ρ σ (a#(b; y)) := funext (λ α, rfl)
+  | Γ Δ η φ f ρ σ (τ@k) := funext (λ α, rfl)
 
   /-- Substituting with the identity function does nothing. -/
   theorem subst_id : ∀ {Γ} {f} (π : prefix_expr Γ f), subst id π = π
   | Γ ._ (a#(b; y)) := by simp [subst]
-  | Γ ._ (τ@k) := by simp [subst]
+  | Γ ._ (τ@k) := rfl
 
   /-- Substituting twice is the same as substituting on a composed function. -/
   theorem subst_compose :
     ∀ {Γ Δ η} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η) (π : prefix_expr Γ f)
     , subst σ (subst ρ π) = subst (σ ∘ ρ) π
   | Γ Δ η f ρ σ (a#(b; y)) := by simp [subst]
-  | Γ Δ η f ρ σ (τ@_) := by unfold subst
+  | Γ Δ η f ρ σ (τ@_) := rfl
 end prefix_expr
 
 namespace species
@@ -147,6 +123,7 @@ namespace species
   using_well_founded {
     rel_tac := λ _ _,
       `[exact ⟨_, measure_wf (λ s,
+        -- Only decrease on the species, not the context.
         psum.cases_on s (λ x, sizeof x.snd.snd.snd) (λ x, sizeof x.snd.snd.snd))⟩ ],
     dec_tac := tactic.fst_dec_tac,
   }
