@@ -67,7 +67,19 @@ with species.choices : context → Type
 reserve infixr ` |ₛ ` :50
 infixr ` |ₛ ` := species.parallel
 
-notation `ν(` m `) ` a := species.restriction m a
+notation `ν(` M `) ` A := species.restriction M A
+
+/-- The set of processes. Defined as one or more species, each with a
+    non-negative concentration.
+
+    The context parameter represents the "global affinity network", in which
+    all processes are evaluated. -/
+inductive process : context → Type
+| one : ∀ {Γ}, ℝ≥0 → species Γ → process Γ
+| parallel : ∀ {Γ}, process Γ → process Γ → process Γ
+
+infix ` • `:30 := process.one
+infixr ` |ₚ `:50 := process.parallel
 
 namespace tactic
   open tactic
