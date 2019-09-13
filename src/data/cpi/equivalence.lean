@@ -48,10 +48,6 @@ namespace species
       all non-symmetric rules end up having forwards and backwards versions -
       while this does lead to some duplication, it seems easier to reason
       about than having a generic "x_symm" rule.
-
-      Ideally this should be a type, but it means we do not have access to
-      sizeof, which makes it more inconvenient to reason about the termination
-      of some programs.
   -/
   inductive equiv : ∀ {Γ : context} (A B : species Γ), Type
   -- Chain two rewrite rules together.
@@ -116,9 +112,16 @@ namespace species
       {A : species (context.extend N.arity (context.extend M.arity Γ))}
     , @equiv Γ (ν(N)ν(M) subst name.swap A) (ν(M)ν(N)A)
 
-  /-- Lower equivalence to the Prop level. -/
-  inductive is_equiv {Γ : context} (A B : species Γ) : Prop
-  | intro : equiv A B → is_equiv
+  /-- Lower equivalence to the Prop level.
+
+      Ideally equiv would be a Prop. However, one cannot write functions which
+      map from a prop to a type, which means we cannot determine the size of
+      an equivalence class. This means the termination checker is not aware of
+      the size of equivalence classes, and so fails to verify recursive
+      functions are well-formed.
+  -/
+  inductive equiv.wrap {Γ : context} (A B : species Γ) : Prop
+  | intro : equiv A B → equiv.wrap
 
   namespace equiv
     local infix ` ~ `:51 := equiv
@@ -243,20 +246,30 @@ namespace species
 
     protected theorem trans : ∀ {Γ} {A B C : species Γ}, A ~ B → B ~ C → A ~ C := @chain
 
-    section examples
-      variable Γ : context
-      variables A A' B C : species Γ
+    instance is_equiv : ∀ {Γ : context}, is_equiv (species Γ) wrap
+    | Γ := { refl := λ x, ⟨ equiv.refl x ⟩,
+             symm := λ _ _ ⟨ eq ⟩, ⟨ equiv.symm eq ⟩,
+             trans := λ _ _ _ ⟨ ab ⟩ ⟨ bc ⟩, ⟨ equiv.trans ab bc ⟩ }
 
-      example : A ~ (A |ₛ nil) := parallel_nil₂
-
-      example : A ~ (nil |ₛ A) :=
-        chain parallel_nil₂ parallel_symm
-
-      example : A ~ A' → (A |ₛ B) ~ C → (A' |ₛ B) ~ C := λ a eq,
-        equiv.trans (ξ_parallel (equiv.symm a) (equiv.refl B)) eq
-
-    end examples
   end equiv
+
+  instance : ∀ {Γ : context}, setoid (species Γ)
+  | Γ := ⟨ equiv.wrap, ⟨ equiv.is_equiv.refl, equiv.is_equiv.symm, equiv.is_equiv.trans ⟩ ⟩
+
+  /- Just a couple of sanity checks for verifying equivalence proves what it
+     does.-/
+  section examples
+    variable Γ : context
+    variables A A' B C : species Γ
+
+    example : A ≈ (A |ₛ nil) := wrap.intro equiv.parallel_nil₂
+
+    example : A ≈ (nil |ₛ A) :=
+      trans (wrap.intro equiv.parallel_nil₂) (wrap.intro equiv.parallel_symm)
+
+    example : A ≈ A' → (A |ₛ B) ≈ C → (A' |ₛ B) ≈ C := λ ⟨ a ⟩ ⟨ eq ⟩,
+      trans ⟨ equiv.ξ_parallel (equiv.symm a) (equiv.refl B) ⟩ ⟨ eq ⟩
+  end examples
 end species
 
 end cpi
