@@ -3,6 +3,8 @@
 import data.non_neg
 import tactic.sanity_check
 
+import data.multiset
+
 namespace cpi
 
 /-- A context under which terms may be evaluated.
@@ -14,8 +16,8 @@ inductive context
 
 /-- The set of names within the continuous-π calculus. -/
 inductive name : context → Type
-| nil    : Π {Γ} {i n : ℕ},  i < n → name (context.extend n Γ)
-| extend : Π {Γ} {n : ℕ},   name Γ → name (context.extend n Γ)
+| nil    {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
+| extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
 
 /-- A prefix expression. This can either be one of:
 
@@ -31,8 +33,8 @@ inductive name : context → Type
   type system a little, as you end up with weird unification constraints.
 -/
 inductive prefix_expr : context → (context → context) → Type
-| communicate : Π {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ), prefix_expr Γ (context.extend y)
-| spontanious : Π {Γ} (k : ℝ≥0), prefix_expr Γ id
+| communicate {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (context.extend y)
+| spontanious {Γ} (k : ℝ≥0) : prefix_expr Γ id
 
 -- Define some additional notation, and sugar
 notation a `#(` b ` ; ` y `)` := prefix_expr.communicate a b y
@@ -56,13 +58,13 @@ structure affinity := affinity ::
 -/
 mutual inductive species, species.choices
 with species : context → Type
-| nil : Π {Γ}, species Γ
-| choice : Π {Γ : context}, species.choices Γ → species Γ
-| parallel : Π {Γ}, species Γ → species Γ → species Γ
-| restriction : Π {Γ} (M : affinity), species (context.extend M.arity Γ) → species Γ
+| nil {Γ} : species Γ
+| choice {Γ} : species.choices Γ → species Γ
+| parallel {Γ} : species Γ → species Γ → species Γ
+| restriction {Γ} (M : affinity) : species (context.extend M.arity Γ) → species Γ
 with species.choices : context → Type
-| nil : Π {Γ}, species.choices Γ
-| cons : Π {Γ} {f} (π : prefix_expr Γ f), species (f Γ) → species.choices Γ → species.choices Γ
+| nil {Γ} : species.choices Γ
+| cons {Γ} {f} (π : prefix_expr Γ f) : species (f Γ) → species.choices Γ → species.choices Γ
 
 reserve infixr ` |ₛ ` :50
 infixr ` |ₛ ` := species.parallel
@@ -75,15 +77,16 @@ notation `ν(` M `) ` A := species.restriction M A
     The context parameter represents the "global affinity network", in which
     all processes are evaluated. -/
 inductive process : context → Type
-| one : ∀ {Γ}, ℝ≥0 → species Γ → process Γ
-| parallel : ∀ {Γ}, process Γ → process Γ → process Γ
+| one      {Γ} : ℝ≥0 → species Γ → process Γ
+| parallel {Γ} : process Γ → process Γ → process Γ
 
-infix ` • `:30 := process.one
+infix ` • `:60 := process.one
 infixr ` |ₚ `:50 := process.parallel
 
 namespace tactic
   open tactic
   open well_founded_tactics
+
   /-- An alternative version of dec_tac which also unfolds .fst indexing.
 
       This is required for the various proofs which skip the implicit context

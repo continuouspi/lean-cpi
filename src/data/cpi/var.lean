@@ -11,15 +11,15 @@ namespace name
     Π {Γ Δ : context}
     , (name Γ → name Δ)
     → ∀ {n : ℕ}, name (context.extend n Γ) → name (context.extend n Δ)
-    | Γ Δ ρ n (name.nil lt) := name.nil lt
-    | Γ Δ ρ n (name.extend x) := name.extend (ρ x)
+    | Γ Δ ρ n (nil idx) := nil idx
+    | Γ Δ ρ n (extend x) := extend (ρ x)
 
   /-- Extending with the identity does nothing. -/
   theorem ext_identity :
     ∀ {Γ : context} {n : ℕ} (α : name (context.extend n Γ))
     , ext id α = α
-  | Γ n (name.nil p) := rfl
-  | Γ n (name.extend α) := rfl
+  | Γ n (nil lt) := rfl
+  | Γ n (extend α) := rfl
 
   /-- Extending with the identity yields the identity function. -/
   theorem ext_id : ∀ {Γ : context} {n : ℕ}, @ext Γ Γ id n = id
@@ -29,8 +29,8 @@ namespace name
   theorem ext_compose :
     ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) {n : ℕ} (α : name (context.extend n Γ))
     , ext σ (ext ρ α) = ext (σ ∘ ρ) α
-  | Γ Δ η ρ σ n (name.nil p) := rfl
-  | Γ Δ η ρ σ n (name.extend α) := rfl
+  | Γ Δ η ρ σ n (nil lt) := rfl
+  | Γ Δ η ρ σ n (extend α) := rfl
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_comp :
@@ -42,8 +42,38 @@ namespace name
       renaming then extending. -/
   theorem ext_extend :
     ∀ {Γ Δ} {n : ℕ} (ρ : name Γ → name Δ)
-    , (name.ext ρ ∘ name.extend) = (@name.extend Δ n ∘ ρ)
+    , (ext ρ ∘ extend) = (@extend Δ n ∘ ρ)
   | Γ Δ n ρ := funext (λ x, rfl)
+
+  def swap {Γ} {M N : ℕ}
+    : name (context.extend M (context.extend N Γ))
+    → name (context.extend N (context.extend M Γ))
+  | (nil lt) := extend (nil lt)
+  | (extend (nil lt)) := nil lt
+  | (extend (extend n)) := extend (extend n)
+
+  theorem swap.ext_ext {Γ Δ} {ρ : name Γ → name Δ} {m n : ℕ}
+    : (ext (ext ρ) ∘ swap)
+    = (swap ∘ @ext _ _ (@ext _ _ ρ m) n) := funext $ λ α,
+      match α with
+      | nil p := by simp [swap, ext]
+      | extend (nil lt) := by simp [swap, ext]
+      | extend (extend _) := by simp [swap, ext]
+      end
+
+  theorem swap.comp_extend {Γ} {m n : ℕ}
+    : (@name.swap Γ m n ∘ name.extend) = (name.ext name.extend) := funext $ λ α,
+      match α with
+      | nil idx := by simp [swap, ext]
+      | extend n := by simp [swap, ext]
+      end
+
+  theorem swap.comp_ext_extend {Γ} {m n : ℕ}
+    : (@name.swap Γ m n ∘ name.ext name.extend) = name.extend := funext $ λ α,
+      match α with
+      | nil idx := by simp [swap, ext]
+      | extend n := by simp [swap, ext]
+      end
 end name
 
 namespace prefix_expr
