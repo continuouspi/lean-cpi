@@ -65,12 +65,6 @@ namespace species
     species.is_equiv
 
   namespace equiv
-      private lemma subst_ext
-      {Γ Δ} {ρ : name Γ → name Δ} {M : affinity} (A' : species Γ)
-      : subst name.extend (subst ρ A')
-      = subst (name.ext ρ) (subst (@name.extend _ M.arity) A')
-    := by rw [subst_compose, ← name.ext_extend, subst_compose]
-
     private lemma subst_swap
       {Γ Δ} {ρ : name Γ → name Δ} {M N : affinity}
       (A' : species (context.extend M.arity (context.extend N.arity Γ)))
@@ -120,10 +114,10 @@ namespace species
 
         -- Restriction
         case ν_parallel : Γ M A B Δ ρ {
-          unfold species.subst, rw ← subst_ext _, from ν_parallel M
+          unfold species.subst, rw ← species.subst_ext _, from ν_parallel M
         },
         case ν_drop : Γ M A Δ ρ {
-          unfold species.subst, rw ← subst_ext _, from ν_drop M
+          unfold species.subst, rw ← species.subst_ext _, from ν_drop M
         },
         case ν_swap : Γ M N A Δ ρ {
           unfold species.subst, rw subst_swap _, from ν_swap M N

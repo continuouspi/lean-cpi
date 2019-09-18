@@ -223,10 +223,16 @@ namespace species
     rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ s, sizeof s.snd.snd.snd.snd.snd)⟩ ],
     dec_tac := tactic.fst_dec_tac,
   }
+
+  protected lemma subst_ext
+    {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
+    : subst name.extend (subst ρ A)
+    = subst (name.ext ρ) (subst (@name.extend _ n) A)
+    := by rw [subst_compose, ← name.ext_extend, subst_compose]
 end species
 
 end cpi
 
 -- | For sanity checking only. This takes a long time to run normally.
--- run_cmd sanity_check
--- #sanity_check
+run_cmd sanity_check
+#sanity_check

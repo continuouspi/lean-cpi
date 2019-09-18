@@ -69,7 +69,7 @@ namespace concretion
     | ξ_parallel₂
         {Γ} {b y} {F F' : concretion Γ b y} {A : species Γ}
       : equiv F F' → equiv (F |₁ A) (F' |₁ A)
-    | ξ_nu
+    | ξ_restriction
         {Γ} {b y} (M : affinity) {F F' : concretion (context.extend M.arity Γ) b y}
       : equiv F F' → equiv (ν'(M) F) (ν'(M) F')
 
@@ -117,40 +117,13 @@ namespace concretion
         {A : species Γ} {B : species (context.extend y Γ)}
       : equiv (#(bs; y) (species.subst name.extend A |ₛ B)) (A |₂ #(bs; y) B)
 
-    local infix ` ⟶ `:51 := equiv
-
-    open equiv
-
-    -- protected def equiv.subst :
-    --   ∀ {Γ Δ} {b y} {F G : concretion Γ b y} (ρ : name Γ → name Δ)
-    --     , F ⟶ G
-    --     → subst ρ F ⟶ subst ρ G
-    -- | Γ Δ b y ._ ._ ρ (ξ_parallel₁ eq) :=
-    --     by { unfold subst, from ξ_parallel₁ (equiv.subst ρ eq) }
-    -- | Γ Δ b y ._ ._ ρ (ξ_parallel₂ eq) :=
-    --   by { unfold subst, from ξ_parallel₂ (equiv.subst ρ eq) }
-    -- | Γ Δ b y ._ ._ ρ (ξ_nu M eq) :=
-    --   by { unfold subst, from ξ_nu M (equiv.subst (name.ext ρ) eq) }
-    -- | Γ Δ b y ._ ._ ρ parallel_nil :=
-    --   by { unfold subst species.subst has_zero.zero, from parallel_nil }
-    -- | Γ Δ b y ._ ._ ρ parallel_symm :=
-    --   by { unfold subst, from parallel_symm }
-    -- | Γ Δ b y ._ ._ ρ parallel_assoc₁ :=
-    --   by { unfold subst species.subst, from parallel_assoc₁ }
-    -- | Γ Δ b y ._ ._ ρ parallel_assoc₂ :=
-    --   by { unfold subst species.subst, from parallel_assoc₂ }
-    -- | Γ Δ b y ._ ._ ρ (ξ_parallel eq) :=
-    --     by { unfold subst, from ξ_parallel (species.equiv.subst ρ eq) }
-    -- | Γ Δ b y ._ ._ ρ (ξ_apply eq) :=
-    --   by { unfold subst, from ξ_apply (species.equiv.subst (name.ext ρ) eq) }
-    -- | Γ Δ b y ._ ._ ρ (@ν_parallel₁ _ _ _ M A F) := by {
-    --   unfold subst,
-    --   rw species.subst_compose,
-    --   sorry }
-    -- | Γ Δ b y ._ ._ ρ (ν_parallel₂ M) := by { sorry }
-    -- | Γ Δ b y ._ ._ ρ (ν_drop M) := by { sorry }
-    -- | Γ Δ b y ._ ._ ρ (ν_swap M N) := by { sorry }
-    -- | Γ Δ b y ._ ._ ρ apply_parallel := by { sorry }
+    instance {Γ} {b y} : is_equiv (concretion Γ b y) equiv :=
+      { refl := @equiv.refl Γ b y, symm := @equiv.symm Γ b y, trans := @equiv.trans Γ b y }
+    instance {Γ} {b y} : is_refl (concretion Γ b y) equiv := ⟨ λ _, equiv.refl ⟩
+    instance {Γ} {b y} : setoid (concretion Γ b y) :=
+      ⟨ equiv, ⟨ @equiv.refl Γ b y, @equiv.symm Γ b y, @equiv.trans Γ b y ⟩ ⟩
+    instance setoid.is_equiv {Γ} {b y} : is_equiv (concretion Γ b y) has_equiv.equiv :=
+      concretion.is_equiv
   end equivalence
 
   private def depth : ∀ {Γ} {b y}, concretion Γ b y → ℕ
@@ -168,48 +141,48 @@ namespace concretion
   | Γ Δ b y ρ (ν'(M) F) :=
     by { unfold subst depth, rw depth.over_subst (name.ext ρ) F }
 
-  private def mk_sub {Γ} {b} (bs : vector (name Γ) b) : name (context.extend b Γ) → name Γ
-  | (name.nil idx) := vector.nth bs idx
-  | (name.extend e) := e
-
-  /-- Helper function for doign the actual application. This is split up to
-      make the totality of pseudo_apply/pseudo_apply_app easier to determine.
-  -/
-  private def pseudo_apply_app {a b} :
-    ∀ {Γ}, vector (name Γ) a → species (context.extend b Γ)
-    → concretion Γ b a → species Γ
-  | Γ as A (#(bs; y) B) :=
-    species.subst (mk_sub bs) A |ₛ species.subst (mk_sub as) B
-  | Γ as A (F |₁ B) :=
-      pseudo_apply_app as A F |ₛ B
-  | Γ as A (B |₂ F) :=
-      B |ₛ pseudo_apply_app as A F
-  | Γ as A (ν'(M) F) :=
-    ν(M) (pseudo_apply_app
-            (vector.map name.extend as)
-            (species.subst (name.ext name.extend) A)
-            F)
-  using_well_founded {
-    rel_tac := λ _ _,
-      `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst b a x.snd.snd.snd ) ⟩ ],
-    dec_tac := tactic.fst_dec_tac,
-  }
-
-  /-- Apply two concretions together. -/
-  def pseudo_apply {a b} : ∀ {Γ}, concretion Γ a b → concretion Γ b a → species Γ
-  | Γ (#(bs; y) A) F' := pseudo_apply_app bs A F'
-  | Γ (F |₁ A) F' := pseudo_apply F F' |ₛ A
-  | Γ (A |₂ F) F' := A |ₛ pseudo_apply F F'
-  | Γ (ν'(M) F) F' := ν(M) (pseudo_apply F (subst name.extend F'))
-  using_well_founded {
-    rel_tac := λ _ _,
-      `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst a b x.snd.fst ) ⟩ ],
-    dec_tac := tactic.fst_dec_tac,
-  }
-
   /- Theorems/lemmas defining equivalency of species for pseudo application. -/
-  section pseudo_apply_species
+  section pseudo_apply
+    private def mk_sub {Γ} {b} (bs : vector (name Γ) b) : name (context.extend b Γ) → name Γ
+    | (name.nil idx) := vector.nth bs idx
+    | (name.extend e) := e
+
+    /-- Helper function for doign the actual application. This is split up to
+        make the totality of pseudo_apply/pseudo_apply_app easier to determine.
+    -/
+    private def pseudo_apply_app {a b} :
+      ∀ {Γ}, vector (name Γ) a → species (context.extend b Γ)
+      → concretion Γ b a → species Γ
+    | Γ as A (#(bs; y) B) :=
+      species.subst (mk_sub bs) A |ₛ species.subst (mk_sub as) B
+    | Γ as A (F |₁ B) :=
+        pseudo_apply_app as A F |ₛ B
+    | Γ as A (B |₂ F) :=
+        B |ₛ pseudo_apply_app as A F
+    | Γ as A (ν'(M) F) :=
+      ν(M) (pseudo_apply_app
+              (vector.map name.extend as)
+              (species.subst (name.ext name.extend) A)
+              F)
+    using_well_founded {
+      rel_tac := λ _ _,
+        `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst b a x.snd.snd.snd ) ⟩ ],
+      dec_tac := tactic.fst_dec_tac,
+    }
+
+    /-- Apply two concretions together. -/
+    def pseudo_apply {a b} : ∀ {Γ}, concretion Γ a b → concretion Γ b a → species Γ
+    | Γ (#(bs; y) A) F' := pseudo_apply_app bs A F'
+    | Γ (F |₁ A) F' := pseudo_apply F F' |ₛ A
+    | Γ (A |₂ F) F' := A |ₛ pseudo_apply F F'
+    | Γ (ν'(M) F) F' := ν(M) (pseudo_apply F (subst name.extend F'))
+    using_well_founded {
+      rel_tac := λ _ _,
+        `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst a b x.snd.fst ) ⟩ ],
+      dec_tac := tactic.fst_dec_tac,
+    }
     open species.equiv (hiding trans symm refl)
+
 
     protected lemma pseudo_apply.on_parallel₁ :
       ∀ {Γ} {a b} (F : concretion Γ a b) (G : concretion Γ b a) (A : species Γ)
@@ -267,9 +240,15 @@ namespace concretion
         {Γ Δ} {b} (ρ : name Γ → name Δ) {bs : vector (name Γ) b}
       : ρ ∘ mk_sub bs = mk_sub (vector.map ρ bs) ∘ name.ext ρ := funext $ λ α,
         match α with
-        | name.nil idx := by simp [mk_sub, name.ext]
+        | name.nil idx := by simp only [mk_sub, name.ext, vector.nth_map, function.comp]
         | name.extend β := by simp only [mk_sub, name.ext, function.comp]
         end
+
+    private lemma mk_sub.ext {Γ} {b} {bs : vector (name Γ) b} :
+      mk_sub bs ∘ (@name.extend Γ b) = id := funext $ λ α, begin
+        cases α,
+        all_goals { unfold mk_sub id function.comp }
+      end
 
     -- TODO: Clean up to use calc
     -- TODO: Use induction - does this allow us to drop the explicit termination
@@ -349,7 +328,7 @@ namespace concretion
       dec_tac := tactic.fst_dec_tac,
     }
 
-    protected lemma pseudo_apply.restriction_swap {a b}:
+    private lemma pseudo_apply.restriction_swap {a b}:
       ∀ {Γ} (M N : affinity) (F : concretion (context.extend N.arity Γ) a b) (G : concretion (context.extend M.arity Γ) b a)
       , (ν(N) ν(M) pseudo_apply (subst name.extend F) (subst (name.ext name.extend) G))
       ≈ ν(M) ν(N) pseudo_apply (subst (name.ext name.extend) F) (subst name.extend G)
@@ -364,7 +343,7 @@ namespace concretion
         ... ≈ ν(M) ν(N) pseudo_apply (subst (name.ext name.extend) F) (subst name.extend G)
               : by rw [name.swap.comp_extend, name.swap.comp_ext_extend]
 
-    protected lemma pseudo_apply.on_restriction :
+    private lemma pseudo_apply.on_restriction :
       ∀ {Γ} {a b} (F : concretion Γ a b) (M : affinity)
         (G : concretion (context.extend M.arity Γ) b a)
       , pseudo_apply F (ν'(M) G) ≈ ν(M) (pseudo_apply (subst name.extend F) G)
@@ -422,7 +401,7 @@ namespace concretion
       }
     end
 
-    protected theorem pseudo_apply.symm {a b} :
+    theorem pseudo_apply.symm {a b} :
       ∀ {Γ} (F : concretion Γ a b) (G : concretion Γ b a)
       , pseudo_apply F G ≈ pseudo_apply G F
     | Γ (#(as; x) A) G := begin
@@ -569,8 +548,182 @@ namespace concretion
         well_founded_tactics.cancel_nat_add_lt,
         tactic.try well_founded_tactics.trivial_nat_lt
     }
-  end pseudo_apply_species
+
+    private lemma pseudo_apply_app.equiv {a b} :
+      ∀ {Γ} {bs : vector (name Γ) a} {A A' : species (context.extend b Γ)}
+        {F : concretion Γ b a}
+      , A ≈ A' → pseudo_apply_app bs A F ≈ pseudo_apply_app bs A' F :=
+    begin
+      intros Γ as A A' G eq,
+      induction G,
+
+      case apply : Γ b bs y B {
+        unfold pseudo_apply_app,
+        from ξ_parallel₁ (species.equiv.subst _ eq),
+      },
+      case parallel₁ : Γ b y F B ih {
+        unfold pseudo_apply_app,
+        from ξ_parallel₁ (ih eq)
+      },
+      case parallel₂ : Γ b y B F ih {
+        unfold pseudo_apply_app,
+        from ξ_parallel₂ (ih eq)
+      },
+      case restriction : Γ b y M F ih {
+        unfold pseudo_apply_app,
+        from ξ_restriction M (ih (species.equiv.subst _ eq)),
+      }
+    end
+
+    private lemma pseudo_apply_app.par {a b} :
+      ∀ {Γ} (bs : vector (name Γ) a) (A : species Γ) (B : species (context.extend b Γ))
+        (G : concretion Γ b a)
+      , pseudo_apply_app bs (species.subst name.extend A |ₛ B) G ≈ (A |ₛ pseudo_apply_app bs B G) :=
+    begin
+      intros Γ as A B G,
+      induction G,
+
+      case apply : _ b' bs y C {
+        unfold pseudo_apply_app species.subst,
+        calc  ((species.subst (mk_sub bs) (species.subst name.extend A) |ₛ species.subst (mk_sub bs) B)
+               |ₛ species.subst (mk_sub as) C)
+            ≈ ((species.subst (mk_sub bs ∘ name.extend) A |ₛ species.subst (mk_sub bs) B)
+               |ₛ species.subst (mk_sub as) C)
+              : by rw species.subst_compose _ _ A
+        ... ≈ ((A |ₛ species.subst (mk_sub bs) B) |ₛ species.subst (mk_sub as) C)
+              : by rw [mk_sub.ext, species.subst_id]
+        ... ≈ (A |ₛ species.subst (mk_sub bs) B |ₛ species.subst (mk_sub as) C)
+              : parallel_assoc
+      },
+
+      case parallel₁ : _ b' y G C ih {
+        unfold pseudo_apply_app species.subst,
+        calc  (pseudo_apply_app as (species.subst name.extend A |ₛ B) G |ₛ C)
+            ≈ ((A |ₛ pseudo_apply_app as B G) |ₛ C) : ξ_parallel₁ (ih as A B)
+        ... ≈ (A |ₛ pseudo_apply_app as B G |ₛ C) : parallel_assoc
+      },
+
+      case parallel₂ : _ b' y C G ih {
+        unfold pseudo_apply_app species.subst,
+        calc  (C |ₛ pseudo_apply_app as (species.subst name.extend A |ₛ B) G)
+            ≈ (C |ₛ (A |ₛ pseudo_apply_app as B G)) : ξ_parallel₂ (ih as A B)
+        ... ≈ (A |ₛ C |ₛ pseudo_apply_app as B G) : parallel_symm₁
+      },
+
+      case restriction : _ b' y' M G ih {
+        unfold pseudo_apply_app species.subst,
+        calc  (ν(M) pseudo_apply_app (vector.map name.extend as)
+                      (species.subst (name.ext name.extend) (species.subst name.extend A)
+                      |ₛ species.subst (name.ext name.extend) B) G)
+            ≈ (ν(M) pseudo_apply_app (vector.map name.extend as)
+                      (species.subst name.extend (species.subst name.extend A)
+                      |ₛ species.subst (name.ext name.extend) B) G)
+              : by rw ← species.subst_ext A
+        ... ≈ (ν(M) species.subst name.extend A |ₛ
+                    pseudo_apply_app (vector.map name.extend as)
+                        (species.subst (name.ext name.extend) B) G)
+              : ξ_restriction M (ih _ _ _)
+        ... ≈ (A |ₛ ν(M)
+                    pseudo_apply_app (vector.map name.extend as)
+                        (species.subst (name.ext name.extend) B) G)
+            : ν_parallel M
+      }
+    end
+
+    lemma pseudo_apply.equiv_l {a b} :
+      ∀ {Γ} {F F' : concretion Γ a b} {G : concretion Γ b a}
+      , F ≈ F' → pseudo_apply F G ≈ pseudo_apply F' G :=
+    begin
+      intros Γ F F' G eq, induction eq,
+
+      -- Modifiers are incredibly trivial
+      case equiv.refl { from refl _ },
+      case equiv.trans : Γ b y F G H fg gh ih_fg ih_gh { from trans ih_fg ih_gh },
+      case equiv.symm : Γ b y F G eq ih_eq { from symm ih_eq },
+
+      -- Projections are trivial
+      case equiv.ξ_parallel₁ : Γ b y F F' A eq ih {
+        unfold pseudo_apply,
+        from ξ_parallel₁ ih
+      },
+      case equiv.ξ_parallel₂ : Γ b y A F F' eq ih {
+        unfold pseudo_apply,
+        from ξ_parallel₁ ih
+      },
+      case equiv.ξ_restriction : Γ b y M F F' eq ih {
+        unfold pseudo_apply,
+        from ξ_restriction M ih
+      },
+
+      -- Now for the interesting stuff. Well, relatively speaking.
+
+      case equiv.parallel_nil : Γ b y F { unfold pseudo_apply, from parallel_nil },
+      case equiv.parallel_symm : Γ b y F G { unfold pseudo_apply, from parallel_symm },
+      case equiv.parallel_assoc₁ : Γ b y F A B {
+        unfold pseudo_apply,
+        from parallel_assoc
+      },
+      case equiv.parallel_assoc₂ : Γ b y F A B {
+        unfold pseudo_apply,
+        from parallel_assoc
+      },
+
+      case equiv.ξ_apply : Γ b y bs A A' eq F {
+        unfold pseudo_apply,
+        from pseudo_apply_app.equiv eq
+      },
+      case equiv.ξ_parallel : Γ b y F A A' eq {
+        unfold pseudo_apply,
+        from ξ_parallel₂ eq
+      },
+
+      case equiv.ν_parallel₁ : Γ b y M A F {
+        unfold pseudo_apply,
+        from ν_parallel M
+      },
+      case equiv.ν_parallel₂ : Γ b y M F F {
+        unfold pseudo_apply,
+        from ν_parallel' M
+      },
+      case equiv.ν_drop : Γ b y M F {
+        unfold pseudo_apply,
+        rw ← pseudo_apply.subst name.extend F G,
+        from ν_drop M
+      },
+      case equiv.ν_swap : Γ b y M N F {
+        unfold pseudo_apply,
+        calc  (ν(M) ν(N) pseudo_apply F (subst name.extend (subst name.extend G)))
+            ≈ (ν(M) ν(N) pseudo_apply F (subst (name.extend ∘ name.extend) G))
+              : by rw subst_compose
+        ... ≈ (ν(N) ν(M) pseudo_apply (subst name.swap F) (subst name.swap (subst (name.extend ∘ name.extend) G)))
+              : by { rw ← pseudo_apply.subst, from ν_swap M N }
+        ... ≈ (ν(N) ν(M) pseudo_apply (subst name.swap F) (subst (name.swap ∘ name.extend ∘ name.extend) G))
+              : by rw subst_compose
+        ... ≈ (ν(N) ν(M) pseudo_apply (subst name.swap F) (subst (name.extend ∘ name.extend) G))
+              : by rw [← function.comp.assoc, name.swap.comp_extend, name.ext_extend]
+        ... ≈ (ν(N) ν(M) pseudo_apply (subst name.swap F) (subst name.extend (subst name.extend G)))
+              : by rw subst_compose
+      },
+      case equiv.apply_parallel : Γ b y bs A B {
+        unfold pseudo_apply,
+        from pseudo_apply_app.par bs A B G
+      }
+    end
+
+    theorem pseudo_apply.equiv {a b} :
+      ∀ {Γ} {F F' : concretion Γ a b} {G G' : concretion Γ b a}
+      , F ≈ F' → G ≈ G' → pseudo_apply F G ≈ pseudo_apply F' G'
+    | Γ F F' G G' eq_1 eq_2 :=
+      calc  pseudo_apply F  G
+          ≈ pseudo_apply F' G  : pseudo_apply.equiv_l eq_1
+      ... ≈ pseudo_apply G  F' : pseudo_apply.symm F' G
+      ... ≈ pseudo_apply G' F' : pseudo_apply.equiv_l eq_2
+      ... ≈ pseudo_apply F' G' : pseudo_apply.symm G' F'
+  end pseudo_apply
 
 end concretion
 
 end cpi
+
+run_cmd sanity_check
+#sanity_check
