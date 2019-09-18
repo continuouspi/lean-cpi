@@ -78,7 +78,7 @@ end name
 
 namespace prefix_expr
   /-- Apply a renaming function to a prefix. -/
-  def subst : Π {Γ Δ : context} {f}, (name Γ → name Δ) → prefix_expr Γ f → prefix_expr Δ f
+  def rename : Π {Γ Δ : context} {f}, (name Γ → name Δ) → prefix_expr Γ f → prefix_expr Δ f
     | Γ Δ f ρ (a#(b; y)) := (ρ a)#(list.map ρ b; y)
     | Γ Δ f ρ τ@k := τ@k
 
@@ -116,40 +116,40 @@ namespace prefix_expr
     , (ext π σ ∘ ext π ρ) = ext π (σ ∘ ρ)
   | Γ Δ η φ f ρ σ π := funext (ext_compose ρ σ π)
 
-  /-- Extending with a substituted prefix has the same effect as the original one. -/
-  theorem subst_ext :
+  /-- Extending with a renamed prefix has the same effect as the original one. -/
+  theorem rename_ext :
     ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name η → name φ) (π : prefix_expr Γ f)
-    , @ext η φ Γ f π σ = (ext (subst ρ π) σ)
+    , @ext η φ Γ f π σ = (ext (rename ρ π) σ)
   | Γ Δ η φ f ρ σ (a#(b; y)) := funext (λ α, rfl)
   | Γ Δ η φ f ρ σ (τ@k) := funext (λ α, rfl)
 
-  /-- Substituting with the identity function does nothing. -/
-  theorem subst_id : ∀ {Γ} {f} (π : prefix_expr Γ f), subst id π = π
-  | Γ ._ (a#(b; y)) := by simp [subst]
+  /-- Renaming with the identity function does nothing. -/
+  theorem rename_id : ∀ {Γ} {f} (π : prefix_expr Γ f), rename id π = π
+  | Γ ._ (a#(b; y)) := by simp [rename]
   | Γ ._ (τ@k) := rfl
 
-  /-- Substituting twice is the same as substituting on a composed function. -/
-  theorem subst_compose :
+  /-- Renaming twice is the same as renaming with a composed function. -/
+  theorem rename_compose :
     ∀ {Γ Δ η} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η) (π : prefix_expr Γ f)
-    , subst σ (subst ρ π) = subst (σ ∘ ρ) π
-  | Γ Δ η f ρ σ (a#(b; y)) := by simp [subst]
+    , rename σ (rename ρ π) = rename (σ ∘ ρ) π
+  | Γ Δ η f ρ σ (a#(b; y)) := by simp [rename]
   | Γ Δ η f ρ σ (τ@_) := rfl
 end prefix_expr
 
 namespace species
   /-- Apply a renaming function to a species. -/
-  mutual def subst, subst.choice
-  with subst : Π {Γ Δ : context}, (name Γ → name Δ) → species Γ → species Δ
+  mutual def rename, rename.choice
+  with rename : Π {Γ Δ : context}, (name Γ → name Δ) → species Γ → species Δ
   | Γ Δ ρ nil := nil
-  | Γ Δ ρ (A |ₛ B) := subst ρ A |ₛ subst ρ B
-  | Γ Δ ρ ν(M)A := ν(M)(subst (name.ext ρ) A)
-  | Γ Δ ρ (choice As) := choice (subst.choice ρ As)
-  with subst.choice : Π {Γ Δ : context}, (name Γ → name Δ) → species.choices Γ → species.choices Δ
+  | Γ Δ ρ (A |ₛ B) := rename ρ A |ₛ rename ρ B
+  | Γ Δ ρ ν(M)A := ν(M)(rename (name.ext ρ) A)
+  | Γ Δ ρ (choice As) := choice (rename.choice ρ As)
+  with rename.choice : Π {Γ Δ : context}, (name Γ → name Δ) → species.choices Γ → species.choices Δ
   | Γ Δ ρ choices.nil := choices.nil
   | Γ Δ ρ (choices.cons π A As) :=
-    let π' := prefix_expr.subst ρ π in
-    let A' := subst (prefix_expr.ext π ρ) A in
-    choices.cons π' A' (subst.choice ρ As)
+    let π' := prefix_expr.rename ρ π in
+    let A' := rename (prefix_expr.ext π ρ) A in
+    choices.cons π' A' (rename.choice ρ As)
   using_well_founded {
     rel_tac := λ _ _,
       `[exact ⟨_, measure_wf (λ s,
@@ -158,29 +158,29 @@ namespace species
     dec_tac := tactic.fst_dec_tac,
   }
 
-  /-- Substituting with the identity function does nothing. -/
-  theorem subst_id : ∀ {Γ} (A : species Γ), subst id A = A
-  | Γ nil := by unfold subst
+  /-- Renaming with the identity function does nothing. -/
+  theorem rename_id : ∀ {Γ} (A : species Γ), rename id A = A
+  | Γ nil := by unfold rename
   | Γ (A |ₛ B) :=
-    let a : subst id A = A := subst_id A in
-    let b : subst id B = B := subst_id B in
-    by simp [subst, a, b]
+    let a : rename id A = A := rename_id A in
+    let b : rename id B = B := rename_id B in
+    by simp [rename, a, b]
   | Γ ν(M)A :=
-    let a : subst id A = A := subst_id A in
-    by simp [subst, name.ext_id, a]
-  | Γ (choice choices.nil) := by unfold subst subst.choice
+    let a : rename id A = A := rename_id A in
+    by simp [rename, name.ext_id, a]
+  | Γ (choice choices.nil) := by unfold rename rename.choice
   | Γ (choice (choices.cons π A As)) :=
-    let π' : prefix_expr.subst id π = π := prefix_expr.subst_id π in
-    let a : subst id A = A := subst_id A in
-    let as : subst.choice id As = As := begin
+    let π' : prefix_expr.rename id π = π := prefix_expr.rename_id π in
+    let a : rename id A = A := rename_id A in
+    let as : rename.choice id As = As := begin
       -- So it'd probably be more elegant to make the theorems mutually
       -- recursive too, but this'll do for now.
-      have h := subst_id (choice As),
-      simp only [subst] at h,
+      have h := rename_id (choice As),
+      simp only [rename] at h,
       from h
     end in
     begin
-      unfold subst subst.choice at as ⊢,
+      unfold rename rename.choice at as ⊢,
       rw prefix_expr.ext_id,
       simp [π', a, as]
     end
@@ -189,34 +189,34 @@ namespace species
     dec_tac := tactic.fst_dec_tac,
   }
 
-  /-- Substituting twice is the same as substituting on a composed function. -/
-  theorem subst_compose :
+  /-- Renaming twice is the same as renaming with a composed function. -/
+  theorem rename_compose :
     ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species Γ)
-    , subst σ (subst ρ A) = subst (σ ∘ ρ) A
-  | Γ Δ η ρ σ  nil := by unfold subst
+    , rename σ (rename ρ A) = rename (σ ∘ ρ) A
+  | Γ Δ η ρ σ  nil := by unfold rename
   | Γ Δ η ρ σ (A |ₛ B) :=
-    let a := subst_compose ρ σ A in
-    let b := subst_compose ρ σ B in
-    by simp [subst, a, b]
+    let a := rename_compose ρ σ A in
+    let b := rename_compose ρ σ B in
+    by simp [rename, a, b]
   | Γ Δ η ρ σ ν(M)A :=
-    let a := subst_compose (name.ext ρ) (name.ext σ) A in
+    let a := rename_compose (name.ext ρ) (name.ext σ) A in
     begin
-      simp [subst, a],
+      simp [rename, a],
       rw ← name.ext_comp ρ σ
     end
-  | Γ Δ η ρ σ (choice choices.nil) := by unfold subst subst.choice
+  | Γ Δ η ρ σ (choice choices.nil) := by unfold rename rename.choice
   | Γ Δ η ρ σ (choice (choices.cons π A As)) :=
-    let π' := prefix_expr.subst_compose ρ σ π in
-    let a := subst_compose (prefix_expr.ext π ρ) (prefix_expr.ext π σ) A in
-    let as : subst.choice σ (subst.choice ρ As) = subst.choice (σ ∘ ρ) As := begin
-      have h := subst_compose ρ σ (choice As),
-      simp only [subst] at h,
+    let π' := prefix_expr.rename_compose ρ σ π in
+    let a := rename_compose (prefix_expr.ext π ρ) (prefix_expr.ext π σ) A in
+    let as : rename.choice σ (rename.choice ρ As) = rename.choice (σ ∘ ρ) As := begin
+      have h := rename_compose ρ σ (choice As),
+      simp only [rename] at h,
       from h
     end in
     begin
-      unfold subst subst.choice, simp [],
+      unfold rename rename.choice, simp [],
       rw ← prefix_expr.ext_comp ρ σ,
-      rw ← prefix_expr.subst_ext ρ σ π,
+      rw ← prefix_expr.rename_ext ρ σ π,
       simp [π', a, as]
     end
   using_well_founded {
@@ -224,11 +224,11 @@ namespace species
     dec_tac := tactic.fst_dec_tac,
   }
 
-  protected lemma subst_ext
+  protected lemma rename_ext
     {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
-    : subst name.extend (subst ρ A)
-    = subst (name.ext ρ) (subst (@name.extend _ n) A)
-    := by rw [subst_compose, ← name.ext_extend, subst_compose]
+    : rename name.extend (rename ρ A)
+    = rename (name.ext ρ) (rename (@name.extend _ n) A)
+    := by rw [rename_compose, ← name.ext_extend, rename_compose]
 end species
 
 end cpi

@@ -42,14 +42,14 @@ namespace species
 
   | ν_parallel
       {Γ} (M : affinity) {A : species Γ} {B : species (context.extend M.arity Γ)}
-    : equiv (ν(M) (subst name.extend A |ₛ B)) (A |ₛ ν(M)B)
+    : equiv (ν(M) (rename name.extend A |ₛ B)) (A |ₛ ν(M)B)
   | ν_drop
       {Γ} (M : affinity) {A : species Γ}
-    : equiv (ν(M) (subst name.extend A)) A
+    : equiv (ν(M) (rename name.extend A)) A
   | ν_swap
       {Γ} (M N : affinity)
       {A  : species (context.extend N.arity (context.extend M.arity Γ))}
-    : @equiv Γ (ν(M)ν(N) A) (ν(N)ν(M) subst name.swap A)
+    : @equiv Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
 
 
   local infix ` ~ `:51 := equiv
@@ -65,20 +65,20 @@ namespace species
     species.is_equiv
 
   namespace equiv
-    private lemma subst_swap
+    private lemma rename_swap
       {Γ Δ} {ρ : name Γ → name Δ} {M N : affinity}
       (A' : species (context.extend M.arity (context.extend N.arity Γ)))
-      : subst (name.ext (name.ext ρ)) (subst name.swap A')
-      = subst name.swap (subst (name.ext (name.ext ρ)) A')
-      := by rw [subst_compose, name.swap.ext_ext, subst_compose]
+      : rename (name.ext (name.ext ρ)) (rename name.swap A')
+      = rename name.swap (rename (name.ext (name.ext ρ)) A')
+      := by rw [rename_compose, name.swap.ext_ext, rename_compose]
 
-    protected def subst :
+    protected def rename :
        ∀ {Γ Δ} {A B : species Γ} (ρ : name Γ → name Δ)
-       , A ~ B → subst ρ A ~ subst ρ B
+       , A ~ B → rename ρ A ~ rename ρ B
       := begin
         intros _Γ _Δ _A _B _ρ _eq,
         known_induction species.equiv @equiv.rec_on
-          (λ Γ A B, Π {Δ} (ρ : name Γ → name Δ), subst ρ A ~ subst ρ B)
+          (λ Γ A B, Π {Δ} (ρ : name Γ → name Δ), rename ρ A ~ rename ρ B)
           _Γ _A _B _eq,
 
         case refl : Γ A Δ ρ { from refl },
@@ -87,40 +87,40 @@ namespace species
 
         -- Projection
         case ξ_parallel₁ : Γ A A' B eq ih Δ ρ {
-          unfold species.subst, from ξ_parallel₁ (ih ρ)
+          unfold species.rename, from ξ_parallel₁ (ih ρ)
         },
         case ξ_parallel₂ : Γ A A' B eq ih Δ ρ {
-          unfold species.subst, from ξ_parallel₂ (ih ρ)
+          unfold species.rename, from ξ_parallel₂ (ih ρ)
         },
         case ξ_restriction : Γ M A A' eq ih Δ ρ {
-          unfold species.subst,
+          unfold species.rename,
           from ξ_restriction M (ih (name.ext ρ))
         },
         case ξ_choice_cons : Γ f π A A' As eq ih Δ ρ {
-          unfold species.subst species.subst.choice,
-          from ξ_choice_cons (prefix_expr.subst ρ π) (ih (prefix_expr.ext π ρ))
+          unfold species.rename species.rename.choice,
+          from ξ_choice_cons (prefix_expr.rename ρ π) (ih (prefix_expr.ext π ρ))
         },
 
         -- Choice
         case choice_swap : Γ f g π₁ π₂ A B As Δ ρ {
-          simp only [species.subst, species.subst.choice],
+          simp only [species.rename, species.rename.choice],
           from choice_swap _ _
         },
 
         -- Parallel
-        case parallel_nil : Γ A Δ ρ { unfold species.subst, from parallel_nil },
-        case parallel_symm : Γ A B Δ ρ { unfold species.subst, from parallel_symm },
-        case parallel_assoc : Γ A B C Δ ρ { unfold species.subst, from parallel_assoc },
+        case parallel_nil : Γ A Δ ρ { unfold species.rename, from parallel_nil },
+        case parallel_symm : Γ A B Δ ρ { unfold species.rename, from parallel_symm },
+        case parallel_assoc : Γ A B C Δ ρ { unfold species.rename, from parallel_assoc },
 
         -- Restriction
         case ν_parallel : Γ M A B Δ ρ {
-          unfold species.subst, rw ← species.subst_ext _, from ν_parallel M
+          unfold species.rename, rw ← species.rename_ext _, from ν_parallel M
         },
         case ν_drop : Γ M A Δ ρ {
-          unfold species.subst, rw ← species.subst_ext _, from ν_drop M
+          unfold species.rename, rw ← species.rename_ext _, from ν_drop M
         },
         case ν_swap : Γ M N A Δ ρ {
-          unfold species.subst, rw subst_swap _, from ν_swap M N
+          unfold species.rename, rw rename_swap _, from ν_swap M N
         }
       end
 
@@ -137,9 +137,9 @@ namespace species
         ... ≈ ((A |ₛ C) |ₛ B) : symm parallel_assoc
 
       def ν_parallel' {Γ} (M : affinity) {A : species (context.extend M.arity Γ)} {B : species Γ}
-        : (ν(M) (A |ₛ subst name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
-        calc  (ν(M) A |ₛ subst name.extend B)
-            ≈ (ν(M) subst name.extend B |ₛ A) : ξ_restriction M parallel_symm
+        : (ν(M) (A |ₛ rename name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
+        calc  (ν(M) A |ₛ rename name.extend B)
+            ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
         ... ≈ (B |ₛ ν(M) A) : ν_parallel M
         ... ≈ ((ν(M) A) |ₛ B) : parallel_symm
   end equiv
@@ -161,47 +161,5 @@ namespace species
     end
   end examples
 end species
-
--- namespace tactic
---   open tactic
-
---   private meta def collect_add_args : expr → list expr
---   | `(%%a |ₛ %%b) := collect_add_args a ++ collect_add_args b
---   | e             := [e]
-
---   -- private meta def prove_equiv_by_perm (a b : expr) : tactic expr :=
---   -- (is_def_eq a b >> to_expr ``(eq.refl %%a))
---   -- <|>
---   -- perm_ac (get_add_fn a) `(nat.add_assoc) `(nat.add_comm) a b
-
---   private meta def mk_par : list expr → tactic expr
---   | []      := to_expr ``(species.nil)
---   | [a]     := return a
---   | (a::as) := do
---     rs ← mk_par as,
---     to_expr ``(%%a |ₛ %%rs)
-
---   private meta def cancel_parallel : tactic unit := do
---     `(%%lhs ≈ %%rhs) ← target,
---     ty ← infer_type lhs >>= whnf,
---     guard (ty = `(nat)),
---     let lhs_args := collect_add_args lhs,
---     let rhs_args := collect_add_args rhs,
---     let common   := lhs_args.bag_inter rhs_args,
---     if common = [] then return ()
---     else do
---       let lhs_rest := lhs_args.diff common,
---       let rhs_rest := rhs_args.diff common,
---       new_lhs    ← mk_par (list.qsort expr.lt lhs_rest),
---       new_rhs    ← mk_par (list.qsort expr.lt rhs_rest),
---       lhs_pr     ← prove_eq_by_perm lhs new_lhs,
---       rhs_pr     ← prove_eq_by_perm rhs new_rhs,
---       target_pr  ← to_expr ``(congr (congr_arg (≈) %%lhs_pr) %%rhs_pr),
---       new_target ← to_expr ``(%%new_lhs ≈ %%new_rhs),
---       replace_target new_target target_pr
-
---   -- meta def species_equiv_parallel : (parse expr)
-
--- end tactic
 
 end cpi
