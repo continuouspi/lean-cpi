@@ -1,6 +1,8 @@
 import data.cpi.basic
-
 import tactic.basic
+
+set_option profiler true
+set_option profiler.threshold 0.5
 
 namespace cpi
 
@@ -89,14 +91,14 @@ namespace prefix_expr
     , (name Γ → name Δ)
     → name (f Γ) → name (f Δ)
   | Γ Δ ._ ._ (a#(b; y)) ρ α := name.ext ρ α
-  | Γ Δ ._ ._ (τ@k) ρ α := ρ α
+  | Γ Δ ._ ._ τ@k ρ α := ρ α
 
   /-- Extending with the identity does nothing. -/
   theorem ext_identity :
     ∀ {Γ η : context} {f} (π : prefix_expr η f) (α : name (f Γ))
     , ext π id α = α
   | Γ η ._ (a#(b; y)) α := name.ext_identity α
-  | Γ η ._ (τ@k) name := rfl
+  | Γ η ._ τ@k name := rfl
 
   /-- Extending with the identity yields the identity function. -/
   theorem ext_id : ∀ {Γ η : context} {f} (π : prefix_expr η f), @ext Γ Γ η f π id = id
@@ -108,7 +110,7 @@ namespace prefix_expr
       (π : prefix_expr φ f) (α : name (f Γ))
     , ext π σ (ext π ρ α) = ext π (σ ∘ ρ) α
   | Γ Δ η φ f ρ σ (a#(b; y)) α := name.ext_compose ρ σ α
-  | Γ Δ η φ f ρ σ (τ@k) α := rfl
+  | Γ Δ η φ f ρ σ τ@k α := rfl
 
   /-- Composing extensions is equivalent extending a composition. -/
   theorem ext_comp :
@@ -121,12 +123,12 @@ namespace prefix_expr
     ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name η → name φ) (π : prefix_expr Γ f)
     , @ext η φ Γ f π σ = (ext (rename ρ π) σ)
   | Γ Δ η φ f ρ σ (a#(b; y)) := funext (λ α, rfl)
-  | Γ Δ η φ f ρ σ (τ@k) := funext (λ α, rfl)
+  | Γ Δ η φ f ρ σ τ@k := funext (λ α, rfl)
 
   /-- Renaming with the identity function does nothing. -/
   theorem rename_id : ∀ {Γ} {f} (π : prefix_expr Γ f), rename id π = π
   | Γ ._ (a#(b; y)) := by simp [rename]
-  | Γ ._ (τ@k) := rfl
+  | Γ ._ τ@k := rfl
 
   /-- Renaming twice is the same as renaming with a composed function. -/
   theorem rename_compose :

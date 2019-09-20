@@ -2,6 +2,9 @@ import data.cpi.basic
 import data.cpi.var
 import data.cpi.species_equivalence
 
+set_option profiler true
+set_option profiler.threshold 0.5
+
 namespace cpi
 
 inductive concretion : context → ℕ → ℕ → Type
@@ -23,9 +26,6 @@ infixr ` |₁ ` := concretion.parallel₁
 infixr ` |₂ ` := concretion.parallel₂
 
 notation `ν'(` M `) ` A := concretion.restriction M A
-
-set_option profiler true
-set_option profiler.threshold 0.5
 
 namespace concretion
   def rename :

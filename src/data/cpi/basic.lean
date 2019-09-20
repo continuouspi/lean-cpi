@@ -3,7 +3,8 @@
 import data.non_neg
 import tactic.sanity_check
 
-import data.multiset
+set_option profiler true
+set_option profiler.threshold 0.5
 
 namespace cpi
 
@@ -37,12 +38,12 @@ inductive prefix_expr : context → (context → context) → Type
 | spontanious {Γ} (k : ℝ≥0) : prefix_expr Γ id
 
 -- Define some additional notation, and sugar
-notation a `#(`:40 b ` ; ` y `)` := prefix_expr.communicate a b y
-notation a `#(`:40 y `)` := prefix_expr.communicate a [] y
-notation a `#<`:40 b `>` := prefix_expr.communicate a b 0
-notation a `#`:40 := prefix_expr.communicate a [] 0
+notation a `#(` b ` ; ` y `)` := prefix_expr.communicate a b y
+notation a `#(` y `)` := prefix_expr.communicate a [] y
+notation a `#<` b `>` := prefix_expr.communicate a b 0
+notation a `#` := prefix_expr.communicate a [] 0
 
-notation `τ@` k:40 := prefix_expr.spontanious k
+notation `τ@`:max k:max := prefix_expr.spontanious k
 
 /-- An affinity network.
 
