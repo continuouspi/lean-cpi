@@ -19,7 +19,6 @@ inductive name : context → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
 | extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
 
-
 namespace name
   /-- Scope extension for names. Given a renaming function, return the same
       function lifted one level.-/

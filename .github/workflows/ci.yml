@@ -18,4 +18,4 @@ jobs:
     - name: "Check Lean code"
       run: |
         source ~/.elan/env
-        leanpkg build -- -t0
+        leanpkg build

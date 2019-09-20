@@ -10,3 +10,4 @@
 
 # Misc (possibly Lean?)
 /node_modules
+/.vscode
