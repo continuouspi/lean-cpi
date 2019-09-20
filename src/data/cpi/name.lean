@@ -1,4 +1,4 @@
-import tactic.sanity_check
+import tactic.sanity_check data.fin
 
 run_cmd sanity_check
 set_option profiler true
@@ -10,11 +10,13 @@ namespace cpi
 
     Each level of the context holds the arity of the vector defined at that
     point. -/
+@[derive decidable_eq]
 inductive context
 | nil : context
 | extend : ℕ → context → context
 
 /-- The set of names within the continuous-π calculus. -/
+@[derive decidable_eq]
 inductive name : context → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
 | extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
@@ -31,10 +33,10 @@ namespace name
 
   /-- Extending with the identity does nothing. -/
   lemma ext_identity :
-    ∀ {Γ : context} {n : ℕ} (α : name (context.extend n Γ))
-    , ext id α = α
+    ∀ {Γ : context} {n : ℕ} (a : name (context.extend n Γ))
+    , ext id a = a
   | Γ n (zero lt) := rfl
-  | Γ n (extend α) := rfl
+  | Γ n (extend a) := rfl
 
   /-- Extending with the identity yields the identity function. -/
   lemma ext_id : ∀ {Γ : context} {n : ℕ}, @ext Γ Γ id n = id
@@ -42,8 +44,8 @@ namespace name
 
   /-- Composing extensions is equivalent extending a composition. -/
   lemma ext_compose :
-    ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) {n : ℕ} (α : name (context.extend n Γ))
-    , ext σ (ext ρ α) = ext (σ ∘ ρ) α
+    ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) {n : ℕ} (a : name (context.extend n Γ))
+    , ext σ (ext ρ a) = ext (σ ∘ ρ) a
   | Γ Δ η ρ σ n (zero lt) := rfl
   | Γ Δ η ρ σ n (extend α) := rfl
 
@@ -96,6 +98,62 @@ namespace name
       | zero idx := by simp [swap, ext]
       | extend n := by simp [swap, ext]
       end
+
+  section ordering
+    inductive le : ∀ {Γ}, name Γ → name Γ → Prop
+    | zero {Γ} {n} {i j : fin n} :    i ≤ j → le (@zero Γ n i) (zero j)
+    | one  {Γ} {n} {i : fin n} (a : name Γ) : le (@zero Γ n i) (extend a)
+    | succ {Γ} {n} {a b : name Γ} :  le a b → le (@extend Γ n a) (extend b)
+
+    protected theorem refl : ∀ {Γ} (α : name Γ), name.le α α
+    | ._ (zero x) := le.zero (nat.le_refl x.val)
+    | ._ (extend x) := le.succ (refl x)
+
+    protected theorem trans : ∀ {Γ} (a b c : name Γ), name.le a b → name.le b c → name.le a c
+    | ._ ._ ._ ._ (le.zero ab) (le.zero bc) := le.zero (le_trans ab bc)
+    | ._ ._ ._ ._ (le.zero ab) (le.one c) := le.one c
+    | ._ ._ ._ ._ (le.succ ab) (le.succ bc) := le.succ (trans _ _ _ ab bc)
+    | ._ ._ ._ ._ (le.one β') (le.succ _) := le.one _
+
+    protected theorem antisymm : ∀ {Γ} (a b : name Γ), le a b → le b a → a = b
+    | ._ (zero a) (zero b) (le.zero ab) (le.zero ba) := by rw le_antisymm ab ba
+    | ._ (extend a) (extend b) (le.succ ab) (le.succ ba) := by rw antisymm a b ab ba
+
+    protected theorem total : ∀ {Γ} (a b : name Γ), le a b ∨ le b a
+    | ._ (name.zero i) (name.zero j) :=
+      if h : i ≤ j
+      then or.inl (le.zero h)
+      else or.inr (le.zero (le_of_not_le h))
+    | ._ (name.extend a) (name.extend b) :=
+      match total a b with
+      | or.inl x := or.inl (le.succ x)
+      | or.inr x := or.inr (le.succ x)
+      end
+    | ._ (name.zero _) (name.extend _) := or.inl (le.one _)
+    | ._ (name.extend _) (name.zero _) := or.inr (le.one _)
+
+    protected def decide : ∀ {Γ} (a b : name Γ), decidable (le a b)
+    | ._ (name.zero i) (name.zero j) :=
+      if h : i ≤ j
+      then is_true (le.zero h)
+      else is_false (λ x, begin cases x, contradiction end)
+    | ._ (name.zero i) (name.extend a) := is_true (le.one _)
+    | ._ (name.extend a) (name.zero i) := is_false (λ x, begin cases x end)
+    | ._ (name.extend a) (name.extend b) :=
+      match decide a b with
+      | is_true h := is_true (le.succ h)
+      | is_false h := is_false (λ x, begin cases x, contradiction end)
+      end
+
+    instance {Γ} : decidable_linear_order (name Γ) :=
+      { le := name.le,
+        le_refl := name.refl,
+        le_trans := name.trans,
+        le_antisymm := name.antisymm,
+        le_total := name.total,
+        decidable_le := name.decide,
+        decidable_eq := by apply_instance }
+  end ordering
 end name
 
 end cpi
