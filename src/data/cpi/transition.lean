@@ -113,7 +113,7 @@ inductive transition : Π {Γ} {k}, species Γ → label Γ k → production Γ 
     {A B : species (context.extend M.arity Γ)}
 
     (k : option.is_some (M.f a b))
-  : transition A τ⟨ name.nil a, name.nil b ⟩ B
+  : transition A τ⟨ name.zero a, name.zero b ⟩ B
   → transition (ν(M) A) τ@'(option.get k) (ν(M) B)
 
 | parₗ
