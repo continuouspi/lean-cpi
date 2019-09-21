@@ -1,5 +1,6 @@
 import data.non_neg
 import data.cpi.name
+import order.lexicographic
 
 run_cmd sanity_check
 set_option profiler true
@@ -31,7 +32,6 @@ notation a `#<` b `>` := prefix_expr.communicate a b 0
 notation a `#` := prefix_expr.communicate a [] 0
 
 notation `τ@`:max k:max := prefix_expr.spontanious k
-
 
 namespace prefix_expr
   /-- Apply a renaming function to a prefix. -/
@@ -91,6 +91,123 @@ namespace prefix_expr
     , rename σ (rename ρ π) = rename (σ ∘ ρ) π
   | Γ Δ η f ρ σ (a#(b; y)) := by simp [rename]
   | Γ Δ η f ρ σ (τ@_) := rfl
+
+  section ordering
+    /-- A wrapper for prefixed expressions, which hides the extension function.
+
+        This is suitable for comparing prefixes. -/
+    inductive wrap : context → Type
+    | intro {Γ} {f} (π : prefix_expr Γ f) : wrap Γ
+
+    protected def le {Γ} : wrap Γ → wrap Γ → Prop
+    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
+      let order := (@lex_has_le (name Γ) (lex (list (name Γ)) ℕ) _ lex_preorder) in
+      @has_le.le _ order (a, b, y) (a', b', y')
+    | ⟨ _#(_; _) ⟩ ⟨ τ@_ ⟩ := true
+    | ⟨ τ@_ ⟩ ⟨ _#(_; _) ⟩ := false
+    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := k ≤ k'
+
+    protected theorem le_refl {Γ} : ∀ (a : wrap Γ), prefix_expr.le a a
+    | ⟨ a#(b; y) ⟩ := by simp only [prefix_expr.le]
+    | ⟨ τ@k ⟩ := by unfold prefix_expr.le
+
+    protected theorem le_trans {Γ} :
+      ∀ (a b c : wrap Γ)
+      , prefix_expr.le a b → prefix_expr.le b c → prefix_expr.le a c
+    | ⟨ a1#(b1; y1) ⟩ ⟨ a2#(b2; y2) ⟩ ⟨ a3#(b3; y3) ⟩ h12 h23 := begin
+        simp only [prefix_expr.le] at h12 h23 ⊢,
+        from preorder.le_trans _ _ _ h12 h23
+      end
+    | ⟨ τ@k1 ⟩ ⟨ τ@k2 ⟩ ⟨ τ@k3 ⟩ h12 h23 := begin
+        unfold prefix_expr.le at h12 h23 ⊢,
+        from preorder.le_trans _ _ _ h12 h23,
+      end
+    | ⟨ a#(b; y) ⟩ ⟨ _#(_ ; _) ⟩ ⟨ τ@k ⟩ h12 h23 := by unfold prefix_expr.le
+    | ⟨ a#(b; y) ⟩ ⟨ τ@_ ⟩ ⟨ τ@k ⟩ h12 h23 := by unfold prefix_expr.le
+    | ⟨ τ@k ⟩ ⟨ a#(b;y) ⟩ _ h12 h23 := by { unfold prefix_expr.le at h12, contradiction }
+
+    protected theorem le_total {Γ} : ∀ (a b : wrap Γ), prefix_expr.le a b ∨ (prefix_expr.le b a)
+    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { simp only [prefix_expr.le], from linear_order.le_total _ _ }
+    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := by { unfold prefix_expr.le, simp only [true_or] }
+    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := by { unfold prefix_expr.le, simp only [or_true] }
+    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := by { unfold prefix_expr.le, from linear_order.le_total k k' }
+
+    protected theorem le_antisymm {Γ} : ∀ (a b : wrap Γ), prefix_expr.le a b → prefix_expr.le b a → a = b
+    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ ab ba := begin
+        simp only [prefix_expr.le] at ab ba,
+        have eq : (⟨ a, b, y ⟩ : lex _ (lex _ _)) = ⟨ a', b', y' ⟩,
+        from @linear_order.le_antisymm (lex _ _)
+          (@lex_linear_order (name Γ) (lex (list (name Γ)) ℕ) _ _)
+          (a, b, y) (a', b', y') ab ba,
+        simp at eq, simp [eq],
+        have h : y = y' := by simp only [eq],
+        subst h
+      end
+    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ ab _ := by { unfold prefix_expr.le at ab, contradiction }
+    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ _ ba := by { unfold prefix_expr.le at ba, contradiction }
+    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ ab ba := begin
+        unfold prefix_expr.le at ab ba,
+        have eq : k = k', from linear_order.le_antisymm _ _ ab ba, subst eq
+      end
+
+    protected noncomputable def decidable_le {Γ} : ∀ (a b : wrap Γ), decidable (prefix_expr.le a b)
+    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { unfold prefix_expr.le, apply_instance }
+    | ⟨ _#(_; _) ⟩ ⟨ τ@_ ⟩ := is_true true.intro
+    | ⟨ τ@_ ⟩ ⟨ _#(_; _) ⟩ := is_false not_false
+    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := by { unfold prefix_expr.le, apply_instance }
+
+    /-- Somewhat bizzare helper function to show the impossible cannot happen.
+
+        It's hopefully possible to remove this I just haven't worked out how. -/
+    private def no_extend : ∀ {y Γ}, ¬ (context.extend y Γ = Γ)
+    | y (context.nil) eq := by contradiction
+    | y (context.extend n Γ) eq := begin
+        simp only [] at eq,
+        have : y = n := and.left eq, subst this,
+        have : context.extend y Γ = Γ := and.right eq,
+        from no_extend this
+      end
+
+    protected noncomputable def decidable_eq {Γ} : ∀ (a b : wrap Γ), decidable (a = b)
+    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
+        if hy : y = y'
+        then if ha : a = a'
+             then if hb : b = b'
+                  then is_true (by rw [hy, ha, hb])
+                  else is_false (begin rw [hy], simp [hb] end)
+            else is_false (begin rw [hy], simp [ha] end)
+        else is_false (λ x, begin
+          simp only [] at x,
+          -- We only have (context.extend y = context.extend y') - thus we need
+          -- to saturate the call with congr_fun, and then derive y = y'.
+          have : y = y' := and.left (context.extend.inj (congr_fun (and.left x) Γ)),
+          contradiction
+        end)
+    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := is_false (λ x, begin
+        simp only [] at x,
+        have h := congr_fun (and.left x) Γ, simp at h,
+        from no_extend h
+      end)
+    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := is_false (λ x, begin
+        simp only [] at x,
+        have h := congr_fun (and.left x) Γ,
+        from no_extend (symm h)
+      end)
+    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ :=
+      if h : k = k'
+      then is_true (by rw [h])
+      else is_false (λ x, begin simp at x, contradiction end)
+
+    noncomputable instance {Γ} : decidable_linear_order (wrap Γ) :=
+      { le := prefix_expr.le,
+        le_refl := prefix_expr.le_refl,
+        le_trans := prefix_expr.le_trans,
+        le_total := prefix_expr.le_total,
+        le_antisymm := prefix_expr.le_antisymm,
+        decidable_eq := prefix_expr.decidable_eq,
+        decidable_le := prefix_expr.decidable_le,
+      }
+  end ordering
 end prefix_expr
 
 end cpi

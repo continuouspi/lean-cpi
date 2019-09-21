@@ -138,10 +138,10 @@ inductive transition : Π {Γ} {k}, species Γ → label Γ k → production Γ 
 
 notation A `[`:max l `]⟶ ` E:max := transition A l E
 
-/-- Map a transition from one species to another equivalent one. -/
-def convert :
-  ∀ {Γ} {A : species Γ} (B : species Γ) {k} {l : label Γ k} {E : production Γ k}
-  , A [l]⟶ E → Σ' (E' : production Γ k) (eq : E ≈ E'), B [l]⟶ E'
-  := sorry
+-- /-- Map a transition from one species to another equivalent one. -/
+-- def convert :
+--   ∀ {Γ} {A : species Γ} (B : species Γ) {k} {l : label Γ k} {E : production Γ k}
+--   , A [l]⟶ E → Σ' (E' : production Γ k) (eq : E ≈ E'), B [l]⟶ E'
+--   := sorry
 
 end cpi
