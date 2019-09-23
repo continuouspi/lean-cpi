@@ -21,6 +21,12 @@ inductive name : context → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
 | extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
 
+/-- A level a variable can occur at. -/
+@[derive decidable_eq]
+inductive level : context → Type
+| zero   {Γ} {n} : level (context.extend n Γ)
+| extend {Γ} {n} : level Γ → level (context.extend n Γ)
+
 namespace name
   section rename
     /-- Scope extension for names. Given a renaming function, return the same
@@ -100,6 +106,32 @@ namespace name
         | extend n := by simp [swap, ext]
         end
   end rename
+
+  section free
+    /-- Determine if this variable has a given level. This can be thought of
+        as a preliminary to determining if a given level is free within this
+        variable. -/
+    def at_level : ∀ {Γ}, level Γ → name Γ → Prop
+    | ._ level.zero (zero _) := true
+    | ._ (level.extend l) (extend a) := at_level l a
+
+    | ._ level.zero (extend _) := false
+    | ._ (level.extend _) (zero _) := false
+
+    instance {Γ} : has_mem (level Γ) (name Γ) := ⟨ at_level ⟩
+
+    private def at_level_decide : ∀ {Γ} (l : level Γ) (a : name Γ), decidable (at_level l a)
+    | ._ level.zero (zero _) := decidable.true
+    | ._ (level.extend l) (extend a) := begin
+        unfold at_level,
+        from at_level_decide l a
+      end
+    | ._ level.zero (extend _) := decidable.false
+    | ._ (level.extend _) (zero _) := decidable.false
+
+    instance at_level.decidable {Γ} {l} {a : name Γ} : decidable (at_level l a)
+      := at_level_decide l a
+  end free
 
   section ordering
     inductive le : ∀ {Γ}, name Γ → name Γ → Prop

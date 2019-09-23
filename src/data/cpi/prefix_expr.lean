@@ -49,6 +49,13 @@ namespace prefix_expr
     | Γ Δ ._ ._ (a#(b; y)) ρ α := name.ext ρ α
     | Γ Δ ._ ._ τ@k ρ α := ρ α
 
+    /-- Lift a level according to this prefix's context extension function. -/
+    def lift_level :
+      ∀ {Γ η : context} {f} (π : prefix_expr η f)
+      , level Γ → level (f Γ)
+    | Γ ._ ._ (a#(b; y)) l := level.extend l
+    | Γ ._ ._ τ@_ l := l
+
     /-- Extending with the identity does nothing. -/
     lemma ext_identity :
       ∀ {Γ η : context} {f} (π : prefix_expr η f) (α : name (f Γ))
@@ -93,6 +100,23 @@ namespace prefix_expr
     | Γ Δ η f ρ σ (a#(b; y)) := by simp [rename]
     | Γ Δ η f ρ σ (τ@_) := rfl
   end rename
+
+  section free
+    /-- Determine if any variable with a given level occurs within this prefix.
+    -/
+    def free_in : ∀ {Γ} {f}, level Γ → prefix_expr Γ f → Prop
+    | ._ ._ n (a#(b; y)) := n ∈ a ∨ ∃ x ∈ b, n ∈ x
+    | ._ ._ n τ@_ := false
+
+    instance {Γ} {f} : has_mem (level Γ) (prefix_expr Γ f) := ⟨ free_in ⟩
+
+    private def free_in_decide : ∀ {Γ} {f} (l : level Γ) (π : prefix_expr Γ f), decidable (free_in l π)
+    | ._ ._ n (a#(b; y)) := if h : n ∈ a ∨ ∃ x ∈ b, n ∈ x then is_true h else is_false h
+    | ._ ._ n τ@_ := decidable.false
+
+    instance free_in.decidable {Γ} {f} {l} {π : prefix_expr Γ f} : decidable (free_in l π)
+      := free_in_decide l π
+  end free
 
   section ordering
     /-- A wrapper for prefixed expressions, which hides the extension function.
