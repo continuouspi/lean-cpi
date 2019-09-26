@@ -16,181 +16,277 @@ structure affinity := affinity ::
   (arity : ℕ)
   (f : fin arity → fin arity → option ℝ≥0)
 
-/-- The set of species, defining invocation, guarded choice, parallel composition
-    and restriction.
+namespace species
+
+inductive kind
+| species
+| choices
+
+/-- A type which acts as both a species and a choice.
 -/
-mutual inductive species, species.choices
-with species : context → Type
-| nil {Γ} : species Γ
-| choice {Γ} : species.choices Γ → species Γ
-| parallel {Γ} : species Γ → species Γ → species Γ
-| restriction {Γ} (M : affinity) : species (context.extend M.arity Γ) → species Γ
-with species.choices : context → Type
-| nil {Γ} : species.choices Γ
-| cons {Γ} {f} (π : prefix_expr Γ f) : species (f Γ) → species.choices Γ → species.choices Γ
+inductive whole : kind → context → Type
+/- Species -/
+| nil {Γ} : whole kind.species Γ
+| choice {Γ} : whole kind.choices Γ → whole kind.species Γ
+| parallel {Γ} : whole kind.species Γ → whole kind.species Γ → whole kind.species Γ
+| restriction {Γ} (M : affinity) :
+    whole kind.species (context.extend M.arity Γ) → whole kind.species Γ
+/- Elements in the sum -/
+| empty {Γ} : whole kind.choices Γ
+| cons {Γ} {f} (π : prefix_expr Γ f) :
+    whole kind.species (f Γ) → whole kind.choices Γ → whole kind.choices Γ
+
+/-- The set of species, defining invocation, guarded choice, parallel
+    composition and restriction. -/
+@[reducible]
+def species := whole kind.species
+
+@[reducible]
+def choices := whole kind.choices
+
+export whole (nil choice parallel restriction)
+open whole
 
 reserve infixr ` |ₛ ` :50
-infixr ` |ₛ ` := species.parallel
+infixr ` |ₛ ` := parallel
 
-notation `ν(` M `) ` A := species.restriction M A
+notation `ν(` M `) ` A := restriction M A
 
 reserve prefix `Σ#`: 40
-prefix `Σ# ` := species.choice
+prefix `Σ# ` := choice
 
-
-namespace species
-  section rename
-    /-- Apply a renaming function to a species. -/
-    mutual def rename, rename.choice
-    with rename : Π {Γ Δ : context}, (name Γ → name Δ) → species Γ → species Δ
-    | Γ Δ ρ nil := nil
-    | Γ Δ ρ (A |ₛ B) := rename ρ A |ₛ rename ρ B
-    | Γ Δ ρ ν(M)A := ν(M)(rename (name.ext ρ) A)
-    | Γ Δ ρ (Σ# As) := Σ# rename.choice ρ As
-    with rename.choice : Π {Γ Δ : context}, (name Γ → name Δ) → species.choices Γ → species.choices Δ
-    | Γ Δ ρ choices.nil := choices.nil
-    | Γ Δ ρ (choices.cons π A As) :=
-      let π' := prefix_expr.rename ρ π in
-      let A' := rename (prefix_expr.ext π ρ) A in
-      choices.cons π' A' (rename.choice ρ As)
-    using_well_founded {
-      rel_tac := λ _ _,
-        `[exact ⟨_, measure_wf (λ s,
-          -- Only decrease on the species, not the context.
-          psum.cases_on s (λ x, sizeof x.snd.snd.snd) (λ x, sizeof x.snd.snd.snd))⟩ ],
-      dec_tac := tactic.fst_dec_tac,
+section free
+  def free_in {Γ} {k} (l : level Γ) (A : whole k Γ) : Prop := begin
+    induction A,
+    case nil { from false },
+    case choice : Γ As ih { from ih l },
+    case parallel : Γ A B ih_a ih_b { from ih_a l ∨ ih_b l },
+    case restriction : Γ M A ih { from ih (level.extend l) },
+    case whole.empty : Γ { from false },
+    case whole.cons : Γ f π A As ih_a ih_as {
+      from l ∈ π ∨ ih_a (prefix_expr.raise π l) ∨ ih_as l
     }
+  end
 
-    /-- Renaming with the identity function does nothing. -/
-    lemma rename_id : ∀ {Γ} (A : species Γ), rename id A = A
-    | Γ nil := by unfold rename
-    | Γ (A |ₛ B) :=
-      let a : rename id A = A := rename_id A in
-      let b : rename id B = B := rename_id B in
-      by simp [rename, a, b]
-    | Γ ν(M)A :=
-      let a : rename id A = A := rename_id A in
-      by simp [rename, name.ext_id, a]
-    | Γ (Σ# choices.nil) := by unfold rename rename.choice
-    | Γ (Σ# choices.cons π A As) :=
-      let π' : prefix_expr.rename id π = π := prefix_expr.rename_id π in
-      let a : rename id A = A := rename_id A in
-      let as : rename.choice id As = As := begin
-        -- So it'd probably be more elegant to make the theorems mutually
-        -- recursive too, but this'll do for now.
-        have h := rename_id (Σ# As),
-        simp only [rename] at h,
-        from h
-      end in
-      begin
-        unfold rename rename.choice at as ⊢,
-        rw prefix_expr.ext_id,
-        simp [π', a, as]
-      end
-    using_well_founded {
-      rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, sizeof x.snd)⟩ ],
-      dec_tac := tactic.fst_dec_tac,
+  instance {Γ} {k} : has_mem (level Γ) (whole k Γ) := ⟨ free_in ⟩
+
+  private def free_in_decide {Γ} {k} (l : level Γ) (A : whole k Γ) : decidable (free_in l A) := begin
+    induction A,
+
+    case nil { from decidable.false },
+    case choice : Γ As ih { from ih l } ,
+    case parallel : Γ A B ih_a ih_b { from @or.decidable _ _ (ih_a l) (ih_b l) },
+    case restriction : Γ M A ih { from ih (level.extend l) },
+    case whole.empty { from decidable.false },
+    case whole.cons : Γ f π A As ih_a ih_as {
+      from @or.decidable (l ∈ π) _ _
+        (@or.decidable _ _ (ih_a (prefix_expr.raise π l)) (ih_as l))
     }
+  end
 
-    /-- Renaming twice is the same as renaming with a composed function. -/
-    lemma rename_compose :
-      ∀ {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species Γ)
-      , rename σ (rename ρ A) = rename (σ ∘ ρ) A
-    | Γ Δ η ρ σ  nil := by unfold rename
-    | Γ Δ η ρ σ (A |ₛ B) :=
-      let a := rename_compose ρ σ A in
-      let b := rename_compose ρ σ B in
-      by simp [rename, a, b]
-    | Γ Δ η ρ σ ν(M)A :=
-      let a := rename_compose (name.ext ρ) (name.ext σ) A in
-      begin
-        simp [rename, a],
-        rw ← name.ext_comp ρ σ
-      end
-    | Γ Δ η ρ σ (Σ# choices.nil) := by unfold rename rename.choice
-    | Γ Δ η ρ σ (Σ# choices.cons π A As) :=
-      let π' := prefix_expr.rename_compose ρ σ π in
-      let a := rename_compose (prefix_expr.ext π ρ) (prefix_expr.ext π σ) A in
-      let as : rename.choice σ (rename.choice ρ As) = rename.choice (σ ∘ ρ) As := begin
-        have h := rename_compose ρ σ (Σ# As),
-        simp only [rename] at h,
-        from h
-      end in
-      begin
-        unfold rename rename.choice, simp [],
-        rw ← prefix_expr.ext_comp ρ σ,
-        rw ← prefix_expr.rename_ext ρ σ π,
-        simp [π', a, as]
-      end
-    using_well_founded {
-      rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ s, sizeof s.snd.snd.snd.snd.snd)⟩ ],
-      dec_tac := tactic.fst_dec_tac,
-    }
+  instance free_in.decidable {Γ} {k} {l} {A: whole k Γ} : decidable (free_in l A)
+    := free_in_decide l A
+end free
 
-    lemma rename_ext
-      {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
-      : rename name.extend (rename ρ A)
-      = rename (name.ext ρ) (rename (@name.extend _ n) A)
-      := by rw [rename_compose, ← name.ext_extend, rename_compose]
-  end rename
+section rename
+  /-- Apply a renaming function to a species, with a witness of presence. -/
+  def rename_with : ∀ {Γ Δ} {k} (A : whole k Γ)
+    (ρ : Π (a : name Γ), name.to_level a ∈ A → name Δ), whole k Δ
+  | Γ Δ ._ nil ρ := nil
+  | Γ Δ ._ (A |ₛ B) ρ :=
+    rename_with A (λ a free, ρ a (or.inl free)) |ₛ
+    rename_with B (λ a free, ρ a (or.inr free))
+  | Γ Δ ._ (ν(M)A) ρ :=
+      let ρ' := λ a free, ρ a (free) in
+      ν(M) rename_with A (name.ext_with (λ l, l ∈ A) ρ')
+  | Γ Δ ._ (Σ# As) ρ:=
+    let ρ' := (λ a free, ρ a (free)) in
+    Σ# rename_with As ρ'
+  | Γ Δ ._ empty ρ := empty
+  | Γ Δ ._ (cons π A As) ρ :=
+    cons
+      (prefix_expr.rename_with π (λ a free, ρ a (or.inl free)))
+      (rename_with A
+        (prefix_expr.ext_with π (λ l, l ∈ A) (λ a free, ρ a (or.inr (or.inl free)))))
+      (rename_with As (λ a free, ρ a (or.inr (or.inr free))))
+  using_well_founded {
+    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ s, sizeof s.snd.snd.snd.fst)⟩],
+    dec_tac := tactic.fst_dec_tac,
+  }
 
-  section free
-    mutual def free_in, free_in.choices
-    with free_in : ∀ {Γ}, level Γ → species Γ → Prop
-    | Γ n nil := false
-    | Γ n (A |ₛ B) := free_in n A ∨ free_in n B
-    | Γ n (Σ# xs) := free_in.choices n xs
-    | Γ n (ν(M) A) := free_in (level.extend n) A
-    with free_in.choices : ∀ {Γ}, level Γ → species.choices Γ → Prop
-    | Γ n choices.nil := false
-    | Γ n (choices.cons π A As) := n ∈ π ∨ free_in (prefix_expr.lift_level π n) A ∨ free_in.choices n As
-    using_well_founded {
-      rel_tac := λ _ _,
-        `[exact ⟨_, measure_wf (λ s, psum.cases_on s (λ x, sizeof x.snd.snd) (λ x, sizeof x.snd.snd))⟩ ],
-      dec_tac := tactic.fst_dec_tac,
-    }
+  /-- A simpler version of rename_with, which does not require a witness. -/
+  @[reducible]
+  def rename {Γ Δ : context} {k} (ρ : name Γ → name Δ) (A : whole k Γ) : whole k Δ
+    := rename_with A (λ a _, ρ a)
 
-    instance {Γ} : has_mem (level Γ) (species Γ) := ⟨ free_in ⟩
+  /-- Renaming with the identity function does nothing. -/
+  lemma rename_with_id : ∀ {Γ} {k} (A : whole k Γ), rename_with A (λ x _, x) = A
+  | Γ ._ nil := by unfold rename_with
+  | Γ ._ (A |ₛ B) :=
+    let a : rename_with A _ = A := rename_with_id A in
+    let b : rename_with B _ = B := rename_with_id B in
+    by { unfold rename_with, rw [a, b] }
+  | Γ ._ ν(M)A :=
+    let a : rename_with A _ = A := rename_with_id A in
+    begin
+        simp only [rename_with],
+        have h := name.ext_with_id (λ l, l ∈ A),
+        have g
+          : (λ (x : name Γ) (free : (λ (l : level (context.extend (M.arity) Γ)), l ∈ A) (level.extend (name.to_level x))), x)
+          = (λ (a : name Γ) (free : name.to_level a ∈ ν(M) A), a) := rfl,
+        rw g at h, rw h,
+        simp [a]
+    end
+  | Γ ._ (Σ# As) := by { simp only [rename_with], from rename_with_id As }
+  | Γ ._ empty := by unfold rename_with
+  | Γ ._ (cons π A As) :=
+    let π' : prefix_expr.rename_with π _ = π := prefix_expr.rename_with_id π in
+    let a : rename_with A _ = A := rename_with_id A in
+    let as : rename_with As _ = As := rename_with_id As in
+    begin
+      simp [rename_with],
+      rw prefix_expr.ext_with_id,
+      simp [π', a, as]
+    end
 
-    private mutual def free_in_decide, free_in_decide.choices
-    with free_in_decide : ∀ {Γ} (n) (A : species Γ), decidable (free_in n A)
-    | Γ n nil := by { unfold free_in, from decidable.false }
-    | Γ n (A |ₛ B) :=
-      match free_in_decide n A with
-      | is_true h := by { unfold free_in, from is_true (or.inl h) }
-      | is_false h :=
-        match free_in_decide n B with
-        | is_true h' := by { unfold free_in, from is_true (or.inr h') }
-        | is_false h' := by { unfold free_in, from is_false (not_or h h') }
-        end
-      end
-    | Γ n (Σ# As) := by { unfold free_in, from free_in_decide.choices n As }
-    | Γ n (ν(M) A) := by { unfold free_in, from free_in_decide (level.extend n) A }
-    with free_in_decide.choices : ∀ {Γ} (n) (As : species.choices Γ), decidable (free_in.choices n As)
-    | Γ n choices.nil := by { unfold free_in.choices, from decidable.false }
-    | Γ n (choices.cons π A As) :=
-      if h : n ∈ π then
-        by { unfold free_in.choices, from is_true (or.inl h) }
-      else
-        match free_in_decide (prefix_expr.lift_level π n) A with
-        | is_true h1 := by { unfold free_in.choices, from is_true (or.inr (or.inl h1)) }
-        | is_false h1 :=
-          match free_in_decide.choices n As with
-          | is_true h2 := by { unfold free_in.choices, from is_true (or.inr (or.inr h2)) }
-          | is_false h2 := by { unfold free_in.choices, from is_false (not_or h (not_or h1 h2)) }
-          end
-        end
-    using_well_founded {
-      rel_tac := λ _ _,
-        `[exact ⟨_, measure_wf (λ s, psum.cases_on s (λ x, sizeof x.snd.snd) (λ x, sizeof x.snd.snd))⟩ ],
-      dec_tac := tactic.fst_dec_tac,
-    }
+  /-- Renaming with the identity function does nothing. -/
+  lemma rename_id {Γ} {k} (A : whole k Γ) : rename id A = A := rename_with_id A
 
-    instance free_in.decidable {Γ} {l} {A: species Γ} : decidable (free_in l A)
-      := free_in_decide l A
-  end free
+  set_option pp.binder_types false
+
+  /-- Renaming twice is the same as renaming with a composed function. -/
+  lemma rename_with_compose :
+    ∀ {Γ Δ η} {k}
+      (A : whole k Γ)
+      (ρ : (Π (a : name Γ), name.to_level a ∈ A → name Δ))
+      (σ : name Δ → name η)
+    , rename σ (rename_with A ρ) = rename_with A (λ x f, σ (ρ x f))
+  | Γ Δ η ._ nil ρ σ := by unfold rename rename_with
+  | Γ Δ η ._ (A |ₛ B) ρ σ :=
+    let a := rename_with_compose A (λ a free, ρ a (or.inl free)) σ in
+    let b := rename_with_compose B (λ a free, ρ a (or.inr free)) σ in
+    by { simp [rename, rename_with], from and.intro a b }
+  | Γ Δ η ._ (ν(M) A) ρ σ := begin
+      simp [rename, rename_with, name.ext_with],
+
+      suffices
+        : rename (name.ext σ) (rename_with A (name.ext_with (λ l, l ∈ A) ρ))
+        = rename_with A (name.ext_with (λ l, l ∈ A) (λ a free, σ (ρ a free))),
+        unfold rename name.ext at this,
+        rw ← name.ext_with_discard (λ l, l ∈ rename_with A (name.ext_with (λ l, l ∈ A) ρ)) σ at this,
+        from this,
+
+      have h := rename_with_compose A
+            (name.ext_with (λ l, l ∈ A) (λ a free, ρ a (free)))
+            (name.ext σ),
+
+      from name.ext_with_comp (λ l, l ∈ A) ρ σ ▸ h,
+    end
+  | Γ Δ η ._ (Σ# As) ρ σ := begin
+      simp [rename, rename_with],
+      from rename_with_compose As _ σ
+    end
+  | Γ Δ η ._ empty ρ σ := by unfold rename rename_with
+  | Γ Δ η ._ (cons π A As) ρ σ := begin
+      simp [rename, rename_with, prefix_expr.ext_with],
+
+      have π' := prefix_expr.rename_with_compose π (λ a f, ρ a (or.inl f)) σ,
+      have A' := rename_with_compose A
+        (prefix_expr.ext_with π (λ l, l ∈ A) (λ a f, ρ a (or.inr (or.inl f))))
+        (prefix_expr.ext π σ),
+      have As' := rename_with_compose As (λ a f, ρ a (or.inr (or.inr f))) σ,
+
+      -- Massage A and ⊢ into shape
+      rw prefix_expr.ext_with_comp π (λ l, l ∈ A) at A',
+      unfold rename prefix_expr.ext at A',
+
+      rw prefix_expr.ext_with_discard
+        (prefix_expr.rename_with π (λ a free, ρ a _))
+        (λ l, l ∈ rename_with A (prefix_expr.ext_with π (λ l, l ∈ A) (λ a free, ρ a _)))
+        σ,
+      rw prefix_expr.rename_with_ext_with π,
+
+      from ⟨ π', A', As' ⟩,
+    end
+
+  /-- Renaming twice is the same as renaming with a composed function. -/
+  lemma rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species Γ)
+    : rename σ (rename ρ A) = rename (σ ∘ ρ) A
+    := rename_with_compose A (λ x _, ρ x) σ
+
+  lemma rename_ext {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
+    : rename name.extend (rename ρ A)
+    = rename (name.ext ρ) (rename (@name.extend _ n) A)
+    := by rw [rename_compose, ← name.ext_extend, rename_compose]
+end rename
+
+/- Various equational lemmas for rewrite -/
+section rename_equations
+  variables {Γ Δ : context} {ρ : name Γ → name Δ}
+
+  @[simp]
+  lemma rename.nil : rename ρ nil = nil := by unfold rename rename_with
+
+  @[simp]
+  lemma rename.parallel (A B : species Γ)
+    : rename ρ (A |ₛ B) = (rename ρ A |ₛ rename ρ B)
+    := by { unfold rename rename_with, }
+
+  @[simp]
+  lemma rename.restriction (M : affinity) (A : species (context.extend M.arity Γ))
+    : rename ρ (ν(M)A ) = ν(M) (rename (name.ext ρ) A)
+    := begin
+      unfold rename rename_with name.ext,
+      rw ← name.ext_with_discard (λ l, l ∈ A) ρ,
+      from rfl
+    end
+
+  @[simp]
+  lemma rename.choice (As : choices Γ): rename ρ (Σ# As) = Σ# (rename ρ As) := begin
+    unfold rename rename_with,
+    have : (λ (a : name Γ) (free : name.to_level a ∈ Σ# As), ρ a)
+         = (λ (a : name Γ) (free : name.to_level a ∈ As), ρ a)
+        := (funext $ λ a, funext $ λ free, rfl),
+    rw this,
+  end
+
+  @[simp]
+  lemma rename.empty : rename ρ empty = empty := by unfold rename rename_with
+
+  @[simp]
+  lemma rename.sum {f} (π : prefix_expr Γ f) (A : species (f Γ)) (As : choices Γ)
+    : rename ρ (cons π A As)
+    = cons (prefix_expr.rename ρ π) (rename (prefix_expr.ext π ρ) A) (rename ρ As)
+    := begin
+      unfold rename rename_with prefix_expr.rename prefix_expr.ext,
+      rw prefix_expr.ext_with_discard π (λ l, _) ρ
+    end
+
+end rename_equations
+
 end species
 
+/- Re-export all the definitions. Don't ask - apparently export within
+   namespaces is a little broken. -/
+export species (renaming
+  whole.nil → species.nil
+  whole.parallel → species.parallel
+  whole.restriction → species.restriction
+  whole.choice → species.choice
+  species → species
+)
+
 end cpi
+
+/- Re-export all the definitions. Don't ask - apparently export within
+   namespaces is a little broken. -/
+export cpi.species (renaming
+  whole.nil → cpi.species.nil
+  whole.parallel → cpi.species.parallel
+  whole.restriction → cpi.species.restriction
+  whole.choice → cpi.species.choice
+  species → cpi.species
+)
+
 
 #sanity_check

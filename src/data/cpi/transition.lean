@@ -83,22 +83,22 @@ inductive transition : Π {Γ} {k}, species Γ → label Γ k → production Γ 
     {Γ} {f} {π : prefix_expr Γ f} {A : species (f Γ)} {As : species.choices Γ}
     {k} {l : label Γ k} {E : production Γ k}
 
-  : transition (species.choice As) l E
-  → transition (species.choice (species.choices.cons π A As)) l E
+  : transition (Σ# As) l E
+  → transition (Σ# species.whole.cons π A As) l E
 
 | choice₁
     {Γ}
 
     (a : name Γ) (b : list (name Γ)) (y : ℕ) (A : species (context.extend y Γ))
     (As : species.choices Γ)
-  : transition (species.choice (species.choices.cons (a#(b; y)) A As))
+  : transition (Σ# species.whole.cons (a#(b; y)) A As)
                (label.apply a)
                (#(⟨ b, rfl ⟩; y) A)
 | choice₂
     {Γ}
 
     (k : ℝ≥0) (A : species Γ) (As : species.choices Γ)
-  : transition (species.choice (species.choices.cons (τ@k) A As)) τ@'k A
+  : transition (Σ# species.whole.cons (τ@k) A As) τ@'k A
 
 | com₁
     {Γ} {x y} {A B : species Γ} {a b : name Γ}

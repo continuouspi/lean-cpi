@@ -28,14 +28,14 @@ inductive equiv : ∀ {Γ : context} (A B : species Γ), Prop
 | ξ_choice_cons
       {Γ} {f} (π : prefix_expr Γ f) {A A' : species (f Γ)} {As : choices Γ}
     : equiv A A'
-    → equiv (choice (choices.cons π A As)) (choice (choices.cons π A' As))
+    → equiv (Σ# (whole.cons π A As)) (Σ# (whole.cons π A' As))
 
 -- | An element in the choice array can be swapped.
 | choice_swap
     {Γ} {f g} (π₁ : prefix_expr Γ f) (π₂ : prefix_expr Γ g)
     {A : species (f Γ)} {B : species (g Γ)} {As : choices Γ}
-  : equiv (choice (choices.cons π₁ A (choices.cons π₂ B As)))
-            (choice (choices.cons π₂ B (choices.cons π₁ A As)))
+  : equiv (Σ# (whole.cons π₁ A (whole.cons π₂ B As)))
+          (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
 
 -- Species forms a commutative monoid using parallel.
 | parallel_nil   : ∀ {Γ} {A : species Γ},     equiv (A |ₛ nil) A
@@ -85,41 +85,34 @@ namespace equiv
       case symm : Γ A B eq ih Δ ρ { from symm (ih ρ) },
 
       -- Projection
-      case ξ_parallel₁ : Γ A A' B eq ih Δ ρ {
-        unfold species.rename, from ξ_parallel₁ (ih ρ)
-      },
-      case ξ_parallel₂ : Γ A A' B eq ih Δ ρ {
-        unfold species.rename, from ξ_parallel₂ (ih ρ)
-      },
+      case ξ_parallel₁ : Γ A A' B eq ih Δ ρ { simp, from ξ_parallel₁ (ih ρ) },
+      case ξ_parallel₂ : Γ A A' B eq ih Δ ρ { simp, from ξ_parallel₂ (ih ρ) },
       case ξ_restriction : Γ M A A' eq ih Δ ρ {
-        unfold species.rename,
+        simp,
         from ξ_restriction M (ih (name.ext ρ))
       },
       case ξ_choice_cons : Γ f π A A' As eq ih Δ ρ {
-        unfold species.rename species.rename.choice,
+        simp,
         from ξ_choice_cons (prefix_expr.rename ρ π) (ih (prefix_expr.ext π ρ))
       },
 
       -- Choice
-      case choice_swap : Γ f g π₁ π₂ A B As Δ ρ {
-        simp only [species.rename, species.rename.choice],
-        from choice_swap _ _
-      },
+      case choice_swap : Γ f g π₁ π₂ A B As Δ ρ { simp, from choice_swap _ _ },
 
       -- Parallel
-      case parallel_nil : Γ A Δ ρ { unfold species.rename, from parallel_nil },
-      case parallel_symm : Γ A B Δ ρ { unfold species.rename, from parallel_symm },
-      case parallel_assoc : Γ A B C Δ ρ { unfold species.rename, from parallel_assoc },
+      case parallel_nil : Γ A Δ ρ { simp, from parallel_nil },
+      case parallel_symm : Γ A B Δ ρ { simp, from parallel_symm },
+      case parallel_assoc : Γ A B C Δ ρ { simp, from parallel_assoc },
 
       -- Restriction
       case ν_parallel : Γ M A B Δ ρ {
-        unfold species.rename, rw ← species.rename_ext _, from ν_parallel M
+        simp, rw ← species.rename_ext _, from ν_parallel M
       },
       case ν_drop : Γ M A Δ ρ {
-        unfold species.rename, rw ← species.rename_ext _, from ν_drop M
+        simp, rw ← species.rename_ext _, from ν_drop M
       },
       case ν_swap : Γ M N A Δ ρ {
-        unfold species.rename, rw rename_swap _, from ν_swap M N
+        simp, rw rename_swap _, from ν_swap M N
       }
     end
 

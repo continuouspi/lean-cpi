@@ -32,8 +32,8 @@ private lemma mk_sub_rename
     {Γ Δ} {b} (ρ : name Γ → name Δ) {bs : vector (name Γ) b}
   : ρ ∘ mk_sub bs = mk_sub (vector.map ρ bs) ∘ name.ext ρ := funext $ λ α,
     match α with
-    | name.zero idx := by simp only [mk_sub, name.ext, vector.nth_map, function.comp]
-    | name.extend β := by simp only [mk_sub, name.ext, function.comp]
+    | name.zero idx := by simp only [mk_sub, name.ext, name.ext_with, vector.nth_map, function.comp]
+    | name.extend β := by simp only [mk_sub, name.ext, name.ext_with, function.comp]
     end
 
 private lemma mk_sub_ext {Γ} {b} {bs : vector (name Γ) b} :
@@ -141,20 +141,19 @@ private lemma pseudo_apply_app.rename {a b} :
   , species.rename ρ (pseudo_apply_app as A F)
   = pseudo_apply_app (vector.map ρ as) (species.rename (name.ext ρ) A) (rename ρ F)
 | Γ Δ ρ as A (#(bs; y) B) := begin
-    unfold pseudo_apply_app rename species.rename,
-    repeat { rw species.rename_compose },
-    repeat { rw mk_sub_rename }
+    unfold pseudo_apply_app rename,
+    simp [species.rename_compose, mk_sub_rename]
   end
 | Γ Δ ρ bs A (F |₁ B) := begin
-    unfold pseudo_apply_app species.rename rename,
-    rw pseudo_apply_app.rename ρ bs A F
+    unfold pseudo_apply_app rename,
+    simp [pseudo_apply_app.rename ρ bs A F]
   end
 | Γ Δ ρ bs A (B |₂ F) := begin
-    unfold pseudo_apply_app species.rename rename,
-    rw pseudo_apply_app.rename ρ bs A F
+    unfold pseudo_apply_app rename,
+    simp [pseudo_apply_app.rename ρ bs A F]
   end
 | Γ Δ ρ ⟨ bs, n ⟩ A (ν'(M) G) := begin
-    unfold pseudo_apply_app species.rename rename,
+    unfold pseudo_apply_app rename,
     simp,
     have map
       : vector.map (@name.extend _ M.arity) (vector.map ρ ⟨bs, n⟩)
@@ -187,15 +186,15 @@ protected lemma pseudo_apply.rename {a b} :
     from pseudo_apply_app.rename ρ bs A G
   end
 | Γ Δ ρ (F |₁ A) G := begin
-    unfold pseudo_apply rename species.rename,
-    rw pseudo_apply.rename ρ F G
+    unfold pseudo_apply rename,
+    simp [pseudo_apply.rename ρ F G]
   end
 | Γ Δ ρ (A |₂ F) G := begin
-    unfold pseudo_apply rename species.rename,
-    rw pseudo_apply.rename ρ F G
+    unfold pseudo_apply rename,
+    simp [pseudo_apply.rename ρ F G]
   end
 | Γ Δ ρ (ν'(M) F) G := begin
-    unfold pseudo_apply rename species.rename,
+    unfold pseudo_apply rename, simp,
     -- -- TODO: Clean up to use calc
     rw rename_compose,
     rw ← name.ext_extend,
@@ -464,14 +463,14 @@ begin
   induction G,
 
   case apply : _ b' bs y C {
-    unfold pseudo_apply_app species.rename,
+    unfold pseudo_apply_app, simp,
     calc  ((species.rename (mk_sub bs) (species.rename name.extend A) |ₛ species.rename (mk_sub bs) B)
             |ₛ species.rename (mk_sub as) C)
         ≈ ((species.rename (mk_sub bs ∘ name.extend) A |ₛ species.rename (mk_sub bs) B)
             |ₛ species.rename (mk_sub as) C)
           : by rw species.rename_compose _ _ A
     ... ≈ ((A |ₛ species.rename (mk_sub bs) B) |ₛ species.rename (mk_sub as) C)
-          : by rw [mk_sub_ext, species.rename_id]
+          : by { rw [mk_sub_ext, species.rename_id], }
     ... ≈ (A |ₛ species.rename (mk_sub bs) B |ₛ species.rename (mk_sub as) C)
           : parallel_assoc
   },
@@ -491,7 +490,7 @@ begin
   },
 
   case restriction : _ b' y' M G ih {
-    unfold pseudo_apply_app species.rename,
+    unfold pseudo_apply_app, simp,
     calc  (ν(M) pseudo_apply_app (vector.map name.extend as)
                   (species.rename (name.ext name.extend) (species.rename name.extend A)
                   |ₛ species.rename (name.ext name.extend) B) G)

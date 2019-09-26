@@ -1,6 +1,7 @@
 import data.non_neg
 import data.cpi.name
 import order.lexicographic
+import data.list.witness
 
 run_cmd sanity_check
 set_option profiler true
@@ -34,90 +35,6 @@ notation a `#` := prefix_expr.communicate a [] 0
 notation `τ@`:max k:max := prefix_expr.spontanious k
 
 namespace prefix_expr
-  section rename
-    /-- Apply a renaming function to a prefix. -/
-    def rename : Π {Γ Δ : context} {f}, (name Γ → name Δ) → prefix_expr Γ f → prefix_expr Δ f
-      | Γ Δ f ρ (a#(b; y)) := (ρ a)#(list.map ρ b; y)
-      | Γ Δ f ρ τ@k := τ@k
-
-    /-- Scope extension for prefix expressions. Given a renaming function, return
-        the same function lifted for the variables bound by this prefix. -/
-    def ext :
-      Π {Γ Δ η : context} {f} (π : prefix_expr η f)
-      , (name Γ → name Δ)
-      → name (f Γ) → name (f Δ)
-    | Γ Δ ._ ._ (a#(b; y)) ρ α := name.ext ρ α
-    | Γ Δ ._ ._ τ@k ρ α := ρ α
-
-    /-- Lift a level according to this prefix's context extension function. -/
-    def lift_level :
-      ∀ {Γ η : context} {f} (π : prefix_expr η f)
-      , level Γ → level (f Γ)
-    | Γ ._ ._ (a#(b; y)) l := level.extend l
-    | Γ ._ ._ τ@_ l := l
-
-    /-- Extending with the identity does nothing. -/
-    lemma ext_identity :
-      ∀ {Γ η : context} {f} (π : prefix_expr η f) (α : name (f Γ))
-      , ext π id α = α
-    | Γ η ._ (a#(b; y)) α := name.ext_identity α
-    | Γ η ._ τ@k name := rfl
-
-    /-- Extending with the identity yields the identity function. -/
-    lemma ext_id : ∀ {Γ η : context} {f} (π : prefix_expr η f), @ext Γ Γ η f π id = id
-    | Γ η f π := funext (ext_identity π)
-
-    /-- Composing extensions is equivalent extending a composition. -/
-    lemma ext_compose :
-      ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η)
-        (π : prefix_expr φ f) (α : name (f Γ))
-      , ext π σ (ext π ρ α) = ext π (σ ∘ ρ) α
-    | Γ Δ η φ f ρ σ (a#(b; y)) α := name.ext_compose ρ σ α
-    | Γ Δ η φ f ρ σ τ@k α := rfl
-
-    /-- Composing extensions is equivalent extending a composition. -/
-    lemma ext_comp :
-      ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η) (π : prefix_expr φ f)
-      , (ext π σ ∘ ext π ρ) = ext π (σ ∘ ρ)
-    | Γ Δ η φ f ρ σ π := funext (ext_compose ρ σ π)
-
-    /-- Extending with a renamed prefix has the same effect as the original one. -/
-    lemma rename_ext :
-      ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name η → name φ) (π : prefix_expr Γ f)
-      , @ext η φ Γ f π σ = (ext (rename ρ π) σ)
-    | Γ Δ η φ f ρ σ (a#(b; y)) := funext (λ α, rfl)
-    | Γ Δ η φ f ρ σ τ@k := funext (λ α, rfl)
-
-    /-- Renaming with the identity function does nothing. -/
-    lemma rename_id : ∀ {Γ} {f} (π : prefix_expr Γ f), rename id π = π
-    | Γ ._ (a#(b; y)) := by simp [rename]
-    | Γ ._ τ@k := rfl
-
-    /-- Renaming twice is the same as renaming with a composed function. -/
-    lemma rename_compose :
-      ∀ {Γ Δ η} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η) (π : prefix_expr Γ f)
-      , rename σ (rename ρ π) = rename (σ ∘ ρ) π
-    | Γ Δ η f ρ σ (a#(b; y)) := by simp [rename]
-    | Γ Δ η f ρ σ (τ@_) := rfl
-  end rename
-
-  section free
-    /-- Determine if any variable with a given level occurs within this prefix.
-    -/
-    def free_in : ∀ {Γ} {f}, level Γ → prefix_expr Γ f → Prop
-    | ._ ._ n (a#(b; y)) := n ∈ a ∨ ∃ x ∈ b, n ∈ x
-    | ._ ._ n τ@_ := false
-
-    instance {Γ} {f} : has_mem (level Γ) (prefix_expr Γ f) := ⟨ free_in ⟩
-
-    private def free_in_decide : ∀ {Γ} {f} (l : level Γ) (π : prefix_expr Γ f), decidable (free_in l π)
-    | ._ ._ n (a#(b; y)) := if h : n ∈ a ∨ ∃ x ∈ b, n ∈ x then is_true h else is_false h
-    | ._ ._ n τ@_ := decidable.false
-
-    instance free_in.decidable {Γ} {f} {l} {π : prefix_expr Γ f} : decidable (free_in l π)
-      := free_in_decide l π
-  end free
-
   section ordering
     /-- A wrapper for prefixed expressions, which hides the extension function.
 
@@ -234,6 +151,186 @@ namespace prefix_expr
         decidable_le := prefix_expr.decidable_le,
       }
   end ordering
+
+
+  section free
+    /-- Determine if any variable with a given level occurs within this prefix.
+    -/
+    def free_in : ∀ {Γ} {f}, level Γ → prefix_expr Γ f → Prop
+    | ._ ._ l (a#(b; y)) := l ∈ a ∨ ∃ x ∈ b, l ∈ x
+    | ._ ._ l τ@_ := false
+
+    instance {Γ} {f} : has_mem (level Γ) (prefix_expr Γ f) := ⟨ free_in ⟩
+
+    private def free_in_decide : ∀ {Γ} {f} (l : level Γ) (π : prefix_expr Γ f), decidable (free_in l π)
+    | Γ ._ l (a#(b; y)) := if h : l ∈ a ∨ ∃ x ∈ b, l ∈ x then is_true h else is_false h
+    | ._ ._ l τ@_ := decidable.false
+
+    instance free_in.decidable {Γ} {f} {l} {π : prefix_expr Γ f} : decidable (free_in l π)
+      := free_in_decide l π
+  end free
+
+  section rename
+    /-- Raise a level according to this prefix's context extension function. -/
+    def raise :
+      ∀ {Γ η : context} {f} (π : prefix_expr η f)
+      , level Γ → level (f Γ)
+    | Γ ._ ._ (a#(b; y)) l := level.extend l
+    | Γ ._ ._ τ@_ l := l
+
+    /-- Rename all names within a prefix expression, providing some witness that
+        this variable is free within it. -/
+    def rename_with {Γ Δ} :
+      Π {f} (π : prefix_expr Γ f)
+      , (Π (a : name Γ), name.to_level a ∈ π → name Δ) → prefix_expr Δ f
+    | f (a#(b; y)) ρ :=
+      let a' := ρ a (or.inl (name.to_level_at a)) in
+      let b' := list.map_witness b
+        (λ x mem, ρ x (or.inr ⟨ x, mem, name.to_level_at x ⟩))
+      in
+      a'#( b' ; y)
+    | f τ@k ρ := τ@k
+
+    @[reducible]
+    def rename {Γ Δ : context} {f} (ρ : name Γ → name Δ) (π : prefix_expr Γ f) : prefix_expr Δ f
+      := rename_with π (λ a _, ρ a)
+
+    /-- Renaming with the identity function does nothing. -/
+    lemma rename_with_id {Γ} : ∀ {f} (π : prefix_expr Γ f), rename_with π (λ a _, a) = π
+    | ._ (a#(b; y)) := by simp [rename_with]
+    | ._ τ@k := rfl
+
+    /-- Renaming with the identity function does nothing. -/
+    lemma rename_id {Γ} {f} (π : prefix_expr Γ f) : rename id π = π
+      := rename_with_id π
+
+    /-- Renaming twice is the same as renaming with a composed function. -/
+    lemma rename_with_compose {Γ Δ η} :
+      ∀ {f} (π : prefix_expr Γ f)
+        (ρ : Π (a : name Γ), name.to_level a ∈ π → name Δ)
+        (σ : name Δ → name η)
+      , rename σ (rename_with π ρ) = rename_with π (λ a free, σ (ρ a free))
+    | f (a#(b; y)) ρ σ := by simp [rename_with, rename, list.map_witness_to_map]
+    | f (τ@_) ρ σ := rfl
+
+    /-- Renaming twice is the same as renaming with a composed function. -/
+    lemma rename_compose {Γ Δ η} {f}
+        (π : prefix_expr Γ f) (ρ : name Γ → name Δ) (σ : name Δ → name η)
+      : rename σ (rename ρ π) = rename (σ ∘ ρ) π
+    := rename_with_compose π _ _
+
+    /-- Scope extension for prefix expressions. Given a renaming function, return
+        the same function lifted for the variables bound by this prefix. -/
+    def ext_with {Γ Δ η} :
+      ∀ {f} (π : prefix_expr η f)
+        (P : level (f Γ) → Prop)
+        (ρ : Π (x : name Γ), P (prefix_expr.raise π (name.to_level x)) → name Δ)
+      , Π (x : name (f Γ)), P (name.to_level x) → name (f Δ)
+    | f (_#(_; y)) P ρ a p := name.ext_with P ρ a p
+    | f τ@_ P ρ a p := ρ a p
+
+    /-- Extending with the identity does nothing. -/
+    lemma ext_with_identity :
+      ∀ {Γ η : context} {f} (π : prefix_expr η f)
+        (P : level (f Γ) → Prop)
+        (a : name (f Γ)) (p : P (name.to_level a))
+      , ext_with π P (λ x _, x) a p = a
+    | Γ η ._ (_#(_; _)) P a p := name.ext_with_identity P a p
+    | Γ η ._ τ@k P a p := rfl
+
+    /-- Extending with the identity does nothing. -/
+    lemma ext_with_id {Γ η} {f} (π : prefix_expr η f) (P : level (f Γ) → Prop)
+      : ext_with π P (λ x _, x) = λ x _, x
+      := funext $ λ a, funext (ext_with_identity π P a)
+
+    /-- Scope extension for prefix expressions. Given a renaming function, return
+        the same function lifted for the variables bound by this prefix. -/
+    def ext {Γ Δ η} {f} (π : prefix_expr η f) (ρ : name Γ → name Δ)
+          : name (f Γ) → name (f Δ)
+    | a := ext_with π (λ _, true) (λ x _, ρ x) a true.intro
+
+    /-- Extending with the identity does nothing. -/
+    lemma ext_identity {Γ η} {f} (π : prefix_expr η f) (a : name (f Γ))
+      : ext π id a = a := ext_with_identity π _ a _
+
+    /-- Extending with the identity yields the identity function. -/
+    lemma ext_id : ∀ {Γ η : context} {f} (π : prefix_expr η f), @ext Γ Γ η f π id = id
+    | Γ η f π := funext (ext_identity π)
+
+    /-- Composing extensions is equivalent extending a composition. -/
+    lemma ext_with_compose :
+      ∀ {Γ Δ η φ} {f} (π : prefix_expr φ f)
+        (P : level (f Γ) → Prop)
+        (ρ : Π (x : name Γ), P (raise π (name.to_level x)) → name Δ)
+        (σ : name Δ → name η)
+        (a : name (f Γ)) (p : P (name.to_level a))
+      , ext π σ (ext_with π P ρ a p) = ext_with π P (λ a p, σ (ρ a p)) a p
+    | Γ Δ η φ f (_#(_;_)) P ρ σ a p := name.ext_with_compose P ρ σ a p
+    | Γ Δ η φ f τ@_ P ρ σ _ _ := rfl
+
+    /-- Composing extensions is equivalent extending a composition. -/
+    lemma ext_with_comp {Γ Δ η φ} {f} (π : prefix_expr φ f)
+        (P : level (f Γ) → Prop)
+        (ρ : Π (x : name Γ), P (raise π (name.to_level x)) → name Δ)
+        (σ : name Δ → name η)
+      : (λ a p, ext π σ (ext_with π P ρ a p)) = ext_with π P (λ a p, σ (ρ a p))
+      := funext $ λ a, funext (ext_with_compose π P ρ σ a)
+
+    /-- Composing extensions is equivalent extending a composition. -/
+    lemma ext_compose :
+      ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η)
+        (π : prefix_expr φ f) (α : name (f Γ))
+      , ext π σ (ext π ρ α) = ext π (σ ∘ ρ) α
+    | Γ Δ η φ f ρ σ (a#(b; y)) α := name.ext_compose ρ σ α
+    | Γ Δ η φ f ρ σ τ@k α := rfl
+
+    /-- Composing extensions is equivalent extending a composition. -/
+    lemma ext_comp :
+      ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η) (π : prefix_expr φ f)
+      , (ext π σ ∘ ext π ρ) = ext π (σ ∘ ρ)
+    | Γ Δ η φ f ρ σ π := funext (ext_compose ρ σ π)
+
+    /-- Rewrite one ext_with to another -/
+    lemma ext_with_discard :
+      ∀ {Γ Δ η} {f} (π : prefix_expr η f)
+        (P : level (f Γ) → Prop)
+        (ρ : name Γ → name Δ)
+      , (ext_with π P (λ a _, ρ a))
+      = (λ a _, ext_with π (λ _x, true) (λ x _, ρ x) a true.intro)
+    | Γ Δ η f (a'#(b; y)) P ρ := funext $ λ a, funext $ λ free, begin
+        have h : (λ (a : name Γ) (_ : P (raise (a'#(b ; y)) (name.to_level a))), ρ a)
+               = (λ (a : name Γ) (_ : P (level.extend (name.to_level a))), ρ a)
+          := rfl,
+        unfold ext_with,
+        rw [h, name.ext_with_discard P],
+      end
+    | Γ Δ η f τ@_ P ρ := funext $ λ a, funext $ λ free, rfl
+
+    /-- Raising with a renamed prefix has the same effect as the original one. -/
+    lemma rename_with_raise
+        {Γ Δ η} {f} (π : prefix_expr Γ f)
+        (ρ : Π (x : name Γ), name.to_level x ∈ π → name Δ)
+        (l : level η)
+      : raise π l = raise (rename_with π ρ) l
+    := by { cases π; from rfl }
+
+    /-- Extending with a renamed prefix has the same effect as the original one. -/
+    lemma rename_with_ext_with
+        {Γ Δ η φ} {f} (π : prefix_expr η f)
+        (P : level (f Γ) → Prop)
+        (ρ : name Γ → name Δ)
+        (σ : Π (x : name η), name.to_level x ∈ π → name φ)
+      : ext_with (rename_with π σ) P (λ a _, ρ a) = ext_with π P (λ a _, ρ a)
+      := funext $ λ a, funext $ λ free, by { cases π; from rfl }
+
+    /-- Extending with a renamed prefix has the same effect as the original one. -/
+    lemma rename_ext
+        {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name η → name φ)
+        (π : prefix_expr Γ f)
+      : @ext η φ Γ f π σ = (ext (rename ρ π) σ)
+      := funext $ λ a, by { cases π; from rfl }
+  end rename
+
 end prefix_expr
 
 end cpi
