@@ -1,4 +1,5 @@
 import data.cpi.prefix_expr
+import data.cpi.affinity
 import tactic.custom_wf
 
 run_cmd sanity_check
@@ -6,15 +7,6 @@ set_option profiler true
 set_option profiler.threshold 0.5
 
 namespace cpi
-
-/-- An affinity network.
-
-    This is composed of $arity$ names, and a partial function $f$ which defines
-    the affinities between elements of this matrix.
--/
-structure affinity := affinity ::
-  (arity : ℕ)
-  (f : fin arity → fin arity → option ℝ≥0)
 
 namespace species
 
