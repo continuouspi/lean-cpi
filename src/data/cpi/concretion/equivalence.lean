@@ -7,7 +7,9 @@ set_option profiler.threshold 0.5
 namespace cpi
 namespace concretion
 
-inductive equiv : ∀ {Γ} {b y}, concretion Γ b y → concretion Γ b y → Prop
+variable {ω : environment}
+
+inductive equiv : ∀ {Γ : context ω} {b y}, concretion Γ b y → concretion Γ b y → Prop
 | refl  {Γ} {b y} {F : concretion Γ b y} : equiv F F
 | trans {Γ} {b y} {F G H : concretion Γ b y} : equiv F G → equiv G H → equiv F H
 | symm  {Γ} {b y} {F G : concretion Γ b y} : equiv F G → equiv G F
@@ -66,12 +68,12 @@ inductive equiv : ∀ {Γ} {b y}, concretion Γ b y → concretion Γ b y → Pr
     {A : species Γ} {B : species (context.extend y Γ)}
   : equiv (#(bs; y) (species.rename name.extend A |ₛ B)) (A |₂ #(bs; y) B)
 
-instance {Γ} {b y} : is_equiv (concretion Γ b y) equiv :=
-  { refl := @equiv.refl Γ b y, symm := @equiv.symm Γ b y, trans := @equiv.trans Γ b y }
-instance {Γ} {b y} : is_refl (concretion Γ b y) equiv := ⟨ λ _, equiv.refl ⟩
-instance {Γ} {b y} : setoid (concretion Γ b y) :=
-  ⟨ equiv, ⟨ @equiv.refl Γ b y, @equiv.symm Γ b y, @equiv.trans Γ b y ⟩ ⟩
-instance setoid.is_equiv {Γ} {b y} : is_equiv (concretion Γ b y) has_equiv.equiv :=
+instance {Γ : context ω} {b y} : is_equiv (concretion Γ b y) equiv :=
+  { refl := @equiv.refl _ Γ b y, symm := @equiv.symm _ Γ b y, trans := @equiv.trans _ Γ b y }
+instance {Γ : context ω} {b y} : is_refl (concretion Γ b y) equiv := ⟨ λ _, equiv.refl ⟩
+instance {Γ : context ω} {b y} : setoid (concretion Γ b y) :=
+  ⟨ equiv, ⟨ @equiv.refl _ Γ b y, @equiv.symm _ Γ b y, @equiv.trans _ Γ b y ⟩ ⟩
+instance setoid.is_equiv {Γ : context ω} {b y} : is_equiv (concretion Γ b y) has_equiv.equiv :=
   concretion.is_equiv
 
 end concretion

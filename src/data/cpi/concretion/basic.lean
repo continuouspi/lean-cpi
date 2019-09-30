@@ -6,7 +6,9 @@ set_option profiler.threshold 0.5
 
 namespace cpi
 
-inductive concretion : context → ℕ → ℕ → Type
+variable {ω : environment}
+
+inductive concretion : context ω → ℕ → ℕ → Type
 | apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
         , species (context.extend y Γ)
         → concretion Γ b y
@@ -26,10 +28,9 @@ infixr ` |₂ ` := concretion.parallel₂
 
 notation `ν'(` M `) ` A := concretion.restriction M A
 
-
 namespace concretion
   def rename :
-    ∀ {Γ Δ} {b y} (ρ : name Γ → name Δ)
+    ∀ {Γ Δ : context ω} {b y} (ρ : name Γ → name Δ)
     , concretion Γ b y → concretion Δ b y
   | Γ Δ b y ρ (#(bs; _) A) := #( vector.map ρ bs; y) species.rename (name.ext ρ) A
   | Γ Δ b y ρ (F |₁ A) := rename ρ F |₁ species.rename ρ A
@@ -37,7 +38,7 @@ namespace concretion
   | Γ Δ b y ρ (ν'(M) A) := ν'(M) (rename (name.ext ρ) A)
 
   theorem rename_compose :
-    ∀ {Γ Δ η} {b y} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : concretion Γ b y)
+    ∀ {Γ Δ η : context ω} {b y} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : concretion Γ b y)
     , rename σ (rename ρ A) = rename (σ ∘ ρ) A
   | Γ Δ η b ._ ρ σ (#(⟨ elem, n ⟩; y) A) := begin
       unfold rename vector.map,

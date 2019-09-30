@@ -6,6 +6,8 @@ set_option profiler.threshold 0.5
 
 namespace cpi
 
+variable {ω : environment}
+
 open species.whole
 
 /- So there's some pretty questionable decisions going on here, so it's worth
@@ -25,7 +27,8 @@ open species.whole
 
    Yeah, this whole thing is rather ugly. Sorry! -/
 
-private noncomputable def species.eq_decidable {Γ} {k} (A B : whole k Γ) : decidable (A = B) := begin
+private noncomputable def species.eq_decidable {Γ : context ω} {k} (A B : whole k Γ) :
+  decidable (A = B) := begin
   induction A,
 
   case nil { cases B; simp only []; apply_instance },
@@ -71,14 +74,16 @@ private noncomputable def species.eq_decidable {Γ} {k} (A B : whole k Γ) : dec
   }
 end
 
-noncomputable instance species.whole.decidable_eq {Γ} {k} : decidable_eq (whole k Γ) := species.eq_decidable
+noncomputable instance species.whole.decidable_eq {Γ : context ω} {k} :
+  decidable_eq (whole k Γ) := species.eq_decidable
 
 private structure pand {α : Prop} (β : α → Prop) : Prop :=
 mk :: (fst : α) (snd : β fst)
 
 notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
 
-protected def species.le : ∀ {Γ} {k}, whole k Γ → whole k Γ → Prop := λ Γ k A B, begin
+protected def species.le : ∀ {Γ : context ω} {k}, whole k Γ → whole k Γ → Prop :=
+λ Γ k A B, begin
   induction A,
 
   case nil { from true },
@@ -120,7 +125,7 @@ protected def species.le : ∀ {Γ} {k}, whole k Γ → whole k Γ → Prop := �
   }
 end
 
-protected theorem species.le_refl : ∀ {Γ} {k} (A : whole k Γ), species.le A A
+protected theorem species.le_refl : ∀ {Γ : context ω} {k} (A : whole k Γ), species.le A A
 | ._ ._ nil := true.intro
 | ._ ._ (Σ# As) := species.le_refl As
 | ._ ._ (A |ₛ B) := or.inr ⟨ rfl, species.le_refl B ⟩
@@ -130,7 +135,7 @@ protected theorem species.le_refl : ∀ {Γ} {k} (A : whole k Γ), species.le A 
 
 
 protected theorem species.le_antisymm :
-  ∀ {Γ} {k} (A B : whole k Γ), species.le A B → species.le B A → A = B
+  ∀ {Γ : context ω} {k} (A B : whole k Γ), species.le A B → species.le B A → A = B
 | ._ ._ nil nil _ _ := rfl
 | ._ ._ (Σ# As) (Σ# Bs) ab ba :=
   by { simp only [], from species.le_antisymm As Bs ab ba }
@@ -188,12 +193,12 @@ protected theorem species.le_antisymm :
 | ._ ._ (cons _ _ _) empty f _ := false.elim f
 | ._ ._ empty (cons _ _ _) _ f := false.elim f
 
-private lemma lt_not_eq {Γ} :
+private lemma lt_not_eq {Γ : context ω} :
   ∀ {A B C : species Γ}, species.le A B → species.le B C → A ≠ B → A ≠ C
 | A B C lab lbc ab (eq.refl _) := ab (species.le_antisymm A B lab lbc)
 
 protected theorem species.le_trans :
-  ∀ {Γ} {k} (A B C : whole k Γ), species.le A B → species.le B C → species.le A C
+  ∀ {Γ : context ω} {k} (A B C : whole k Γ), species.le A B → species.le B C → species.le A C
 | ._ ._ nil _ _ _ _ := true.intro
 
 | ._ ._ (Σ# As) (Σ# Bs) (Σ# Cs) ab bc := species.le_trans As Bs Cs ab bc
@@ -251,7 +256,7 @@ protected theorem species.le_trans :
 
 
 protected theorem species.le_total :
-  ∀ {Γ} {k} (A B : whole k Γ), species.le A B ∨ species.le B A
+  ∀ {Γ : context ω} {k} (A B : whole k Γ), species.le A B ∨ species.le B A
 | ._ ._ nil _ := or.inl true.intro
 | ._ ._ _ nil := or.inr true.intro
 | Γ ._ (Σ# As) (Σ# Bs) := species.le_total As Bs
@@ -330,7 +335,7 @@ protected theorem species.le_total :
 section
 set_option eqn_compiler.lemmas false
 private noncomputable def species.le_decidable :
-  ∀ {Γ} {k} (A B : whole k Γ), decidable (species.le A B)
+  ∀ {Γ : context ω} {k} (A B : whole k Γ), decidable (species.le A B)
 | ._ ._ nil _ := decidable.true
 
 |  Γ ._ (Σ# As) (Σ# Bs) := species.le_decidable As Bs
@@ -418,7 +423,8 @@ private noncomputable def species.le_decidable :
       end)
 end
 
-noncomputable instance species.whole.decidable_linear_order {Γ} {k} : decidable_linear_order (whole k Γ) :=
+noncomputable instance species.whole.decidable_linear_order {Γ : context ω} {k} :
+  decidable_linear_order (whole k Γ) :=
   { le := species.le,
     le_refl := species.le_refl,
     le_trans := species.le_trans,

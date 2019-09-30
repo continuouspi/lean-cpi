@@ -10,13 +10,33 @@ namespace cpi
 
 namespace species
 
+variable {ω : environment}
+
 inductive kind
 | species
 | choices
 
-/-- A type which acts as both a species and a choice.
--/
-inductive whole : kind → context → Type
+/-- The set of species and choices.
+
+    Species are composed of:
+      - The inactive species
+      - Invocation of a species definition
+      - Guarded choice
+      - Parallel composition
+      - Local name declaration/restriction
+
+    Choices are just a series of prefixes and a species to be evaluated after
+    that prefix.
+
+    While this could (and probably should) be defined as a mutually recursive
+    datatype (or even a nested one, instead of a home-grown list), Lean's
+    handling of recursive types is a little lacklustre: one cannot use the
+    induction tactic, Lean often fails to show termination on its own, etc...
+
+    In order to avoid these problems, we represent mutually-recursive type the
+    same way that Lean does (as a single type indexed by what group it belongs
+    to), but avoid the indirection that such a definition would introduce. -/
+inductive whole : kind → context ω → Type
 /- Species -/
 | nil {Γ} : whole kind.species Γ
 | choice {Γ} : whole kind.choices Γ → whole kind.species Γ
@@ -28,13 +48,13 @@ inductive whole : kind → context → Type
 | cons {Γ} {f} (π : prefix_expr Γ f) :
     whole kind.species (f Γ) → whole kind.choices Γ → whole kind.choices Γ
 
-/-- The set of species, defining invocation, guarded choice, parallel
-    composition and restriction. -/
+/-- An alias for species within the `whole' datatype. -/
 @[reducible]
-def species := whole kind.species
+def species (Γ : context ω) := @whole _ kind.species Γ
 
+/-- An alias for choices within the `whole' datatype. -/
 @[reducible]
-def choices := whole kind.choices
+def choices (Γ : context ω) := @whole _ kind.choices Γ
 
 export whole (nil choice parallel restriction)
 open whole
@@ -48,7 +68,7 @@ reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
 section free
-  def free_in {Γ} {k} (l : level Γ) (A : whole k Γ) : Prop := begin
+  def free_in {Γ : context ω} {k} (l : level Γ) (A : whole k Γ) : Prop := begin
     induction A,
     case nil { from false },
     case choice : Γ As ih { from ih l },
@@ -60,9 +80,9 @@ section free
     }
   end
 
-  instance {Γ} {k} : has_mem (level Γ) (whole k Γ) := ⟨ free_in ⟩
+  instance {Γ : context ω} {k} : has_mem (level Γ) (whole k Γ) := ⟨ free_in ⟩
 
-  private def free_in_decide {Γ} {k} (l : level Γ) (A : whole k Γ) : decidable (free_in l A) := begin
+  private def free_in_decide {Γ : context ω} {k} (l : level Γ) (A : whole k Γ) : decidable (free_in l A) := begin
     induction A,
 
     case nil { from decidable.false },
@@ -76,13 +96,13 @@ section free
     }
   end
 
-  instance free_in.decidable {Γ} {k} {l} {A: whole k Γ} : decidable (free_in l A)
+  instance free_in.decidable {Γ : context ω} {k} {l} {A: whole k Γ} : decidable (free_in l A)
     := free_in_decide l A
 end free
 
 section rename
   /-- Apply a renaming function to a species, with a witness of presence. -/
-  def rename_with : ∀ {Γ Δ} {k} (A : whole k Γ)
+  def rename_with : ∀ {Γ Δ : context ω} {k} (A : whole k Γ)
     (ρ : Π (a : name Γ), name.to_level a ∈ A → name Δ), whole k Δ
   | Γ Δ ._ nil ρ := nil
   | Γ Δ ._ (A |ₛ B) ρ :=
@@ -108,11 +128,11 @@ section rename
 
   /-- A simpler version of rename_with, which does not require a witness. -/
   @[reducible]
-  def rename {Γ Δ : context} {k} (ρ : name Γ → name Δ) (A : whole k Γ) : whole k Δ
+  def rename {Γ Δ : context ω} {k} (ρ : name Γ → name Δ) (A : whole k Γ) : whole k Δ
     := rename_with A (λ a _, ρ a)
 
   /-- Renaming with the identity function does nothing. -/
-  lemma rename_with_id : ∀ {Γ} {k} (A : whole k Γ), rename_with A (λ x _, x) = A
+  lemma rename_with_id : ∀ {Γ : context ω} {k} (A : whole k Γ), rename_with A (λ x _, x) = A
   | Γ ._ nil := by unfold rename_with
   | Γ ._ (A |ₛ B) :=
     let a : rename_with A _ = A := rename_with_id A in
@@ -141,14 +161,12 @@ section rename
       simp [π', a, as]
     end
 
-  /-- Renaming with the identity function does nothing. -/
-  lemma rename_id {Γ} {k} (A : whole k Γ) : rename id A = A := rename_with_id A
-
-  set_option pp.binder_types false
+  /-- Renaming with the identity function is the identity. -/
+  lemma rename_id {Γ : context ω} {k} (A : whole k Γ) : rename id A = A := rename_with_id A
 
   /-- Renaming twice is the same as renaming with a composed function. -/
   lemma rename_with_compose :
-    ∀ {Γ Δ η} {k}
+    ∀ {Γ Δ η : context ω} {k}
       (A : whole k Γ)
       (ρ : (Π (a : name Γ), name.to_level a ∈ A → name Δ))
       (σ : name Δ → name η)
@@ -202,19 +220,22 @@ section rename
     end
 
   /-- Renaming twice is the same as renaming with a composed function. -/
-  lemma rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species Γ)
+  lemma rename_compose {Γ Δ η : context ω} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species Γ)
     : rename σ (rename ρ A) = rename (σ ∘ ρ) A
     := rename_with_compose A (λ x _, ρ x) σ
 
-  lemma rename_ext {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
+  lemma rename_ext {Γ Δ : context ω} {ρ : name Γ → name Δ} {n : ℕ} (A : species Γ)
     : rename name.extend (rename ρ A)
-    = rename (name.ext ρ) (rename (@name.extend _ n) A)
+    = rename (name.ext ρ) (rename (@name.extend _ _ n) A)
     := by rw [rename_compose, ← name.ext_extend, rename_compose]
 end rename
 
-/- Various equational lemmas for rewrite -/
+/- Various equational lemmas for rewrite.
+
+   This just simplifies the work needed to do when using simple rewriting
+   functions (such as in equivalency or pseduo-application).-/
 section rename_equations
-  variables {Γ Δ : context} {ρ : name Γ → name Δ}
+  variables {Γ Δ : context ω} {ρ : name Γ → name Δ}
 
   @[simp]
   lemma rename.nil : rename ρ nil = nil := by unfold rename rename_with
@@ -222,7 +243,7 @@ section rename_equations
   @[simp]
   lemma rename.parallel (A B : species Γ)
     : rename ρ (A |ₛ B) = (rename ρ A |ₛ rename ρ B)
-    := by { unfold rename rename_with, }
+    := by unfold rename rename_with
 
   @[simp]
   lemma rename.restriction (M : affinity) (A : species (context.extend M.arity Γ))

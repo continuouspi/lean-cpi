@@ -8,9 +8,11 @@ set_option profiler.threshold 0.5
 namespace cpi
 namespace species
 
+variable {ω : environment}
+
 /-- A chain of rewrite rule, to transform a species from one kind to another
     equivalent one. -/
-inductive equiv : ∀ {Γ : context} (A B : species Γ), Prop
+inductive equiv : ∀ {Γ : context ω} (A B : species Γ), Prop
 | refl  {Γ} {A : species Γ} : equiv A A
 | trans {Γ} {A B C : species Γ} : equiv A B → equiv B C → equiv A C
 | symm  {Γ} {A B : species Γ} : equiv A B → equiv B A
@@ -53,30 +55,30 @@ inductive equiv : ∀ {Γ : context} (A B : species Γ), Prop
     {A  : species (context.extend N.arity (context.extend M.arity Γ))}
   : @equiv Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
 
-instance {Γ} : is_equiv (species Γ) equiv :=
-  { refl := @equiv.refl Γ, symm := @equiv.symm Γ, trans := @equiv.trans Γ }
-instance {Γ} : is_refl (species Γ) equiv := ⟨ λ _, equiv.refl ⟩
-instance {Γ} : setoid (species Γ) :=
-  ⟨ equiv, ⟨ @equiv.refl Γ, @equiv.symm Γ, @equiv.trans Γ ⟩ ⟩
+instance {Γ : context ω} : is_equiv (species Γ) equiv :=
+  { refl := @equiv.refl _ Γ, symm := @equiv.symm _ Γ, trans := @equiv.trans _ Γ }
+instance {Γ : context ω} : is_refl (species Γ) equiv := ⟨ λ _, equiv.refl ⟩
+instance {Γ : context ω} : setoid (species Γ) :=
+  ⟨ equiv, ⟨ @equiv.refl _ Γ, @equiv.symm _ Γ, @equiv.trans _ Γ ⟩ ⟩
 
 -- -- Somewhat odd instance, but required for transitivity of the operator form.
-instance setoid.is_equiv {Γ} : is_equiv (species Γ) has_equiv.equiv :=
+instance setoid.is_equiv {Γ : context ω} : is_equiv (species Γ) has_equiv.equiv :=
   species.is_equiv
 
 namespace equiv
   private lemma rename_swap
-    {Γ Δ} {ρ : name Γ → name Δ} {M N : affinity}
+    {Γ Δ : context ω} {ρ : name Γ → name Δ} {M N : affinity}
     (A' : species (context.extend M.arity (context.extend N.arity Γ)))
     : rename (name.ext (name.ext ρ)) (rename name.swap A')
     = rename name.swap (rename (name.ext (name.ext ρ)) A')
     := by rw [rename_compose, name.swap_ext_ext, rename_compose]
 
-  protected def rename :
-      ∀ {Γ Δ} {A B : species Γ} (ρ : name Γ → name Δ)
+  protected lemma rename :
+      ∀ {Γ Δ : context ω} {A B : species Γ} (ρ : name Γ → name Δ)
       , A ≈ B → rename ρ A ≈ rename ρ B
     := begin
       intros _Γ _Δ _A _B _ρ _eq,
-      known_induction species.equiv @equiv.rec_on
+      known_induction species.equiv @equiv.rec_on ω
         (λ Γ A B, Π {Δ} (ρ : name Γ → name Δ), rename ρ A ≈ rename ρ B)
         _Γ _A _B _eq,
 
@@ -116,19 +118,19 @@ namespace equiv
       }
     end
 
-    def parallel_symm₁ {Γ} {A B C : species Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
+    lemma parallel_symm₁ {Γ : context ω} {A B C : species Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
       calc  (A |ₛ (B |ₛ C))
-          ≈ ((A |ₛ B) |ₛ C) : symm (@parallel_assoc _ A B C)
+          ≈ ((A |ₛ B) |ₛ C) : symm (@parallel_assoc _ _ A B C)
       ... ≈ ((B |ₛ A) |ₛ C) : ξ_parallel₁ parallel_symm
       ... ≈ (B |ₛ (A |ₛ C)) : parallel_assoc
 
-    def parallel_symm₂ {Γ} {A B C : species Γ} : ((A |ₛ B) |ₛ C) ≈ ((A |ₛ C) |ₛ B) :=
+    lemma parallel_symm₂ {Γ : context ω} {A B C : species Γ} : ((A |ₛ B) |ₛ C) ≈ ((A |ₛ C) |ₛ B) :=
       calc  ((A |ₛ B) |ₛ C)
           ≈ (A |ₛ (B |ₛ C)) : parallel_assoc
       ... ≈ (A |ₛ (C |ₛ B)) : ξ_parallel₂ parallel_symm
       ... ≈ ((A |ₛ C) |ₛ B) : symm parallel_assoc
 
-    def ν_parallel' {Γ} (M : affinity) {A : species (context.extend M.arity Γ)} {B : species Γ}
+    lemma ν_parallel' {Γ : context ω} (M : affinity) {A : species (context.extend M.arity Γ)} {B : species Γ}
       : (ν(M) (A |ₛ rename name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
       calc  (ν(M) A |ₛ rename name.extend B)
           ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
@@ -137,7 +139,7 @@ namespace equiv
 end equiv
 
 section examples
-  variable Γ : context
+  variable Γ : context ω
   variables A A' B C : species Γ
 
   example : A ≈ (A |ₛ nil) := symm equiv.parallel_nil
