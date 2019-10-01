@@ -60,7 +60,7 @@ inductive context : environment → Type
 | nil (ω : environment) : context ω
 | extend {ω : environment} : ℕ → context ω → context ω
 
-/-- The set of names within the continuous-π calculus. -/
+/-- The set of names within the continuous π-calculus. -/
 @[derive decidable_eq]
 inductive name {ω} : context ω → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
