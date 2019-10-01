@@ -7,18 +7,18 @@ set_option profiler.threshold 0.5
 namespace cpi
 namespace concretion
 
-variable {ω : environment}
+variable {ω : context}
 
 /-- An alternative measure, simply computes the depth of a term, and thus is
     preserved over renames. -/
-private def depth : ∀ {Γ : context ω} {b y}, concretion Γ b y → ℕ
+private def depth : ∀ {Γ} {b y}, concretion ω Γ b y → ℕ
 | _ _ _ (#(_; _) _) := 1
 | _ _ _ (F |₁ _) := depth F + 1
 | _ _ _ (_ |₂ F) := depth F + 1
 | _ _ _ (ν'(M) F) := depth F + 1
 
 private theorem depth.over_rename :
-  ∀ {Γ Δ : context ω} {b y} (ρ : name Γ → name Δ) (F : concretion Γ b y)
+  ∀ {Γ Δ} {b y} (ρ : name Γ → name Δ) (F : concretion ω Γ b y)
   , depth F = depth (rename ρ F)
 | Γ Δ b y ρ (#(_; _) _) := by unfold rename depth
 | Γ Δ b y ρ (F |₁ A) := by { unfold rename depth, rw depth.over_rename ρ F }
@@ -29,8 +29,8 @@ private theorem depth.over_rename :
 /-- Helper function for doign the actual application. This is split up to
     make the totality of pseudo_apply/pseudo_apply_app easier to determine. -/
 private def pseudo_apply_app {a b} :
-  ∀ {Γ : context ω}, vector (name Γ) a → species (context.extend b Γ)
-  → concretion Γ b a → species Γ
+  ∀ {Γ}, vector (name Γ) a → species ω (context.extend b Γ)
+  → concretion ω Γ b a → species ω Γ
 | Γ as A (#(bs; y) B) :=
   species.rename (name.mk_apply bs) A |ₛ species.rename (name.mk_apply as) B
 | Γ as A (F |₁ B) :=
@@ -44,26 +44,26 @@ private def pseudo_apply_app {a b} :
           F)
 using_well_founded {
   rel_tac := λ _ _,
-    `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst b a x.snd.snd.snd ) ⟩ ],
+    `[exact ⟨_, measure_wf (λ x, concretion.sizeof ω x.fst b a x.snd.snd.snd ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
 /-- Apply two concretions together. -/
-def pseudo_apply {a b} : ∀ {Γ : context ω}, concretion Γ a b → concretion Γ b a → species Γ
+def pseudo_apply {a b} : ∀ {Γ}, concretion ω Γ a b → concretion ω Γ b a → species ω Γ
 | Γ (#(bs; y) A) F' := pseudo_apply_app bs A F'
 | Γ (F |₁ A) F' := pseudo_apply F F' |ₛ A
 | Γ (A |₂ F) F' := A |ₛ pseudo_apply F F'
 | Γ (ν'(M) F) F' := ν(M) (pseudo_apply F (rename name.extend F'))
 using_well_founded {
   rel_tac := λ _ _,
-    `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst a b x.snd.fst ) ⟩ ],
+    `[exact ⟨_, measure_wf (λ x, concretion.sizeof ω x.fst a b x.snd.fst ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
 open species.equiv (hiding trans symm refl)
 
 protected lemma pseudo_apply.on_parallel₁ :
-  ∀ {Γ : context ω} {a b} (F : concretion Γ a b) (G : concretion Γ b a) (A : species Γ)
+  ∀ {Γ} {a b} (F : concretion ω Γ a b) (G : concretion ω Γ b a) (A : species ω Γ)
   , pseudo_apply F (G |₁ A) ≈ (pseudo_apply F G |ₛ A)
 | Γ a b (#(bs; y) A) G B := by unfold pseudo_apply pseudo_apply_app
 | Γ a b (F |₁ B) G A := begin
@@ -89,7 +89,7 @@ protected lemma pseudo_apply.on_parallel₁ :
   end
 
 protected lemma pseudo_apply.on_parallel₂ :
-  ∀ {Γ : context ω} {a b} (F : concretion Γ a b) (A : species Γ) (G : concretion Γ b a)
+  ∀ {Γ} {a b} (F : concretion ω Γ a b) (A : species ω Γ) (G : concretion ω Γ b a)
   , pseudo_apply F (A |₂ G) ≈ (A |ₛ pseudo_apply F G)
 | Γ a b (#(bs; y) A) B F := by unfold pseudo_apply pseudo_apply_app
 | Γ a b (F |₁ B) A G := begin
@@ -119,9 +119,9 @@ protected lemma pseudo_apply.on_parallel₂ :
 -- checks?
 
 private lemma pseudo_apply_app.rename {a b} :
-  ∀ {Γ Δ : context ω} (ρ : name Γ → name Δ)
-    (as : vector (name Γ) a) (A : species (context.extend b Γ))
-    (F : concretion Γ b a)
+  ∀ {Γ Δ} (ρ : name Γ → name Δ)
+    (as : vector (name Γ) a) (A : species ω (context.extend b Γ))
+    (F : concretion ω Γ b a)
   , species.rename ρ (pseudo_apply_app as A F)
   = pseudo_apply_app (vector.map ρ as) (species.rename (name.ext ρ) A) (rename ρ F)
 | Γ Δ ρ as A (#(bs; y) B) := begin
@@ -140,13 +140,13 @@ private lemma pseudo_apply_app.rename {a b} :
     unfold pseudo_apply_app rename,
     simp,
     have map
-      : vector.map (@name.extend _ _ M.arity) (vector.map ρ ⟨bs, n⟩)
+      : vector.map (@name.extend _ M.arity) (vector.map ρ ⟨bs, n⟩)
       = vector.map (name.ext ρ) (vector.map name.extend ⟨bs, n⟩),
       unfold vector.map, simp, rw ← name.ext_extend ρ,
     rw map,
 
     have spc
-      : species.rename (name.ext (@name.extend _ _ M.arity)) (species.rename (name.ext ρ) A)
+      : species.rename (name.ext (@name.extend _ M.arity)) (species.rename (name.ext ρ) A)
       = species.rename (name.ext (name.ext ρ)) (species.rename (name.ext name.extend) A),
       rw [species.rename_compose, species.rename_compose],
       rw [name.ext_comp, name.ext_comp],
@@ -157,13 +157,13 @@ private lemma pseudo_apply_app.rename {a b} :
   end
 using_well_founded {
   rel_tac := λ _ _,
-    `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst b a x.snd.snd.snd.snd.snd ) ⟩ ],
+    `[exact ⟨_, measure_wf (λ x, concretion.sizeof ω x.fst b a x.snd.snd.snd.snd.snd ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
 protected lemma pseudo_apply.rename {a b} :
-  ∀ {Γ Δ : context ω} (ρ : name Γ → name Δ)
-    (F : concretion Γ a b) (G : concretion Γ b a)
+  ∀ {Γ Δ} (ρ : name Γ → name Δ)
+    (F : concretion ω Γ a b) (G : concretion ω Γ b a)
   , species.rename ρ (pseudo_apply F G) = pseudo_apply (rename ρ F) (rename ρ G)
 | Γ Δ ρ (#(bs; y) A) G := begin
     unfold pseudo_apply rename,
@@ -187,12 +187,14 @@ protected lemma pseudo_apply.rename {a b} :
   end
 using_well_founded {
   rel_tac := λ _ _,
-    `[exact ⟨_, measure_wf (λ x, concretion.sizeof x.fst a b x.snd.snd.snd.fst ) ⟩ ],
+    `[exact ⟨_, measure_wf (λ x, concretion.sizeof ω x.fst a b x.snd.snd.snd.fst ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
 private lemma pseudo_apply.restriction_swap {a b}:
-  ∀ {Γ : context ω} (M N : affinity) (F : concretion (context.extend N.arity Γ) a b) (G : concretion (context.extend M.arity Γ) b a)
+  ∀ {Γ} (M N : affinity)
+    (F : concretion ω (context.extend N.arity Γ) a b)
+    (G : concretion ω (context.extend M.arity Γ) b a)
   , (ν(N) ν(M) pseudo_apply (rename name.extend F) (rename (name.ext name.extend) G))
   ≈ ν(M) ν(N) pseudo_apply (rename (name.ext name.extend) F) (rename name.extend G)
 | Γ M N F G :=
@@ -207,8 +209,8 @@ private lemma pseudo_apply.restriction_swap {a b}:
           : by rw [name.swap_comp_extend, name.swap_comp_ext_extend]
 
 private lemma pseudo_apply.on_restriction :
-  ∀ {Γ : context ω} {a b} (F : concretion Γ a b) (M : affinity)
-    (G : concretion (context.extend M.arity Γ) b a)
+  ∀ {Γ} {a b} (F : concretion ω Γ a b) (M : affinity)
+    (G : concretion ω (context.extend M.arity Γ) b a)
   , pseudo_apply F (ν'(M) G) ≈ ν(M) (pseudo_apply (rename name.extend F) G)
 | Γ a b (#(bs; y) A) M G := by unfold pseudo_apply pseudo_apply_app rename
 | Γ a b (F |₁ A) M G := begin
@@ -237,8 +239,8 @@ private lemma pseudo_apply.on_restriction :
   end
 
 private theorem pseudo_apply_app.symm {a b} :
-  ∀ {Γ : context ω} (bs : vector (name Γ) a) (A : species (context.extend b Γ))
-    (G : concretion Γ b a)
+  ∀ {Γ} (bs : vector (name Γ) a) (A : species ω (context.extend b Γ))
+    (G : concretion ω Γ b a)
   , pseudo_apply_app bs A G ≈ pseudo_apply G (#(bs; b) A) := begin
   intros Γ as A G,
   induction G,
@@ -265,7 +267,7 @@ private theorem pseudo_apply_app.symm {a b} :
 end
 
 theorem pseudo_apply.symm {a b} :
-  ∀ {Γ : context ω} (F : concretion Γ a b) (G : concretion Γ b a)
+  ∀ {Γ} (F : concretion ω Γ a b) (G : concretion ω Γ b a)
   , pseudo_apply F G ≈ pseudo_apply G F
 | Γ (#(as; x) A) G := begin
     unfold pseudo_apply,
@@ -355,7 +357,7 @@ end
     from ξ_restriction M (symm (pseudo_apply_app.symm _ _ F)),
   end
 | Γ (ν'(M) F) (G |₁ B) :=
-  let h : depth (rename (@name.extend _ Γ M.arity) G) < depth G + 1 := begin
+  let h : depth (rename (@name.extend Γ M.arity) G) < depth G + 1 := begin
     rw ← depth.over_rename name.extend G,
     from nat.lt_add_of_pos_right nat.zero_lt_one
   end in begin
@@ -370,7 +372,7 @@ end
           : ξ_parallel₁ (symm (pseudo_apply.on_restriction G M F))
   end
 | Γ (ν'(M) F) (B |₂ G) :=
-  let h : depth (rename (@name.extend _ Γ M.arity) G) < depth G + 1 := begin
+  let h : depth (rename (@name.extend Γ M.arity) G) < depth G + 1 := begin
     rw ← depth.over_rename name.extend G,
     from nat.lt_add_of_pos_right nat.zero_lt_one
   end in begin
@@ -385,7 +387,7 @@ end
           : ξ_parallel₂ (symm (pseudo_apply.on_restriction G M F))
   end
 | Γ (ν'(M) F) (ν'(N) G) :=
-  let h : depth (rename (name.ext (@name.extend _ Γ M.arity)) G) < depth G + 1 := begin
+  let h : depth (rename (name.ext (@name.extend Γ M.arity)) G) < depth G + 1 := begin
     rw ← depth.over_rename _ G,
     from nat.lt_add_of_pos_right nat.zero_lt_one
   end in begin
@@ -413,8 +415,8 @@ using_well_founded {
 }
 
 private lemma pseudo_apply_app.equiv {a b} :
-  ∀ {Γ : context ω} {bs : vector (name Γ) a} {A A' : species (context.extend b Γ)}
-    {F : concretion Γ b a}
+  ∀ {Γ} {bs : vector (name Γ) a} {A A' : species ω (context.extend b Γ)}
+    {F : concretion ω Γ b a}
   , A ≈ A' → pseudo_apply_app bs A F ≈ pseudo_apply_app bs A' F :=
 begin
   intros Γ as A A' G eq,
@@ -439,8 +441,9 @@ begin
 end
 
 private lemma pseudo_apply_app.par {a b} :
-  ∀ {Γ : context ω} (bs : vector (name Γ) a) (A : species Γ) (B : species (context.extend b Γ))
-    (G : concretion Γ b a)
+  ∀ {Γ} (bs : vector (name Γ) a)
+    (A : species ω Γ) (B : species ω (context.extend b Γ))
+    (G : concretion ω Γ b a)
   , pseudo_apply_app bs (species.rename name.extend A |ₛ B) G ≈ (A |ₛ pseudo_apply_app bs B G) :=
 begin
   intros Γ as A B G,
@@ -494,7 +497,7 @@ begin
 end
 
 lemma pseudo_apply.equiv_l {a b} :
-  ∀ {Γ : context ω} {F F' : concretion Γ a b} {G : concretion Γ b a}
+  ∀ {Γ} {F F' : concretion ω Γ a b} {G : concretion ω Γ b a}
   , F ≈ F' → pseudo_apply F G ≈ pseudo_apply F' G :=
 begin
   intros Γ F F' G eq, induction eq,
@@ -574,7 +577,7 @@ begin
 end
 
 theorem pseudo_apply.equiv {a b} :
-  ∀ {Γ : context ω} {F F' : concretion Γ a b} {G G' : concretion Γ b a}
+  ∀ {Γ} {F F' : concretion ω Γ a b} {G G' : concretion ω Γ b a}
   , F ≈ F' → G ≈ G' → pseudo_apply F G ≈ pseudo_apply F' G'
 | Γ F F' G G' eq_1 eq_2 :=
   calc  pseudo_apply F  G

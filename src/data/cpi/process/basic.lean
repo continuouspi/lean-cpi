@@ -6,15 +6,13 @@ set_option profiler.threshold 0.5
 
 namespace cpi
 
-variable {ω : environment}
-
 /-- The set of processes. Defined as one or more species, each with a
     non-negative concentration.
 
     The context parameter represents the "global affinity network", in which
     all processes are evaluated. -/
-inductive process : context ω → Type
-| one      {Γ} : ℝ≥0 → species Γ → process Γ
+inductive process (ω : context) : context → Type
+| one      {Γ} : ℝ≥0 → species ω Γ → process Γ
 | parallel {Γ} : process Γ → process Γ → process Γ
 
 infix ` • `:60 := process.one

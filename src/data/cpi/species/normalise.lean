@@ -8,15 +8,15 @@ set_option profiler.threshold 0.5
 namespace cpi
 namespace species
 
-variable {ω : environment}
+variable {ω : context}
 
-def drop_var {Γ : context ω} {n}
+def drop_var {Γ} {n}
     (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
   : Π a, P (name.to_level a) → name Γ
 | (name.zero idx) q := by { unfold name.to_level at q, contradiction }
 | (name.extend a) _ := a
 
-lemma drop_var_compose {Γ : context ω} {n}
+lemma drop_var_compose {Γ} {n}
   (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
   : (λ a f, name.extend (drop_var P p a f)) = λ a _, a
   := funext $ λ a, funext $ λ q, begin
@@ -25,11 +25,11 @@ lemma drop_var_compose {Γ : context ω} {n}
     case name.extend { from rfl }
   end
 
-def drop {Γ : context ω} {n} {A : species (context.extend n Γ)}
-  : level.zero ∉ A → species Γ
+def drop {Γ} {n} {A : species ω (context.extend n Γ)}
+  : level.zero ∉ A → species ω Γ
 | free := rename_with A (drop_var (λ l, l ∈ A) free)
 
-lemma drop_extend {Γ : context ω} {n} {A : species (context.extend n Γ)} (fr : level.zero ∉ A)
+lemma drop_extend {Γ} {n} {A : species ω (context.extend n Γ)} (fr : level.zero ∉ A)
   : rename name.extend (drop fr) = A
   := begin
     unfold drop,
@@ -38,7 +38,7 @@ lemma drop_extend {Γ : context ω} {n} {A : species (context.extend n Γ)} (fr 
         rename_with_id]
   end
 
-def drop_nu : ∀ {Γ : context ω} (A : species Γ), Σ' (B : species Γ), A ≈ B
+def drop_nu : ∀ {Γ} (A : species ω Γ), Σ' (B : species ω Γ), A ≈ B
 | Γ (ν(M) A) :=
   if h : level.zero ∈ A then
     ⟨ ν(M) A, refl _ ⟩
@@ -51,14 +51,14 @@ def drop_nu : ∀ {Γ : context ω} (A : species Γ), Σ' (B : species Γ), A �
 | Γ x := ⟨ x, refl _ ⟩
 
 /-- Reduce a term to some equivalent normal form. -/
-constant normalise_to : ∀ {Γ : context ω} (A : species Γ), Σ' (B : species Γ), A ≈ B
+constant normalise_to : ∀ {Γ} (A : species ω Γ), Σ' (B : species ω Γ), A ≈ B
 
 /-- Reduce a term to some equivalent normal form. -/
-noncomputable def normalise {Γ : context ω} : species Γ → species Γ := λ A, (normalise_to A).fst
+noncomputable def normalise {Γ} : species ω Γ → species ω Γ := λ A, (normalise_to A).fst
 
 /-- If two terms reduce to the same thing, then they are equivalent. -/
 lemma normalise_to_equiv :
-  ∀ {Γ : context ω} {A B : species Γ}
+  ∀ {Γ} {A B : species ω Γ}
   , normalise A = normalise B → A ≈ B
 | Γ A B eq := begin
     unfold normalise at eq,
@@ -68,21 +68,21 @@ end
 
 /-- If two terms are equivalent, they reduce to the same thing. -/
 axiom normalise_of_equiv :
-  ∀ {Γ : context ω} {A B : species Γ}
+  ∀ {Γ} {A B : species ω Γ}
   , A ≈ B → normalise A = normalise B
 
 /-- Reducing again does nothing extra. -/
-lemma normalise_normalise {Γ : context ω} (A : species Γ)
+lemma normalise_normalise {Γ} (A : species ω Γ)
   : normalise (normalise A) = normalise A
   := normalise_of_equiv (symm (normalise_to A).snd)
 
 /-- Equality of reduction is isomorphic to equivalence. -/
-lemma normalise_equiv {Γ : context ω} (A B : species Γ)
+lemma normalise_equiv {Γ} (A B : species ω Γ)
   : (normalise A = normalise B) ↔ (A ≈ B)
   := ⟨ normalise_to_equiv, normalise_of_equiv ⟩
 
 /-- Equality of reduction is isomorphic to equivalence (equality version). -/
-lemma normalise_equiv_eq {Γ : context ω} (A B : species Γ)
+lemma normalise_equiv_eq {Γ} (A B : species ω Γ)
   : (normalise A = normalise B) = (A ≈ B)
   := propext (normalise_equiv A B) -- Fun facts: propositional extensionality is an axiom.
 
@@ -90,8 +90,8 @@ lemma normalise_equiv_eq {Γ : context ω} (A B : species Γ)
 
     The fact that this is derivable from normalisation is obvious, but still
     pretty neat. -/
-noncomputable instance equiv.decide {Γ : context ω}
-  : @decidable_rel (species Γ) (≈)
+noncomputable instance equiv.decide {Γ}
+  : @decidable_rel (species ω Γ) (≈)
   := λ A B,
     let h : decidable (normalise A = normalise B) := by apply_instance in
     decidable_of_decidable_of_iff h (normalise_equiv A B)
