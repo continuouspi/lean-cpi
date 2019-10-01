@@ -26,33 +26,13 @@ private theorem depth.over_rename :
 | Γ Δ b y ρ (ν'(M) F) :=
   by { unfold rename depth, rw depth.over_rename (name.ext ρ) F }
 
-private def mk_sub
-    {Γ : context ω} {b} (bs : vector (name Γ) b)
-  : name (context.extend b Γ) → name Γ
-| (name.zero idx) := vector.nth bs idx
-| (name.extend e) := e
-
-private lemma mk_sub_rename
-    {Γ Δ : context ω} {b} (ρ : name Γ → name Δ) {bs : vector (name Γ) b}
-  : ρ ∘ mk_sub bs = mk_sub (vector.map ρ bs) ∘ name.ext ρ := funext $ λ α,
-  match α with
-  | name.zero idx := by simp only [mk_sub, name.ext, name.ext_with, vector.nth_map, function.comp]
-  | name.extend β := by simp only [mk_sub, name.ext, name.ext_with, function.comp]
-  end
-
-private lemma mk_sub_ext {Γ : context ω} {b} {bs : vector (name Γ) b} :
-  mk_sub bs ∘ (@name.extend _ Γ b) = id := funext $ λ α, begin
-    cases α,
-    all_goals { unfold mk_sub id function.comp }
-  end
-
 /-- Helper function for doign the actual application. This is split up to
     make the totality of pseudo_apply/pseudo_apply_app easier to determine. -/
 private def pseudo_apply_app {a b} :
   ∀ {Γ : context ω}, vector (name Γ) a → species (context.extend b Γ)
   → concretion Γ b a → species Γ
 | Γ as A (#(bs; y) B) :=
-  species.rename (mk_sub bs) A |ₛ species.rename (mk_sub as) B
+  species.rename (name.mk_apply bs) A |ₛ species.rename (name.mk_apply as) B
 | Γ as A (F |₁ B) :=
     pseudo_apply_app as A F |ₛ B
 | Γ as A (B |₂ F) :=
@@ -146,7 +126,7 @@ private lemma pseudo_apply_app.rename {a b} :
   = pseudo_apply_app (vector.map ρ as) (species.rename (name.ext ρ) A) (rename ρ F)
 | Γ Δ ρ as A (#(bs; y) B) := begin
     unfold pseudo_apply_app rename,
-    simp [species.rename_compose, mk_sub_rename]
+    simp [species.rename_compose, name.mk_apply_rename]
   end
 | Γ Δ ρ bs A (F |₁ B) := begin
     unfold pseudo_apply_app rename,
@@ -468,14 +448,14 @@ begin
 
   case apply : _ b' bs y C {
     unfold pseudo_apply_app, simp,
-    calc  ((species.rename (mk_sub bs) (species.rename name.extend A) |ₛ species.rename (mk_sub bs) B)
-            |ₛ species.rename (mk_sub as) C)
-        ≈ ((species.rename (mk_sub bs ∘ name.extend) A |ₛ species.rename (mk_sub bs) B)
-            |ₛ species.rename (mk_sub as) C)
+    calc  ((species.rename (name.mk_apply bs) (species.rename name.extend A) |ₛ species.rename (name.mk_apply bs) B)
+            |ₛ species.rename (name.mk_apply as) C)
+        ≈ ((species.rename (name.mk_apply bs ∘ name.extend) A |ₛ species.rename (name.mk_apply bs) B)
+            |ₛ species.rename (name.mk_apply as) C)
           : by rw species.rename_compose _ _ A
-    ... ≈ ((A |ₛ species.rename (mk_sub bs) B) |ₛ species.rename (mk_sub as) C)
-          : by { rw [mk_sub_ext, species.rename_id], }
-    ... ≈ (A |ₛ species.rename (mk_sub bs) B |ₛ species.rename (mk_sub as) C)
+    ... ≈ ((A |ₛ species.rename (name.mk_apply bs) B) |ₛ species.rename (name.mk_apply as) C)
+          : by { rw [name.mk_apply_ext, species.rename_id], }
+    ... ≈ (A |ₛ species.rename (name.mk_apply bs) B |ₛ species.rename (name.mk_apply as) C)
           : parallel_assoc
   },
 

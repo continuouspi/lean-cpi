@@ -141,6 +141,20 @@ inductive transition : Π {Γ : context ω} {k}, species Γ → label Γ k → p
   : transition A (label.replace name.extend l) E
   → transition (ν(M) A) l (production.map (λ x, ν(M) x) (λ _ _ x, ν'(M) x) E)
 
+
+| defn
+    {Γ} {n} {l : label (context.extend n Γ) kind.species}
+    {f : ∀ {n}, reference n ω → species (context.extend n Γ)}
+
+    (B E : species (context.extend n Γ))
+    (D : reference n ω) (as : vector (name Γ) n)
+    {eq : f D = B}
+  : transition B l E
+  → transition
+      (species.apply D as)
+      (label.replace (name.mk_apply as) l)
+      (species.rename (name.mk_apply as) E)
+
 notation A `[`:max l `]⟶ ` E:max := transition A l E
 
 /-- Map a transition from one species to another equivalent one. -/

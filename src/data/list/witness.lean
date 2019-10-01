@@ -40,14 +40,10 @@ lemma map_witness_map :
 | [] _ _ := rfl
 | (x :: xs) f g := by { simp [map_witness, map], from map_witness_map xs _ g }
 
--- @[simp]
--- lemma map_witness_map_witness :
---   ∀ (l : list α) (f : Π x ∈ l, β) (g : Π x ∈ map_witness l f, γ)
---   , map_witness (map_witness l f) g
---   = map_witness l (λ a mem, g (f a mem) (map_witness_mem f mem))
--- | [] _ _ := rfl
--- | (x :: xs) f g := by {
---     simp [map_witness],
---   }
+lemma map_witness_length :
+  ∀ (l : list α) (f : (Π x ∈ l, β))
+  , length (map_witness l f) = length l
+| [] _ := rfl
+| (x :: xs) f := by { unfold map_witness length, rw map_witness_length xs }
 
 end list

@@ -39,6 +39,7 @@ inductive kind
 inductive whole : kind → context ω → Type
 /- Species -/
 | nil {Γ} : whole kind.species Γ
+| apply {Γ} {n} : reference n ω → vector (name Γ) n → whole kind.species Γ
 | choice {Γ} : whole kind.choices Γ → whole kind.species Γ
 | parallel {Γ} : whole kind.species Γ → whole kind.species Γ → whole kind.species Γ
 | restriction {Γ} (M : affinity) :
@@ -56,7 +57,7 @@ def species (Γ : context ω) := @whole _ kind.species Γ
 @[reducible]
 def choices (Γ : context ω) := @whole _ kind.choices Γ
 
-export whole (nil choice parallel restriction)
+export whole (nil apply choice parallel restriction)
 open whole
 
 reserve infixr ` |ₛ ` :50
@@ -71,6 +72,7 @@ section free
   def free_in {Γ : context ω} {k} (l : level Γ) (A : whole k Γ) : Prop := begin
     induction A,
     case nil { from false },
+    case apply : Γ n D as { from ∃ a ∈ as.val, l ∈ a },
     case choice : Γ As ih { from ih l },
     case parallel : Γ A B ih_a ih_b { from ih_a l ∨ ih_b l },
     case restriction : Γ M A ih { from ih (level.extend l) },
@@ -86,7 +88,8 @@ section free
     induction A,
 
     case nil { from decidable.false },
-    case choice : Γ As ih { from ih l } ,
+    case apply : { unfold free_in, apply_instance },
+    case choice : Γ As ih { from ih l },
     case parallel : Γ A B ih_a ih_b { from @or.decidable _ _ (ih_a l) (ih_b l) },
     case restriction : Γ M A ih { from ih (level.extend l) },
     case whole.empty { from decidable.false },
@@ -105,6 +108,10 @@ section rename
   def rename_with : ∀ {Γ Δ : context ω} {k} (A : whole k Γ)
     (ρ : Π (a : name Γ), name.to_level a ∈ A → name Δ), whole k Δ
   | Γ Δ ._ nil ρ := nil
+  | Γ Δ ._ (@apply _ _ n D as) ρ :=
+    let as' := list.map_witness as.val (λ x mem, ρ x ⟨ x, mem, name.to_level_at x ⟩) in
+    let eq : list.length as' = n := by { rw (list.map_witness_length as.val _), from as.property } in
+    apply D ⟨ as', eq ⟩
   | Γ Δ ._ (A |ₛ B) ρ :=
     rename_with A (λ a free, ρ a (or.inl free)) |ₛ
     rename_with B (λ a free, ρ a (or.inr free))
@@ -134,6 +141,7 @@ section rename
   /-- Renaming with the identity function does nothing. -/
   lemma rename_with_id : ∀ {Γ : context ω} {k} (A : whole k Γ), rename_with A (λ x _, x) = A
   | Γ ._ nil := by unfold rename_with
+  | Γ ._ (apply D as) := by simp [rename_with]
   | Γ ._ (A |ₛ B) :=
     let a : rename_with A _ = A := rename_with_id A in
     let b : rename_with B _ = B := rename_with_id B in
@@ -172,6 +180,7 @@ section rename
       (σ : name Δ → name η)
     , rename σ (rename_with A ρ) = rename_with A (λ x f, σ (ρ x f))
   | Γ Δ η ._ nil ρ σ := by unfold rename rename_with
+  | Γ Δ η ._ (apply D as) ρ σ := by simp [rename, rename_with, list.map_witness_to_map]
   | Γ Δ η ._ (A |ₛ B) ρ σ :=
     let a := rename_with_compose A (λ a free, ρ a (or.inl free)) σ in
     let b := rename_with_compose B (λ a free, ρ a (or.inr free)) σ in
@@ -283,6 +292,7 @@ end species
    namespaces is a little broken. -/
 export species (renaming
   whole.nil → species.nil
+  whole.apply → species.apply
   whole.parallel → species.parallel
   whole.restriction → species.restriction
   whole.choice → species.choice
@@ -295,6 +305,7 @@ end cpi
    namespaces is a little broken. -/
 export cpi.species (renaming
   whole.nil → cpi.species.nil
+  whole.apply → cpi.species.apply
   whole.parallel → cpi.species.parallel
   whole.restriction → cpi.species.restriction
   whole.choice → cpi.species.choice

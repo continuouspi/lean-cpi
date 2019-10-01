@@ -1,4 +1,5 @@
 import data.cpi.species.basic
+import order.lex_like
 
 run_cmd sanity_check
 set_option profiler true
@@ -32,6 +33,14 @@ private noncomputable def species.eq_decidable {Γ : context ω} {k} (A B : whol
   induction A,
 
   case nil { cases B; simp only []; apply_instance },
+  case apply : _ n D as {
+    cases B; simp only []; try { apply_instance },
+    case apply : n' D' as' {
+      cases (by apply_instance : decidable (n = n')),
+      case is_true : h { subst h, simp, apply_instance },
+      case is_false : h { from is_false (λ x, h x.left) }
+    }
+  },
   case parallel : _ A₁ A₂ ih_1 ih_2 {
     cases B; simp only []; try { apply_instance },
     case parallel : B₁ B₂ { from @and.decidable _ _ (ih_1 B₁) (ih_2 B₂) }
@@ -87,9 +96,22 @@ protected def species.le : ∀ {Γ : context ω} {k}, whole k Γ → whole k Γ 
   induction A,
 
   case nil { from true },
+  case apply : Γ n D as {
+    cases B,
+    case nil { from false },
+    case apply : n' D' as' {
+      from n < n' ∨ (Σ∧ (H : n = n')
+                     , D < (by { rw ← H at D', from D'})
+                     ∨ (D = (by { rw ← H at D', from D'}) ∧ as.val ≤ as'.val))
+    },
+    case choice { from true },
+    case parallel { from true },
+    case restriction { from true },
+  },
   case choice : Γ As ih {
     cases B,
     case nil { from false },
+    case apply { from false },
     case choice : Bs { from ih Bs },
     case parallel { from true },
     case restriction { from true },
@@ -97,6 +119,7 @@ protected def species.le : ∀ {Γ : context ω} {k}, whole k Γ → whole k Γ 
   case parallel : Γ A A' ih ih' {
     cases B,
     case nil { from false },
+    case apply { from false },
     case choice { from false },
     case parallel : B B' { from (A ≠ B ∧ ih B) ∨ (A = B ∧ ih' B') },
     case restriction { from true },
@@ -104,6 +127,7 @@ protected def species.le : ∀ {Γ : context ω} {k}, whole k Γ → whole k Γ 
   case restriction : Γ M A ih {
     cases B,
     case nil { from false },
+    case apply { from false },
     case choice { from false },
     case parallel { from false },
     case restriction : N B {
@@ -127,16 +151,31 @@ end
 
 protected theorem species.le_refl : ∀ {Γ : context ω} {k} (A : whole k Γ), species.le A A
 | ._ ._ nil := true.intro
+| ._ ._ (apply D as) := or.inr ⟨ rfl, or.inr ⟨ rfl, le_refl as.val ⟩ ⟩
 | ._ ._ (Σ# As) := species.le_refl As
 | ._ ._ (A |ₛ B) := or.inr ⟨ rfl, species.le_refl B ⟩
 | ._ ._ (ν(M) A) := or.inr ⟨ rfl, species.le_refl A ⟩
 | ._ ._ empty := true.intro
 | ._ ._ (cons π A As) := or.inr ⟨ rfl, or.inr ⟨ rfl, species.le_refl As ⟩ ⟩
 
-
 protected theorem species.le_antisymm :
   ∀ {Γ : context ω} {k} (A B : whole k Γ), species.le A B → species.le B A → A = B
 | ._ ._ nil nil _ _ := rfl
+| ._ ._ (@apply _ _ n D as) (apply D' as') ab ba :=
+  match ab, ba with
+  | or.inl lt, or.inl lt' := false.elim (lt_asymm lt lt')
+  | or.inl lt, or.inr ⟨ eq, re ⟩ := false.elim (ne_of_lt lt (symm eq))
+  | or.inr ⟨ eq, re ⟩, or.inl lt := false.elim (ne_of_lt lt (symm eq))
+  | or.inr ⟨ eq, re ⟩, or.inr ⟨ _, re' ⟩ := begin
+      clear _match, cases eq, simp,
+      from match re, re' with
+      | or.inl lt, or.inl lt' := false.elim (lt_asymm lt lt')
+      | or.inl lt, or.inr ⟨ eq, re ⟩ := false.elim (ne_of_lt lt (symm eq))
+      | or.inr ⟨ eq, re ⟩, or.inl lt := false.elim (ne_of_lt lt (symm eq))
+      | or.inr ⟨ eq, le ⟩, or.inr ⟨ _, le' ⟩ := ⟨ eq, subtype.eq (le_antisymm le le') ⟩
+      end
+    end
+  end
 | ._ ._ (Σ# As) (Σ# Bs) ab ba :=
   by { simp only [], from species.le_antisymm As Bs ab ba }
 | ._ ._ (A |ₛ B) (A' |ₛ B') ab ba :=
@@ -178,16 +217,24 @@ protected theorem species.le_antisymm :
     end
   end
 
+| ._ ._ nil (apply _ _) _ f := false.elim f
 | ._ ._ nil (Σ# _) _ f := false.elim f
 | ._ ._ nil (_ |ₛ _) _ f := false.elim f
 | ._ ._ nil (ν(_) _) _ f := false.elim f
+| ._ ._ (apply _ _) nil f _ := false.elim f
+| ._ ._ (apply _ _) (Σ# _) _ f := false.elim f
+| ._ ._ (apply _ _) (_ |ₛ _) _ f := false.elim f
+| ._ ._ (apply _ _) (ν(_) _) _ f := false.elim f
 | ._ ._ (Σ# _) nil f _ := false.elim f
+| ._ ._ (Σ# _) (apply _ _) f _ := false.elim f
 | ._ ._ (Σ# _) (_ |ₛ _) _ f := false.elim f
 | ._ ._ (Σ# _) (ν(_) _) _ f := false.elim f
 | ._ ._ (_ |ₛ _) nil f _ := false.elim f
+| ._ ._ (_ |ₛ _) (apply _ _) f _ := false.elim f
 | ._ ._ (_ |ₛ _) (Σ# _) f _ := false.elim f
 | ._ ._ (_ |ₛ _) (ν(_) _) _ f := false.elim f
 | ._ ._ (ν(_) _) nil f _ := false.elim f
+| ._ ._ (ν(_) _) (apply _ _) f _ := false.elim f
 | ._ ._ (ν(_) _) (Σ# _) f _ := false.elim f
 | ._ ._ (ν(_) _) (_ |ₛ _) f _ := false.elim f
 | ._ ._ (cons _ _ _) empty f _ := false.elim f
@@ -200,6 +247,27 @@ private lemma lt_not_eq {Γ : context ω} :
 protected theorem species.le_trans :
   ∀ {Γ : context ω} {k} (A B C : whole k Γ), species.le A B → species.le B C → species.le A C
 | ._ ._ nil _ _ _ _ := true.intro
+
+| ._ ._ (apply D as) (apply D₂ bs) (apply D₃ cs) ab bc :=
+  match ab, bc with
+  | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+  | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+  | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+
+  | or.inr ⟨ eq, re ⟩, or.inr ⟨ eq', re' ⟩ := begin
+      clear _match, cases eq, cases eq',
+      from or.inr ⟨ rfl, match re, re' with
+      | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+      | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+      | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+      | or.inr ⟨ eq, le ⟩, or.inr ⟨ eq', le' ⟩ :=
+        or.inr ⟨ trans eq eq', le_trans le le' ⟩
+      end ⟩
+    end
+  end
+| ._ ._ (apply D as) _ (Σ# _) _ _ := true.intro
+| ._ ._ (apply D as) _ (_ |ₛ _) _ _ := true.intro
+| ._ ._ (apply D as) _ (ν(_)_) _ _ := true.intro
 
 | ._ ._ (Σ# As) (Σ# Bs) (Σ# Cs) ab bc := species.le_trans As Bs Cs ab bc
 | ._ ._ (Σ# As) _ (_ |ₛ _) _ _ := true.intro
@@ -246,22 +314,52 @@ protected theorem species.le_trans :
   end
 
 -- All the impossible cases
+| ._ ._ (apply _ _) nil _ f _ := false.elim f
 | ._ ._ (Σ# _) nil _ f _ := false.elim f
 | ._ ._ (_ |ₛ _) nil _ f _ := false.elim f
 | ._ ._ (ν(_) _) nil _ f _ := false.elim f
+| ._ ._ _ (Σ# _) (apply _ _) _ f := false.elim f
 | ._ ._ _ (_ |ₛ _) (Σ# _) _ f := false.elim f
 | ._ ._ _ (ν(M) _) (Σ# _) _ f := false.elim f
 | ._ ._ (cons _ _ _) empty _ f _ := false.elim f
 | ._ ._ _ (cons _ _ _) empty _ f := false.elim f
 
-
 protected theorem species.le_total :
   ∀ {Γ : context ω} {k} (A B : whole k Γ), species.le A B ∨ species.le B A
 | ._ ._ nil _ := or.inl true.intro
 | ._ ._ _ nil := or.inr true.intro
+
+| ._ ._ (@apply _ _ m D as) (@apply _ _ n D' bs) :=
+  match le_total m n with
+  | or.inl le :=
+    match lt_or_eq_of_le le with
+    | or.inl lt := or.inl (or.inl lt)
+    | or.inr eq := begin
+        clear _match _match, cases eq,
+        from or.imp (λ h, or.inr ⟨ eq, h ⟩) (λ h, or.inr ⟨ symm eq, h ⟩)
+          (order.lex_like.le_total D D' as.val bs.val)
+      end
+    end
+  | or.inr le :=
+    match lt_or_eq_of_le le with
+    | or.inl lt := or.inr (or.inl lt)
+    | or.inr eq := begin
+        clear _match _match, cases (symm eq),
+        from or.imp (λ h, or.inr ⟨ eq, h ⟩) (λ h, or.inr ⟨ symm eq, h ⟩)
+          (order.lex_like.le_total D D' as.val bs.val)
+      end
+    end
+  end
+| ._ ._ (apply D as) (Σ# _) := or.inl true.intro
+| ._ ._ (apply D as) (_ |ₛ _) := or.inl true.intro
+| ._ ._ (apply D as) (ν(_) _) := or.inl true.intro
+
+| ._ ._ (Σ# As) (apply _ _) := or.inr true.intro
 | Γ ._ (Σ# As) (Σ# Bs) := species.le_total As Bs
 | ._ ._ (Σ# As) (_ |ₛ _) := or.inl true.intro
 | ._ ._ (Σ# As) (ν(_) _) := or.inl true.intro
+
+| ._ ._ (A |ₛ B) (apply _ _) := or.inr true.intro
 | ._ ._ (A |ₛ B) (Σ# _) := or.inr true.intro
 | Γ ._ (A |ₛ B) (A' |ₛ B') :=
   if h : A = A' then
@@ -271,6 +369,8 @@ protected theorem species.le_total :
     or.imp (λ le, or.inl ⟨ h, le ⟩) (λ le, or.inl ⟨ ne.symm h, le ⟩)
       (species.le_total A A')
 | ._ ._ (A |ₛ B) (ν(_) _) := or.inl true.intro
+
+| ._ ._ (ν(M) A) (apply _ _ ) := or.inr true.intro
 | ._ ._ (ν(M) A) (Σ# _) := or.inr true.intro
 | ._ ._ (ν(M) A) (_ |ₛ _) := or.inr true.intro
 | Γ ._ (ν(M) A) (ν(N) B) :=
@@ -292,8 +392,10 @@ protected theorem species.le_total :
       end
     end
   end
+
 | ._ ._ empty _ := or.inl true.intro
 | ._ ._ _ empty := or.inr true.intro
+
 | Γ ._ (cons π₁ A As) (cons π₂ B Bs) :=
   match le_total (prefix_expr.wrap.intro π₁) (prefix_expr.wrap.intro π₂) with
   | or.inl le :=
@@ -338,12 +440,42 @@ private noncomputable def species.le_decidable :
   ∀ {Γ : context ω} {k} (A B : whole k Γ), decidable (species.le A B)
 | ._ ._ nil _ := decidable.true
 
+| ._ ._ (@apply _ _ m D as) (@apply _ _ n D' bs) :=
+  if eqm : m = n then
+    begin
+      cases eqm,
+      have : decidable (D < D' ∨ D = D' ∧ as.val ≤ bs.val), apply_instance,
+      cases this,
+      case is_true { from is_true (or.inr ⟨ rfl, this ⟩) },
+      case is_false {
+        from is_false (λ x,
+          match x with
+          | or.inl lt := lt_irrefl m lt
+          | or.inr ⟨ _, h ⟩ := this h
+          end)
+      }
+    end
+  else if lt : m < n then
+    is_true (or.inl lt)
+  else
+    is_false (λ x,
+      match x with
+      | or.inl lt' := lt lt'
+      | or.inr ⟨ eq', _ ⟩ := eqm eq'
+      end)
+| ._ ._ (apply D as) nil := decidable.false
+| ._ ._ (apply D as) (Σ# _) := decidable.true
+| ._ ._ (apply D as) (_ |ₛ _) := decidable.true
+| ._ ._ (apply D as) (ν(_) _) := decidable.true
+
 |  Γ ._ (Σ# As) (Σ# Bs) := species.le_decidable As Bs
 | ._ ._ (Σ# As) nil := decidable.false
+| ._ ._ (Σ# As) (apply _ _) := decidable.false
 | ._ ._ (Σ# As) (_ |ₛ _) := decidable.true
 | ._ ._ (Σ# As) (ν(_) _) := decidable.true
 
 | ._ ._ (A |ₛ B) nil := decidable.false
+| ._ ._ (A |ₛ B) (apply _ _) := decidable.false
 | ._ ._ (A |ₛ B) (Σ# _) := decidable.false
 |  Γ ._ (A |ₛ B) (A' |ₛ B') :=
   if eq : A = A' then
@@ -356,10 +488,10 @@ private noncomputable def species.le_decidable :
     | is_true le := is_true (or.inl ⟨ eq, le ⟩)
     | is_false nle := is_false (λ x, by { cases x; cases x; contradiction })
     end
-
 | ._ ._ (A |ₛ B) (ν(_) _) := decidable.true
 
 | ._ ._ (ν(M) A) nil := decidable.false
+| ._ ._ (ν(M) A) (apply _ _) := decidable.false
 | ._ ._ (ν(M) A) (Σ# _) := decidable.false
 | ._ ._ (ν(M) A) (_ |ₛ _) := decidable.false
 |  Γ ._ (ν(M) A) (ν(N) B) :=

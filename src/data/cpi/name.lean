@@ -28,7 +28,7 @@
   [1]: Proof-relevant π-calculus: a constructive account of concurrency and
        causality, Roly Perera, James Cheney
 -/
-import tactic.sanity_check data.fin
+import tactic.sanity_check data.fin data.vector data.vector2
 
 run_cmd sanity_check
 set_option profiler true
@@ -47,9 +47,9 @@ inductive environment
 
 /-- A reference to a species definition within an environment. -/
 @[derive decidable_eq]
-inductive reference : environment → Type
-| zero   {ω : environment} {n : ℕ} : reference (environment.extend n ω)
-| extend {ω : environment} {n : ℕ} : reference ω → reference (environment.extend n ω)
+inductive reference : ℕ → environment → Type
+| zero   {ω : environment} (n : ℕ) : reference n (environment.extend n ω)
+| extend {ω : environment} {n m : ℕ} : reference n ω → reference n (environment.extend m ω)
 
 /-- A context under which terms may be evaluated.
 
@@ -60,11 +60,9 @@ inductive context : environment → Type
 | nil (ω : environment) : context ω
 | extend {ω : environment} : ℕ → context ω → context ω
 
-variable {ω : environment}
-
 /-- The set of names within the continuous-π calculus. -/
 @[derive decidable_eq]
-inductive name : context ω → Type
+inductive name {ω} : context ω → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
 | extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
 
@@ -77,11 +75,65 @@ inductive name : context ω → Type
     Technically this property could be defined as "does any name of this level
     appear" - it may be worth seeing if that simplifies things in the future. -/
 @[derive decidable_eq]
-inductive level : context ω → Type
+inductive level {ω} : context ω → Type
 | zero   {Γ} {n} : level (context.extend n Γ)
 | extend {Γ} {n} : level Γ → level (context.extend n Γ)
 
+namespace reference
+  /- Just show that names form a decidable linear order. -/
+  section ordering
+    inductive le : ∀ {ω} {n}, reference n ω → reference n ω → Prop
+    | zero {ω} (n) : le (@zero ω n) (@zero ω n)
+    | one  {ω} {n} (a : reference n ω) : le (@zero ω n) (extend a)
+    | succ {ω} {n m} {a b : reference n ω} : le a b → le (@extend ω n m a) (extend b)
+
+    protected theorem le_refl {n} : ∀ {ω} (α : reference n ω), reference.le α α
+    | ._ (zero x) := le.zero x
+    | ._ (extend x) := le.succ (le_refl x)
+
+    protected theorem le_trans {n} :
+      ∀ {ω} (a b c : reference n ω), reference.le a b → reference.le b c → reference.le a c
+    | ._ ._ ._ ._ (le.zero n) (le.zero _) := le.zero n
+    | ._ ._ ._ ._ (le.zero n) (le.one c) := le.one c
+    | ._ ._ ._ ._ (le.succ ab) (le.succ bc) := le.succ (le_trans _ _ _ ab bc)
+    | ._ ._ ._ ._ (le.one β') (le.succ _) := le.one _
+
+    protected theorem le_antisymm {n} :
+      ∀ {ω} (a b : reference n ω), le a b → le b a → a = b
+    | ._ (zero a) (zero b) (le.zero n) (le.zero _) := rfl
+    | ._ (extend a) (extend b) (le.succ ab) (le.succ ba) := by rw le_antisymm a b ab ba
+
+    protected theorem le_total {n} : ∀ {ω} (a b : reference n ω), le a b ∨ le b a
+    | ._ (zero n) (zero _) := or.inl (le.zero n)
+    | ._ (extend a) (extend b) := or.imp le.succ le.succ (le_total a b)
+    | ._ (zero _) (extend _) := or.inl (le.one _)
+    | ._ (extend _) (zero _) := or.inr (le.one _)
+
+    protected def decidable_le {n} : ∀ {ω} (a b : reference n ω), decidable (le a b)
+    | ._ (zero n) (zero _) := is_true (le.zero n)
+    | ._ (zero i) (extend a) := is_true (le.one _)
+    | ._ (extend a) (zero i) := is_false (λ x, by cases x)
+    | ._ (extend a) (extend b) :=
+      match decidable_le a b with
+      | is_true h := is_true (le.succ h)
+      | is_false h := is_false (λ x, by { clear _match, cases x, contradiction })
+      end
+
+    instance {ω} {n} : decidable_linear_order (reference n ω) :=
+      { le := reference.le,
+        le_refl := reference.le_refl,
+        le_trans := reference.le_trans,
+        le_antisymm := reference.le_antisymm,
+        le_total := reference.le_total,
+        decidable_le := reference.decidable_le,
+        decidable_eq := by apply_instance }
+  end ordering
+
+end reference
+
 namespace name
+  variable {ω : environment}
+
   def to_level : ∀ {Γ : context ω}, name Γ → level Γ
   | ._ (zero _) := level.zero
   | ._ (extend a) := level.extend (to_level a)
@@ -114,11 +166,7 @@ namespace name
       if h : i ≤ j
       then or.inl (le.zero h)
       else or.inr (le.zero (le_of_not_le h))
-    | ._ (name.extend a) (name.extend b) :=
-      match le_total a b with
-      | or.inl x := or.inl (le.succ x)
-      | or.inr x := or.inr (le.succ x)
-      end
+    | ._ (name.extend a) (name.extend b) := or.imp le.succ le.succ (le_total a b)
     | ._ (name.zero _) (name.extend _) := or.inl (le.one _)
     | ._ (name.extend _) (name.zero _) := or.inr (le.one _)
 
@@ -162,10 +210,7 @@ namespace name
     private def at_level_decide :
       ∀ {Γ : context ω} (l : level Γ) (a : name Γ), decidable (at_level l a)
     | ._ level.zero (zero _) := decidable.true
-    | ._ (level.extend l) (extend a) := begin
-        unfold at_level,
-        from at_level_decide l a
-      end
+    | ._ (level.extend l) (extend a) := at_level_decide l a
     | ._ level.zero (extend _) := decidable.false
     | ._ (level.extend _) (zero _) := decidable.false
 
@@ -307,14 +352,31 @@ namespace name
         everything above 0. -/
     lemma swap_comp_extend {Γ : context ω} {m n : ℕ}
       : (@name.swap _ Γ m n ∘ name.extend) = (name.ext name.extend)
-      := funext $ by { assume a, cases a; from rfl }
+      := funext $ λ a, by { cases a; from rfl }
 
     /-- Incrementing all names above 0 and swapping is the same as just
         incrementing everything. -/
     lemma swap_comp_ext_extend {Γ : context ω} {m n : ℕ}
       : (@name.swap _ Γ m n ∘ name.ext name.extend) = name.extend
-      := funext $ by { assume a, cases a; from rfl }
+      := funext $ λ a, by { cases a; from rfl }
   end swap
+
+  section application
+    def mk_apply {Γ : context ω} {b} (bs : vector (name Γ) b)
+      : name (context.extend b Γ) → name Γ
+    | (zero idx) := vector.nth bs idx
+    | (extend e) := e
+
+    lemma mk_apply_rename
+        {Γ Δ : context ω} {b} (ρ : name Γ → name Δ) {bs : vector (name Γ) b}
+      : ρ ∘ mk_apply bs = mk_apply (vector.map ρ bs) ∘ name.ext ρ
+      := funext $ λ a,
+        by { cases a; simp only [mk_apply, ext, ext_with, vector.nth_map, function.comp] }
+
+    lemma mk_apply_ext {Γ : context ω} {b} {bs : vector (name Γ) b}
+      : mk_apply bs ∘ (@extend _ Γ b) = id
+      := funext $λ α, by { cases α; unfold mk_apply id function.comp }
+  end application
 end name
 
 end cpi
