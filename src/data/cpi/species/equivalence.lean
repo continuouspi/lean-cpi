@@ -27,10 +27,14 @@ inductive equiv : ∀ {Γ} (A B : species ω Γ), Prop
 | ξ_restriction
       {Γ} (M : affinity) {A A' : species ω (context.extend (M.arity) Γ)}
     : equiv A A' → equiv (ν(M) A) (ν(M) A')
-| ξ_choice_cons
+| ξ_choice_here
       {Γ} {f} (π : prefix_expr Γ f) {A A' : species ω (f Γ)} {As : choices ω Γ}
     : equiv A A'
     → equiv (Σ# (whole.cons π A As)) (Σ# (whole.cons π A' As))
+| ξ_choice_there
+      {Γ} {f} (π : prefix_expr Γ f) {A : species ω (f Γ)} {As As' : choices ω Γ}
+    : equiv (Σ# As) (Σ# As')
+    → equiv (Σ# (whole.cons π A As)) (Σ# (whole.cons π A As'))
 
 -- | An element in the choice array can be swapped.
 | choice_swap
@@ -93,9 +97,15 @@ namespace equiv
         simp,
         from ξ_restriction M (ih (name.ext ρ))
       },
-      case ξ_choice_cons : Γ f π A A' As eq ih Δ ρ {
+      case ξ_choice_here : Γ f π A A' As eq ih Δ ρ {
         simp,
-        from ξ_choice_cons (prefix_expr.rename ρ π) (ih (prefix_expr.ext π ρ))
+        from ξ_choice_here (prefix_expr.rename ρ π) (ih (prefix_expr.ext π ρ))
+      },
+      case ξ_choice_there : Γ f π A As As' eq ih Δ ρ {
+        simp,
+        have h := ih ρ,
+        have g : (Σ# rename ρ As) ≈ (Σ# rename ρ As'), simp at h, from h,
+        from ξ_choice_there (prefix_expr.rename ρ π) g
       },
 
       -- Choice
@@ -136,7 +146,99 @@ namespace equiv
           ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
       ... ≈ (B |ₛ ν(M) A) : ν_parallel M
       ... ≈ ((ν(M) A) |ₛ B) : parallel_symm
+
+    lemma parallel_nil' {Γ} {A : species ω Γ} : (nil |ₛ A) ≈ A :=
+      calc  (nil |ₛ A)
+          ≈ (A |ₛ nil) : parallel_symm
+      ... ≈ A : parallel_nil
 end equiv
+
+namespace parallel
+  private lemma from_to_cons {Γ} (A : species ω Γ) :
+    ∀ (Bs : list(species ω Γ)), from_list (A :: Bs) ≈ (A |ₛ from_list Bs)
+  | [] := symm equiv.parallel_nil
+  | (B :: Bs) := refl _
+
+  private lemma from_to_append {Γ} :
+    ∀ (As : list (species ω Γ)) (B : species ω Γ)
+    , from_list (As ++ to_list B) ≈ (from_list As |ₛ from_list (to_list B))
+  | [] B := by { simp only [list.nil_append], from symm equiv.parallel_nil' }
+  | [A] B := from_to_cons A _
+  | (A :: A' :: As) B := begin
+      have h := from_to_append (A' :: As) B,
+      simp only [from_list, list.cons_append],
+      from calc  (A |ₛ from_list (A' :: (As ++ to_list B)))
+               ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list (to_list B)))
+                 : equiv.ξ_parallel₂ h
+           ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list (to_list B))
+                : symm equiv.parallel_assoc
+    end
+
+  lemma from_to {Γ} : ∀ (A : species ω Γ), from_list (to_list A) ≈ A
+  | nil := by unfold from_list to_list
+  | (Σ# _) := by unfold from_list to_list
+  | (ν(_) _) := by unfold from_list to_list
+  | (apply _ _) := by unfold from_list to_list
+  | (A |ₛ B) := begin
+      unfold from_list to_list,
+      have a := from_to A, have b := from_to B,
+      from calc  from_list (to_list A ++ to_list B)
+               ≈ (from_list (to_list A) |ₛ from_list (to_list B))
+                : from_to_append (to_list A) B
+           ... ≈ (from_list (to_list A) |ₛ B) : equiv.ξ_parallel₂ b
+           ... ≈ (A |ₛ B) : equiv.ξ_parallel₁ a,
+    end
+
+  private lemma from_cons {Γ} :
+    ∀ (A : species ω Γ) {As Bs : list _}
+    , from_list As ≈ from_list Bs
+    → from_list (A :: As) ≈ from_list (A :: Bs)
+  | A [] [] _ := refl _
+  | A [] (B' :: Bs) eq :=
+      calc  A
+          ≈ (A |ₛ nil) : symm equiv.parallel_nil
+      ... ≈ (A |ₛ from_list (B' :: Bs)) : equiv.ξ_parallel₂ eq
+  | A (A' :: As) [] eq :=
+      calc  (A |ₛ from_list (A' :: As))
+          ≈ (A |ₛ nil) : equiv.ξ_parallel₂ eq
+      ... ≈ A : equiv.parallel_nil
+  | A (A' :: As) (B' :: Bs') eq := equiv.ξ_parallel₂ eq
+
+  lemma permute {Γ} :
+    ∀ {As Bs : list (species ω Γ)}
+    , As ≈ Bs → from_list As ≈ from_list Bs := λ _ _ perm, begin
+    induction perm,
+
+    case list.perm.nil { from refl _ },
+    case list.perm.skip : A As Bs pm ih { from from_cons A ih },
+    case list.perm.swap : A B As {
+      cases As,
+      case list.nil { from equiv.parallel_symm },
+      case list.cons { from equiv.parallel_symm₁ },
+    },
+    case list.perm.trans : As Bs Cs ab bc ih_ab ih_bc { from trans ih_ab ih_bc }
+  end
+end parallel
+
+namespace choice
+  lemma permute {Γ} :
+    ∀ {As Bs : list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ))}
+    , As ≈ Bs → (Σ# from_list As) ≈ (Σ# from_list Bs) := λ _ _ perm, begin
+    induction perm,
+
+    case list.perm.nil { from refl _ },
+    case list.perm.skip : A As Bs pm ih {
+      cases A with f this, cases this with π A,
+      unfold from_list,
+      from equiv.ξ_choice_there π ih
+     },
+    case list.perm.swap : A B As {
+      rcases A with ⟨ f₁, π₁, A ⟩, rcases B with ⟨ f₂, π₂, B ⟩,
+      from equiv.choice_swap π₂ π₁
+    },
+    case list.perm.trans : As Bs Cs ab bc ih_ab ih_bc { from trans ih_ab ih_bc }
+  end
+end choice
 
 section examples
   variable {Γ : context}

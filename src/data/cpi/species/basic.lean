@@ -287,6 +287,48 @@ section rename_equations
 
 end rename_equations
 
+/- Show parallel can be converted to/from a list (though not isomorphic). -/
+namespace parallel
+  def to_list {Γ} : species ω Γ → list (species ω Γ)
+  | nil := []
+  | (A |ₛ B) := to_list A ++ to_list B
+  | A := [A]
+
+  def from_list {Γ} : list (species ω Γ) → species ω Γ
+  | [] := nil
+  | [A] := A
+  | (A :: As) := A |ₛ (from_list As)
+
+  instance lift_to {Γ} : has_lift (species ω Γ) (list (species ω Γ)) := ⟨ to_list ⟩
+  instance lift_from {Γ} : has_lift (list (species ω Γ)) (species ω Γ) := ⟨ from_list ⟩
+end parallel
+
+/- Show choice can be converted to/from a list and is isomorphic. -/
+namespace choice
+  def to_list {Γ} : choices ω Γ → list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ))
+  | empty := []
+  | (cons π A As) := ⟨ _, π, A ⟩ :: to_list As
+
+  def from_list {Γ} : list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)) → choices ω Γ
+  | [] := empty
+  | (⟨ _, π, A ⟩ :: As) := cons π A (from_list As)
+
+  instance lift_to {Γ} : has_lift (choices ω Γ) (list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)))
+    := ⟨ to_list ⟩
+  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ))) (choices ω Γ)
+    := ⟨ from_list ⟩
+
+  lemma from_to {Γ} : ∀ (A : choices ω Γ), from_list (to_list A) = A
+  | empty := by unfold to_list from_list
+  | (cons π A As) := by { simp [to_list, from_list], from from_to As }
+
+  lemma to_from {Γ} :
+    ∀ (As : list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)))
+    , to_list (from_list As) = As
+  | [] := by unfold to_list from_list
+  | (⟨ _, π,  A⟩ :: As) := by { simp [to_list, from_list], from to_from As }
+end choice
+
 end species
 
 /- Re-export all the definitions. Don't ask - apparently export within
