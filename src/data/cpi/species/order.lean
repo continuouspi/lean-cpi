@@ -565,6 +565,18 @@ noncomputable instance species.whole.decidable_linear_order {Γ} {k} :
     decidable_le := species.le_decidable,
     decidable_eq := species.eq_decidable }
 
+namespace choice
+  @[reducible]
+  def pair (ω Γ : context) : Type := Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)
+
+  def le {Γ} : pair ω Γ → pair ω Γ → Prop
+  | ⟨ f, π₁, A ⟩ ⟨ g, π₂, B ⟩ :=
+      (Σ# whole.cons π₁ A whole.empty) ≤ (Σ# whole.cons π₂ B whole.empty)
+
+  noncomputable instance decidable_le {Γ} : decidable_rel (@le ω Γ)
+  | ⟨ f, π₁, A ⟩ ⟨ g, π₂, B ⟩ := by { unfold le, apply_instance }
+end choice
+
 end cpi
 
 #sanity_check

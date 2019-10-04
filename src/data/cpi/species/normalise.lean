@@ -1,5 +1,5 @@
-import data.cpi.species.equivalence
-import data.cpi.species.order
+import data.cpi.species.equivalence data.cpi.species.order
+import data.list.sort
 
 run_cmd sanity_check
 set_option profiler true
@@ -50,11 +50,62 @@ def drop_nu : ∀ {Γ} (A : species ω Γ), Σ' (B : species ω Γ), A ≈ B
      end ⟩
 | Γ x := ⟨ x, refl _ ⟩
 
-/-- Reduce a term to some equivalent normal form. -/
-constant normalise_to : ∀ {Γ} (A : species ω Γ), Σ' (B : species ω Γ), A ≈ B
+def equivalence_of : ∀ {k} {Γ}, whole ω k Γ → Type
+| kind.species Γ A := Σ' (B : species ω Γ), A ≈ B
+| kind.choices Γ A := Σ' (B : choices ω Γ), (Σ# A) ≈ (Σ# B)
 
 /-- Reduce a term to some equivalent normal form. -/
-noncomputable def normalise {Γ} : species ω Γ → species ω Γ := λ A, (normalise_to A).fst
+noncomputable def normalise_to : ∀ {k} {Γ} (A : whole ω k Γ), equivalence_of A
+| ._ ._ nil := ⟨ nil, refl _ ⟩
+| ._ ._ (apply D as) := ⟨ apply D as, refl _ ⟩
+| ._ Γ (A |ₛ B) :=
+  let ⟨ A', ea ⟩ := normalise_to A in
+  let ⟨ B', eb ⟩ := normalise_to B in
+  let as := parallel.to_list A' ++ parallel.to_list B' in
+  ⟨ parallel.from_list (list.insertion_sort (≤) as),
+    calc  (A |ₛ B)
+        ≈ (A' |ₛ B') : trans (equiv.ξ_parallel₁ ea) (equiv.ξ_parallel₂ eb)
+    ... ≈ parallel.from_list as : symm (parallel.from_to_append₂ A' B')
+    ... ≈ parallel.from_list (list.insertion_sort has_le.le as)
+          : parallel.permute (list.perm.symm (list.perm_insertion_sort (≤) _)) ⟩
+| ._ Γ (ν(M) A) :=
+  let ⟨ A', ea ⟩ := normalise_to A in
+  if h : level.zero ∈ A then
+    -- TODO: Shift some things out of the restriction when possible.
+    ⟨ ν(M) A, refl _ ⟩
+  else
+    ⟨ drop h, begin
+      suffices : (ν(M) rename name.extend (drop h)) ≈ drop h,
+        simpa only [drop_extend],
+      from equiv.ν_drop M
+     end ⟩
+| ._ Γ (Σ# As) :=
+  let ⟨ As', eqa ⟩ := normalise_to As in
+  let as := choice.to_list As' in
+  ⟨ Σ# (choice.from_list (list.insertion_sort choice.le as)),
+    calc  (Σ# As)
+        ≈ (Σ# As') : eqa
+    ... ≈ (Σ# choice.from_list as) : by rw choice.from_to
+    ... ≈ Σ# choice.from_list (list.insertion_sort choice.le as)
+          : choice.permute (list.perm.symm (list.perm_insertion_sort choice.le _)) ⟩
+
+| ._ Γ whole.empty := ⟨ whole.empty, refl _ ⟩
+| ._ Γ (whole.cons π A As) :=
+  let ⟨ A', eqa ⟩ := normalise_to A in
+  let ⟨ As', eqas ⟩ := normalise_to As in
+  ⟨ whole.cons π A' As',
+    trans (equiv.ξ_choice_here π eqa) (equiv.ξ_choice_there π eqas) ⟩
+
+using_well_founded {
+  rel_tac := λ _ _,
+    `[exact ⟨_, measure_wf (λ x, whole.sizeof ω x.fst x.snd.fst x.snd.snd ) ⟩ ],
+  dec_tac := tactic.fst_dec_tac,
+}
+
+/-- Reduce a term to some equivalent normal form. -/
+noncomputable def normalise : ∀ {k} {Γ}, whole ω k Γ → whole ω k Γ
+| kind.species Γ A := (normalise_to A).fst
+| kind.choices Γ A := (normalise_to A).fst
 
 /-- If two terms reduce to the same thing, then they are equivalent. -/
 lemma normalise_to_equiv :
@@ -65,36 +116,6 @@ lemma normalise_to_equiv :
     have : A ≈ (normalise_to B).fst := eq ▸ (normalise_to A).snd,
     from trans this (symm (normalise_to B).snd),
 end
-
-/-- If two terms are equivalent, they reduce to the same thing. -/
-axiom normalise_of_equiv :
-  ∀ {Γ} {A B : species ω Γ}
-  , A ≈ B → normalise A = normalise B
-
-/-- Reducing again does nothing extra. -/
-lemma normalise_normalise {Γ} (A : species ω Γ)
-  : normalise (normalise A) = normalise A
-  := normalise_of_equiv (symm (normalise_to A).snd)
-
-/-- Equality of reduction is isomorphic to equivalence. -/
-lemma normalise_equiv {Γ} (A B : species ω Γ)
-  : (normalise A = normalise B) ↔ (A ≈ B)
-  := ⟨ normalise_to_equiv, normalise_of_equiv ⟩
-
-/-- Equality of reduction is isomorphic to equivalence (equality version). -/
-lemma normalise_equiv_eq {Γ} (A B : species ω Γ)
-  : (normalise A = normalise B) = (A ≈ B)
-  := propext (normalise_equiv A B) -- Fun facts: propositional extensionality is an axiom.
-
-/-- Decision procedure for equivalency of species.
-
-    The fact that this is derivable from normalisation is obvious, but still
-    pretty neat. -/
-noncomputable instance equiv.decide {Γ}
-  : @decidable_rel (species ω Γ) (≈)
-  := λ A B,
-    let h : decidable (normalise A = normalise B) := by apply_instance in
-    decidable_of_decidable_of_iff h (normalise_equiv A B)
 
 end species
 end cpi

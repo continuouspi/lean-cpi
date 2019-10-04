@@ -251,6 +251,15 @@ section rename_equations
   lemma rename.nil : rename ρ (@nil ω Γ) = nil := by unfold rename rename_with
 
   @[simp]
+  lemma rename.invoke {n} (D : reference n ω) (as : vector (name Γ) n)
+    : rename ρ (apply D as) = apply D (vector.map ρ as)
+    := begin
+      cases as with as p,
+      unfold rename rename_with vector.map, simp,
+      from list.map_witness_to_map _ as,
+    end
+
+  @[simp]
   lemma rename.parallel (A B : species ω Γ)
     : rename ρ (A |ₛ B) = (rename ρ A |ₛ rename ρ B)
     := by unfold rename rename_with
@@ -301,6 +310,17 @@ namespace parallel
 
   instance lift_to {Γ} : has_lift (species ω Γ) (list (species ω Γ)) := ⟨ to_list ⟩
   instance lift_from {Γ} : has_lift (list (species ω Γ)) (species ω Γ) := ⟨ from_list ⟩
+
+  @[simp]
+  def rename_from_list {Γ Δ} (ρ : name Γ → name Δ) :
+    ∀ (As : list (species ω Γ))
+    , rename ρ (from_list As) = from_list (list.map (rename ρ) As)
+  | [] := rename.nil
+  | [M] := rfl
+  | (M :: M' :: Ms) := begin
+    simp only [from_list, rename.parallel, list.map],
+    from ⟨ rfl, rename_from_list (M' :: Ms) ⟩
+  end
 end parallel
 
 /- Show choice can be converted to/from a list and is isomorphic. -/
