@@ -154,7 +154,7 @@ namespace equiv
 end equiv
 
 namespace parallel
-  private lemma from_to_cons {Γ} (A : species ω Γ) :
+  lemma from_list_cons {Γ} (A : species ω Γ) :
     ∀ (Bs : list(species ω Γ)), from_list (A :: Bs) ≈ (A |ₛ from_list Bs)
   | [] := symm equiv.parallel_nil
   | (B :: Bs) := refl _
@@ -163,7 +163,7 @@ namespace parallel
     ∀ (As : list (species ω Γ)) (B : species ω Γ)
     , from_list (As ++ to_list B) ≈ (from_list As |ₛ from_list (to_list B))
   | [] B := by { simp only [list.nil_append], from symm equiv.parallel_nil' }
-  | [A] B := from_to_cons A _
+  | [A] B := from_list_cons A _
   | (A :: A' :: As) B := begin
       have h := from_to_append (A' :: As) B,
       simp only [from_list, list.cons_append],
