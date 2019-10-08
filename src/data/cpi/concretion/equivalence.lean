@@ -19,7 +19,7 @@ inductive equiv : ∀ {Γ} {b y}, concretion ω Γ b y → concretion ω Γ b y 
   : equiv F F' → equiv (F |₁ A) (F' |₁ A)
 | ξ_parallel₂
     {Γ} {b y} {F F' : concretion ω Γ b y} {A : species ω Γ}
-  : equiv F F' → equiv (F |₁ A) (F' |₁ A)
+  : equiv F F' → equiv (A |₂ F) (A |₂ F')
 | ξ_restriction
     {Γ} {b y} (M : affinity) {F F' : concretion ω (context.extend M.arity Γ) b y}
   : equiv F F' → equiv (ν'(M) F) (ν'(M) F')
@@ -75,6 +75,24 @@ instance {Γ} {b y} : setoid (concretion ω Γ b y) :=
   ⟨ equiv, ⟨ @equiv.refl _ Γ b y, @equiv.symm _ Γ b y, @equiv.trans _ Γ b y ⟩ ⟩
 instance setoid.is_equiv {Γ} {b y} : is_equiv (concretion ω Γ b y) has_equiv.equiv :=
   concretion.is_equiv
+
+protected lemma equiv.ξ_parallel'
+    {Γ} {b y} {F : concretion ω Γ b y} {A A' : species ω Γ} (eq : A ≈ A')
+  : (A |₂ F) ≈ (A' |₂ F) :=
+    calc  (A |₂ F)
+        ≈ (F |₁ A) : symm equiv.parallel_symm
+    ... ≈ (F |₁ A') : equiv.ξ_parallel eq
+    ... ≈ (A' |₂ F) : equiv.parallel_symm
+
+protected lemma equiv.parallel_assoc₃
+    {Γ} {b y : ℕ} {A B : species ω Γ} {F : concretion ω Γ b y}
+  : ((A |ₛ B) |₂ F) ≈ (A |₂ B |₂ F) :=
+  calc  ((A |ₛ B) |₂ F)
+      ≈ (F |₁ (A |ₛ B)) : symm equiv.parallel_symm
+  ... ≈ ((F |₁ A) |₁ B) : symm equiv.parallel_assoc₁
+  ... ≈ ((A |₂ F) |₁ B) : equiv.ξ_parallel₁ equiv.parallel_symm
+  ... ≈ (A |₂ F |₁ B) : equiv.parallel_assoc₂
+  ... ≈ (A |₂ B |₂ F) : equiv.ξ_parallel₂ equiv.parallel_symm
 
 end concretion
 end cpi

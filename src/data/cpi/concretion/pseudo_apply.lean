@@ -514,7 +514,7 @@ begin
   },
   case equiv.ξ_parallel₂ : Γ b y A F F' eq ih {
     unfold pseudo_apply,
-    from ξ_parallel₁ ih
+    from ξ_parallel₂ ih
   },
   case equiv.ξ_restriction : Γ b y M F F' eq ih {
     unfold pseudo_apply,
@@ -585,6 +585,25 @@ theorem pseudo_apply.equiv {a b} :
   ... ≈ pseudo_apply G  F' : pseudo_apply.symm F' G
   ... ≈ pseudo_apply G' F' : pseudo_apply.equiv_l eq_2
   ... ≈ pseudo_apply F' G' : pseudo_apply.symm G' F'
+
+protected lemma pseudo_apply.on_parallel₂'
+    {Γ} {a b} (A : species ω Γ) (F : concretion ω Γ a b) (G : concretion ω Γ b a)
+  : pseudo_apply (A |₂ F) G ≈ (A |ₛ pseudo_apply F G) :=
+  calc  pseudo_apply (A |₂ F) G
+      ≈ pseudo_apply G (A |₂ F) : pseudo_apply.symm _ G
+  ... ≈ (A |ₛ pseudo_apply G F) : pseudo_apply.on_parallel₂ G A F
+  ... ≈ (A |ₛ pseudo_apply F G) : ξ_parallel₂ (pseudo_apply.symm G F)
+
+protected lemma psuedo_apply.parallel_shift
+    {Γ} {a b} (F : concretion ω Γ a b) (A : species ω Γ) (G : concretion ω Γ b a)
+  : pseudo_apply (F |₁ A) G ≈ pseudo_apply F (A |₂ G) :=
+  calc  pseudo_apply (F |₁ A) G
+      ≈ pseudo_apply G (F |₁ A) : pseudo_apply.symm _ G
+  ... ≈ (pseudo_apply G F |ₛ A) : pseudo_apply.on_parallel₁ G F A
+  ... ≈ (A |ₛ pseudo_apply G F) : parallel_symm
+  ... ≈ (A |ₛ pseudo_apply F G) : ξ_parallel₂ (pseudo_apply.symm G F)
+  ... ≈ pseudo_apply F (A |₂ G) : symm (pseudo_apply.on_parallel₂ F A G)
+
 
 end concretion
 end cpi
