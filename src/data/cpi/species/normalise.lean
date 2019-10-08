@@ -52,7 +52,7 @@ private def partition_restriction : ∀ {Γ}
   ⟨ [], [],
     calc  (ν(M) C |ₛ nil)
         ≈ (ν(M) (C |ₛ nil) |ₛ nil)
-          : equiv.ξ_restriction M (symm equiv.parallel_nil)
+          : equiv.ξ_restriction M equiv.parallel_nil₂
 
     ... ≈ ((ν(M) C |ₛ nil) |ₛ nil) : begin
             suffices : (ν(M) (C |ₛ nil) |ₛ rename name.extend nil) ≈ ((ν(M) C |ₛ nil) |ₛ nil),
@@ -68,7 +68,7 @@ private def partition_restriction : ∀ {Γ}
             : equiv.ξ_restriction M $ equiv.ξ_parallel₂ $ parallel.from_list_cons A As
 
       ... ≈ (ν(M) (C |ₛ A) |ₛ parallel.from_list As)
-            : equiv.ξ_restriction M $ symm equiv.parallel_assoc
+            : equiv.ξ_restriction M $ equiv.parallel_assoc₂
 
       ... ≈ ((ν(M) (C |ₛ A) |ₛ parallel.from_list As') |ₛ parallel.from_list Bs')
             : eq
@@ -82,7 +82,7 @@ private def partition_restriction : ∀ {Γ}
            : eq'
 
      ... ≈ ((ν(M) C |ₛ A |ₛ parallel.from_list As') |ₛ parallel.from_list Bs')
-           : equiv.ξ_parallel₁ $ equiv.ξ_restriction M $ equiv.parallel_assoc
+           : equiv.ξ_parallel₁ $ equiv.ξ_restriction M $ equiv.parallel_assoc₁
 
      ... ≈ ((ν(M) C |ₛ parallel.from_list (A :: As')) |ₛ parallel.from_list Bs')
            : equiv.ξ_parallel₁ $ equiv.ξ_restriction M
@@ -96,18 +96,18 @@ private def partition_restriction : ∀ {Γ}
 
       ... ≈ ((ν(M) A |ₛ C |ₛ parallel.from_list As') |ₛ parallel.from_list Bs')
             : equiv.ξ_parallel₁ $ equiv.ξ_restriction M
-            $ trans (equiv.ξ_parallel₁ equiv.parallel_symm) equiv.parallel_assoc
+            $ trans (equiv.ξ_parallel₁ equiv.parallel_symm) equiv.parallel_assoc₁
 
       ... ≈ (((ν(M) C |ₛ parallel.from_list As') |ₛ drop h) |ₛ parallel.from_list Bs')
             : equiv.ξ_parallel₁ begin
                 suffices : (ν(M) rename name.extend (drop h) |ₛ C |ₛ parallel.from_list As')
                            ≈ (drop h |ₛ (ν(M) C |ₛ parallel.from_list As')),
                     rw drop_extend h at this, from trans this equiv.parallel_symm,
-                from equiv.ν_parallel M
+                from equiv.ν_parallel₁ M
               end
 
       ... ≈ ((ν(M) C |ₛ parallel.from_list As') |ₛ drop h |ₛ parallel.from_list Bs')
-            : equiv.parallel_assoc
+            : equiv.parallel_assoc₁
 
       ... ≈ ((ν(M) C |ₛ parallel.from_list As') |ₛ parallel.from_list (drop h :: Bs'))
             : equiv.ξ_parallel₂ (symm (parallel.from_list_cons (drop h) Bs')) ⟩
@@ -145,7 +145,7 @@ private noncomputable def normalise_restriction: ∀ {Γ}
     ⟨ drop h, begin
       suffices : (ν(M) rename name.extend (drop h)) ≈ drop h,
         rw drop_extend h at this, from this,
-      from equiv.ν_drop M
+      from equiv.ν_drop₁ M
      end ⟩
 
 
@@ -206,7 +206,7 @@ def drop_nu : ∀ {Γ}
     ⟨ drop h, begin
       suffices : (ν(M) rename name.extend (drop h)) ≈ drop h,
         rw drop_extend h at this, from this,
-      from equiv.ν_drop M
+      from equiv.ν_drop₁ M
      end ⟩
 
 /-- Reduce a term to some equivalent normal form. -/

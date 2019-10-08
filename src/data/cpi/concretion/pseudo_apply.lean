@@ -78,7 +78,7 @@ protected lemma pseudo_apply.on_parallel₁ :
     calc  (B |ₛ pseudo_apply F (G |₁ A))
         ≈ (B |ₛ pseudo_apply F G |ₛ A)
           : ξ_parallel₂ (pseudo_apply.on_parallel₁ F G A)
-    ... ≈ ((B |ₛ pseudo_apply F G) |ₛ A) : symm parallel_assoc
+    ... ≈ ((B |ₛ pseudo_apply F G) |ₛ A) : parallel_assoc₂
   end
 | Γ a b (ν'(M) F) G A := begin
     unfold pseudo_apply rename,
@@ -97,7 +97,7 @@ protected lemma pseudo_apply.on_parallel₂ :
     calc  (pseudo_apply F (A |₂ G) |ₛ B)
         ≈ ((A |ₛ pseudo_apply F G) |ₛ B)
           : ξ_parallel₁ (pseudo_apply.on_parallel₂ F A G)
-    ... ≈ (A |ₛ pseudo_apply F G |ₛ B) : parallel_assoc
+    ... ≈ (A |ₛ pseudo_apply F G |ₛ B) : parallel_assoc₁
   end
 | Γ a b (B |₂ F) A G := begin
     unfold pseudo_apply,
@@ -111,7 +111,7 @@ protected lemma pseudo_apply.on_parallel₂ :
     calc  (ν(M) pseudo_apply F (species.rename name.extend A |₂ rename name.extend G))
         ≈ (ν(M) species.rename name.extend A |ₛ pseudo_apply F (rename name.extend G))
           : ξ_restriction M (pseudo_apply.on_parallel₂ F _ _)
-    ... ≈ (A |ₛ ν(M) pseudo_apply F (rename name.extend G)) : ν_parallel M
+    ... ≈ (A |ₛ ν(M) pseudo_apply F (rename name.extend G)) : ν_parallel₁ M
   end
 
 -- TODO: Clean up to use calc
@@ -200,7 +200,7 @@ private lemma pseudo_apply.restriction_swap {a b}:
 | Γ M N F G :=
     calc  (ν(N) ν(M) pseudo_apply (rename name.extend F) (rename (name.ext name.extend) G))
         ≈ (ν(M) ν(N) species.rename name.swap (pseudo_apply (rename name.extend F) (rename (name.ext name.extend) G)))
-          : ν_swap N M
+          : ν_swap₁ N M
     ... ≈ (ν(M) ν(N) (pseudo_apply (rename name.swap (rename name.extend F)) (rename name.swap (rename (name.ext name.extend) G))))
           : by rw pseudo_apply.rename
     ... ≈ (ν(M) ν(N) (pseudo_apply (rename (name.swap ∘ name.extend) F) (rename (name.swap ∘ name.ext name.extend) G)))
@@ -227,7 +227,7 @@ private lemma pseudo_apply.on_restriction :
         ≈ (A |ₛ ν(M) pseudo_apply (rename name.extend F) G)
           : ξ_parallel₂ (pseudo_apply.on_restriction F M G)
     ... ≈ ν(M) species.rename name.extend A |ₛ pseudo_apply (rename name.extend F) G
-          : symm (ν_parallel M),
+          : ν_parallel₂ M,
   end
 | Γ a b (ν'(N) F) M G := begin
     unfold pseudo_apply rename,
@@ -294,7 +294,7 @@ theorem pseudo_apply.symm {a b} :
     calc  (pseudo_apply F (B |₂ G) |ₛ A)
         ≈ ((B |ₛ pseudo_apply F G) |ₛ A)
           : ξ_parallel₁ (pseudo_apply.on_parallel₂ F B G)
-    ... ≈ (B |ₛ pseudo_apply F G |ₛ A) : parallel_assoc
+    ... ≈ (B |ₛ pseudo_apply F G |ₛ A) : parallel_assoc₁
     ... ≈ (B |ₛ pseudo_apply G F |ₛ A)
           : ξ_parallel₂ (ξ_parallel₁ (pseudo_apply.symm F G))
     ... ≈ (B |ₛ pseudo_apply G (F |₁ A))
@@ -324,7 +324,7 @@ theorem pseudo_apply.symm {a b} :
           : ξ_parallel₂ (pseudo_apply.on_parallel₁ F G B)
     ... ≈ (A |ₛ pseudo_apply G F |ₛ B)
           : ξ_parallel₂ (ξ_parallel₁ (pseudo_apply.symm F G))
-    ... ≈ ((A |ₛ pseudo_apply G F) |ₛ B) : symm parallel_assoc
+    ... ≈ ((A |ₛ pseudo_apply G F) |ₛ B) : parallel_assoc₂
     ... ≈ (pseudo_apply G (A |₂ F) |ₛ B)
           : ξ_parallel₁ (symm (pseudo_apply.on_parallel₂ G A F))
   end
@@ -345,7 +345,7 @@ theorem pseudo_apply.symm {a b} :
         ≈ (A |ₛ ν(M) pseudo_apply (rename name.extend F) G)
           : ξ_parallel₂ (pseudo_apply.on_restriction F M G)
     ... ≈ ν(M) species.rename name.extend A |ₛ pseudo_apply (rename name.extend F) G
-          : symm (ν_parallel M)
+          : ν_parallel₂ M
     ... ≈ ν(M) species.rename name.extend A |ₛ pseudo_apply G (rename name.extend F)
           : ξ_restriction M (ξ_parallel₂ (pseudo_apply.symm _ G))
     ... ≈ ν(M) pseudo_apply G (species.rename name.extend A |₂ rename name.extend F)
@@ -380,7 +380,7 @@ end
     calc  (ν(M) pseudo_apply F (species.rename name.extend B |₂ rename name.extend G))
         ≈ (ν(M) species.rename name.extend B |ₛ pseudo_apply F (rename name.extend G))
           : ξ_restriction M (pseudo_apply.on_parallel₂ F _ _)
-    ... ≈ (B |ₛ ν(M) pseudo_apply F (rename name.extend G)) : ν_parallel M
+    ... ≈ (B |ₛ ν(M) pseudo_apply F (rename name.extend G)) : ν_parallel₁ M
     ... ≈ (B |ₛ ν(M) pseudo_apply (rename name.extend G) F)
           : ξ_parallel₂ (ξ_restriction M (pseudo_apply.symm F _))
     ... ≈ (B |ₛ pseudo_apply G (ν'(M) F))
@@ -459,14 +459,14 @@ begin
     ... ≈ ((A |ₛ species.rename (name.mk_apply bs) B) |ₛ species.rename (name.mk_apply as) C)
           : by { rw [name.mk_apply_ext, species.rename_id], }
     ... ≈ (A |ₛ species.rename (name.mk_apply bs) B |ₛ species.rename (name.mk_apply as) C)
-          : parallel_assoc
+          : parallel_assoc₁
   },
 
   case parallel₁ : _ b' y G C ih {
     unfold pseudo_apply_app species.rename,
     calc  (pseudo_apply_app as (species.rename name.extend A |ₛ B) G |ₛ C)
         ≈ ((A |ₛ pseudo_apply_app as B G) |ₛ C) : ξ_parallel₁ (ih as A B)
-    ... ≈ (A |ₛ pseudo_apply_app as B G |ₛ C) : parallel_assoc
+    ... ≈ (A |ₛ pseudo_apply_app as B G |ₛ C) : parallel_assoc₁
   },
 
   case parallel₂ : _ b' y C G ih {
@@ -492,7 +492,7 @@ begin
     ... ≈ (A |ₛ ν(M)
                 pseudo_apply_app (vector.map name.extend as)
                     (species.rename (name.ext name.extend) B) G)
-        : ν_parallel M
+        : ν_parallel₁ M
   }
 end
 
@@ -523,15 +523,15 @@ begin
 
   -- Now for the interesting stuff. Well, relatively speaking.
 
-  case equiv.parallel_nil : Γ b y F { unfold pseudo_apply, from parallel_nil },
+  case equiv.parallel_nil : Γ b y F { unfold pseudo_apply, from parallel_nil₁ },
   case equiv.parallel_symm : Γ b y F G { unfold pseudo_apply, from parallel_symm },
   case equiv.parallel_assoc₁ : Γ b y F A B {
     unfold pseudo_apply,
-    from parallel_assoc
+    from parallel_assoc₁
   },
   case equiv.parallel_assoc₂ : Γ b y F A B {
     unfold pseudo_apply,
-    from parallel_assoc
+    from parallel_assoc₁
   },
 
   case equiv.ξ_apply : Γ b y bs A A' eq F {
@@ -545,7 +545,7 @@ begin
 
   case equiv.ν_parallel₁ : Γ b y M A F {
     unfold pseudo_apply,
-    from ν_parallel M
+    from ν_parallel₁ M
   },
   case equiv.ν_parallel₂ : Γ b y M F F {
     unfold pseudo_apply,
@@ -554,7 +554,7 @@ begin
   case equiv.ν_drop : Γ b y M F {
     unfold pseudo_apply,
     rw ← pseudo_apply.rename name.extend F G,
-    from ν_drop M
+    from ν_drop₁ M
   },
   case equiv.ν_swap : Γ b y M N F {
     unfold pseudo_apply,
@@ -562,7 +562,7 @@ begin
         ≈ (ν(M) ν(N) pseudo_apply F (rename (name.extend ∘ name.extend) G))
           : by rw rename_compose
     ... ≈ (ν(N) ν(M) pseudo_apply (rename name.swap F) (rename name.swap (rename (name.extend ∘ name.extend) G)))
-          : by { rw ← pseudo_apply.rename, from ν_swap M N }
+          : by { rw ← pseudo_apply.rename, from ν_swap₁ M N }
     ... ≈ (ν(N) ν(M) pseudo_apply (rename name.swap F) (rename (name.swap ∘ name.extend ∘ name.extend) G))
           : by rw rename_compose
     ... ≈ (ν(N) ν(M) pseudo_apply (rename name.swap F) (rename (name.extend ∘ name.extend) G))

@@ -286,7 +286,7 @@ section rename_equations
   lemma rename.empty : rename ρ (@whole.empty ω Γ) = empty := by unfold rename rename_with
 
   @[simp]
-  lemma rename.sum {f} (π : prefix_expr Γ f) (A : species ω (f Γ)) (As : choices ω Γ)
+  lemma rename.cons {f} (π : prefix_expr Γ f) (A : species ω (f Γ)) (As : choices ω Γ)
     : rename ρ (cons π A As)
     = cons (prefix_expr.rename ρ π) (rename (prefix_expr.ext π ρ) A) (rename ρ As)
     := begin
@@ -312,7 +312,7 @@ namespace parallel
   instance lift_from {Γ} : has_lift (list (species ω Γ)) (species ω Γ) := ⟨ from_list ⟩
 
   @[simp]
-  def rename_from_list {Γ Δ} (ρ : name Γ → name Δ) :
+  lemma rename_from_list {Γ Δ} (ρ : name Γ → name Δ) :
     ∀ (As : list (species ω Γ))
     , rename ρ (from_list As) = from_list (list.map (rename ρ) As)
   | [] := rename.nil
@@ -374,6 +374,5 @@ export cpi.species (renaming
   whole.choice → cpi.species.choice
   species → cpi.species
 )
-
 
 #sanity_check

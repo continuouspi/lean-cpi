@@ -15,7 +15,6 @@ variable {ω : context}
 inductive equiv : ∀ {Γ} (A B : species ω Γ), Prop
 | refl  {Γ} {A : species ω Γ} : equiv A A
 | trans {Γ} {A B C : species ω Γ} : equiv A B → equiv B C → equiv A C
-| symm  {Γ} {A B : species ω Γ} : equiv A B → equiv B A
 
 -- Protections into the body of a species.
 | ξ_parallel₁
@@ -44,20 +43,63 @@ inductive equiv : ∀ {Γ} (A B : species ω Γ), Prop
           (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
 
 -- Species forms a commutative monoid using parallel.
-| parallel_nil   : ∀ {Γ} {A : species ω Γ},     equiv (A |ₛ nil) A
-| parallel_symm  : ∀ {Γ} {A B : species ω Γ},   equiv (A |ₛ B) (B |ₛ A)
-| parallel_assoc : ∀ {Γ} {A B C : species ω Γ}, equiv ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
+| parallel_nil₁   : ∀ {Γ} {A : species ω Γ},     equiv (A |ₛ nil) A
+| parallel_nil₂   : ∀ {Γ} {A : species ω Γ},     equiv A (A |ₛ nil)
+| parallel_symm   : ∀ {Γ} {A B : species ω Γ},   equiv (A |ₛ B) (B |ₛ A)
+| parallel_assoc₁ : ∀ {Γ} {A B C : species ω Γ}, equiv ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
+| parallel_assoc₂ : ∀ {Γ} {A B C : species ω Γ}, equiv (A |ₛ (B |ₛ C)) ((A |ₛ B) |ₛ C)
 
-| ν_parallel
+| ν_parallel₁
     {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
   : equiv (ν(M) (rename name.extend A |ₛ B)) (A |ₛ ν(M)B)
-| ν_drop
+| ν_parallel₂
+    {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
+  : equiv (A |ₛ ν(M)B) (ν(M) (rename name.extend A |ₛ B))
+| ν_drop₁
     {Γ} (M : affinity) {A : species ω Γ}
   : equiv (ν(M) (rename name.extend A)) A
-| ν_swap
+| ν_drop₂
+    {Γ} (M : affinity) {A : species ω Γ}
+  : equiv A (ν(M) (rename name.extend A))
+| ν_swap₁
     {Γ} (M N : affinity)
     {A  : species ω (context.extend N.arity (context.extend M.arity Γ))}
   : @equiv Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
+| ν_swap₂ -- Strictly the same as ν_swap₁, as name.swap is symmetric, but...
+    {Γ} (M N : affinity)
+    {A  : species ω (context.extend N.arity (context.extend M.arity Γ))}
+  : @equiv Γ (ν(N)ν(M) rename name.swap A) (ν(M)ν(N) A)
+
+namespace equiv
+  protected lemma symm : ∀ {Γ} {A B : species ω Γ}, equiv A B → equiv B A
+  | Γ A B eq := begin
+    induction eq,
+    case refl { from refl },
+    case trans : Γ A B C ab bc ih_ab ih_bc { from trans ih_bc ih_ab },
+
+    case ξ_parallel₁ : Γ A A' B eq ih { from ξ_parallel₁ ih },
+    case ξ_parallel₂ : Γ A A' B eq ih { from ξ_parallel₂ ih },
+    case ξ_restriction : Γ M A A' eq ih { from ξ_restriction M ih },
+    case ξ_choice_here : Γ f π A A' As eq ih { from ξ_choice_here π ih },
+    case ξ_choice_there : Γ f π A A' As eq ih { from ξ_choice_there π ih },
+
+    case choice_swap { from choice_swap _ _ },
+
+    case parallel_nil₁ { from parallel_nil₂ },
+    case parallel_nil₂ { from parallel_nil₁ },
+    case parallel_symm { from parallel_symm },
+    case parallel_assoc₁ { from parallel_assoc₂ },
+    case parallel_assoc₂ { from parallel_assoc₁ },
+
+    case ν_parallel₁ : Γ M { from ν_parallel₂ M },
+    case ν_parallel₂ : Γ M { from ν_parallel₁ M },
+    case ν_drop₁ : Γ M { from ν_drop₂ M },
+    case ν_drop₂ : Γ M { from ν_drop₁ M },
+    case ν_swap₁ : Γ M N { from ν_swap₂ M N },
+    case ν_swap₂ : Γ M N { from ν_swap₁ M N },
+  end
+
+end equiv
 
 instance {Γ} : is_equiv (species ω Γ) equiv :=
   { refl := @equiv.refl _ Γ, symm := @equiv.symm _ Γ, trans := @equiv.trans _ Γ }
@@ -88,7 +130,6 @@ namespace equiv
 
       case refl : Γ A Δ ρ { from refl },
       case trans : Γ A B C ab bc ih_ab ih_bc Δ ρ { from trans (ih_ab ρ) (ih_bc ρ) },
-      case symm : Γ A B eq ih Δ ρ { from symm (ih ρ) },
 
       -- Projection
       case ξ_parallel₁ : Γ A A' B eq ih Δ ρ { simp, from ξ_parallel₁ (ih ρ) },
@@ -112,51 +153,58 @@ namespace equiv
       case choice_swap : Γ f g π₁ π₂ A B As Δ ρ { simp, from choice_swap _ _ },
 
       -- Parallel
-      case parallel_nil : Γ A Δ ρ { simp, from parallel_nil },
+      case parallel_nil₁ : Γ A Δ ρ { simp, from parallel_nil₁ },
+      case parallel_nil₂ : Γ A Δ ρ { simp, from parallel_nil₂ },
       case parallel_symm : Γ A B Δ ρ { simp, from parallel_symm },
-      case parallel_assoc : Γ A B C Δ ρ { simp, from parallel_assoc },
+      case parallel_assoc₁ : Γ A B C Δ ρ { simp, from parallel_assoc₁ },
+      case parallel_assoc₂ : Γ A B C Δ ρ { simp, from parallel_assoc₂ },
 
       -- Restriction
-      case ν_parallel : Γ M A B Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_parallel M
+      case ν_parallel₁ : Γ M A B Δ ρ {
+        simp, rw ← species.rename_ext _, from ν_parallel₁ M
       },
-      case ν_drop : Γ M A Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_drop M
+      case ν_parallel₂ : Γ M A B Δ ρ {
+        simp, rw ← species.rename_ext _, from ν_parallel₂ M
       },
-      case ν_swap : Γ M N A Δ ρ {
-        simp, rw rename_swap _, from ν_swap M N
-      }
+      case ν_drop₁ : Γ M A Δ ρ {
+        simp, rw ← species.rename_ext _, from ν_drop₁ M
+      },
+      case ν_drop₂ : Γ M A Δ ρ {
+        simp, rw ← species.rename_ext _, from ν_drop₂ M
+      },
+      case ν_swap₁ : Γ M N A Δ ρ { simp, rw rename_swap _, from ν_swap₁ M N },
+      case ν_swap₂ : Γ M N A Δ ρ { simp, rw rename_swap _, from ν_swap₂ M N },
     end
 
     lemma parallel_symm₁ {Γ} {A B C : species ω Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
       calc  (A |ₛ (B |ₛ C))
-          ≈ ((A |ₛ B) |ₛ C) : symm (@parallel_assoc _ _ A B C)
+          ≈ ((A |ₛ B) |ₛ C) : parallel_assoc₂
       ... ≈ ((B |ₛ A) |ₛ C) : ξ_parallel₁ parallel_symm
-      ... ≈ (B |ₛ (A |ₛ C)) : parallel_assoc
+      ... ≈ (B |ₛ (A |ₛ C)) : parallel_assoc₁
 
     lemma parallel_symm₂ {Γ} {A B C : species ω Γ} : ((A |ₛ B) |ₛ C) ≈ ((A |ₛ C) |ₛ B) :=
       calc  ((A |ₛ B) |ₛ C)
-          ≈ (A |ₛ (B |ₛ C)) : parallel_assoc
+          ≈ (A |ₛ (B |ₛ C)) : parallel_assoc₁
       ... ≈ (A |ₛ (C |ₛ B)) : ξ_parallel₂ parallel_symm
-      ... ≈ ((A |ₛ C) |ₛ B) : symm parallel_assoc
+      ... ≈ ((A |ₛ C) |ₛ B) : parallel_assoc₂
 
     lemma ν_parallel' {Γ} (M : affinity) {A : species ω (context.extend M.arity Γ)} {B : species ω Γ}
       : (ν(M) (A |ₛ rename name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
       calc  (ν(M) A |ₛ rename name.extend B)
           ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
-      ... ≈ (B |ₛ ν(M) A) : ν_parallel M
+      ... ≈ (B |ₛ ν(M) A) : ν_parallel₁ M
       ... ≈ ((ν(M) A) |ₛ B) : parallel_symm
 
     lemma parallel_nil' {Γ} {A : species ω Γ} : (nil |ₛ A) ≈ A :=
       calc  (nil |ₛ A)
           ≈ (A |ₛ nil) : parallel_symm
-      ... ≈ A : parallel_nil
+      ... ≈ A : parallel_nil₁
 end equiv
 
 namespace parallel
   lemma from_list_cons {Γ} (A : species ω Γ) :
     ∀ (Bs : list(species ω Γ)), from_list (A :: Bs) ≈ (A |ₛ from_list Bs)
-  | [] := symm equiv.parallel_nil
+  | [] := equiv.parallel_nil₂
   | (B :: Bs) := refl _
 
   lemma from_to_append {Γ} :
@@ -171,7 +219,7 @@ namespace parallel
                ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list (to_list B)))
                  : equiv.ξ_parallel₂ h
            ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list (to_list B))
-                : symm equiv.parallel_assoc
+                : symm equiv.parallel_assoc₁
     end
 
   lemma from_to {Γ} : ∀ (A : species ω Γ), from_list (to_list A) ≈ A
@@ -202,12 +250,12 @@ namespace parallel
   | A [] [] _ := refl _
   | A [] (B' :: Bs) eq :=
       calc  A
-          ≈ (A |ₛ nil) : symm equiv.parallel_nil
+          ≈ (A |ₛ nil) : equiv.parallel_nil₂
       ... ≈ (A |ₛ from_list (B' :: Bs)) : equiv.ξ_parallel₂ eq
   | A (A' :: As) [] eq :=
       calc  (A |ₛ from_list (A' :: As))
           ≈ (A |ₛ nil) : equiv.ξ_parallel₂ eq
-      ... ≈ A : equiv.parallel_nil
+      ... ≈ A : equiv.parallel_nil₁
   | A (A' :: As) (B' :: Bs') eq := equiv.ξ_parallel₂ eq
 
   lemma permute {Γ} :
@@ -250,12 +298,9 @@ section examples
   variable {Γ : context}
   variables A A' B C : species ω Γ
 
-  example : A ≈ (A |ₛ nil) := symm equiv.parallel_nil
+  example : A ≈ (A |ₛ nil) := symm equiv.parallel_nil₁
 
-  example : A ≈ (nil |ₛ A) :=
-    trans
-      (symm equiv.parallel_nil)
-      equiv.parallel_symm
+  example : A ≈ (nil |ₛ A) := trans equiv.parallel_nil₂ equiv.parallel_symm
 
   example : A ≈ A' → (A |ₛ B) ≈ C → (A' |ₛ B) ≈ C := begin
     assume a eq,
