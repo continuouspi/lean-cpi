@@ -17,76 +17,81 @@ namespace cpi
 structure affinity := intro ::
   (arity : ℕ)
   (f : fin arity → fin arity → option ℝ≥0)
+  (symm : ∀ x y, f x y = f y x)
 
 /- Just show that affinity networks form a decidable linear order. -/
 section ordering
-  inductive affinity.le : affinity → affinity → Prop
-  | on_fun
-      (arity : ℕ) {f g : fin arity → fin arity → option ℝ≥0}
-    : f ≤ g → affinity.le ⟨ arity, f ⟩ ⟨ arity, g ⟩
-  | on_arity
-      {arity arity' : ℕ}
-      {f : fin arity → fin arity → option ℝ≥0}
-      {g : fin arity' → fin arity' → option ℝ≥0}
-    : arity < arity' → affinity.le ⟨ arity, f ⟩ ⟨ arity', g ⟩
+  private structure pand {α : Prop} (β : α → Prop) : Prop :=
+    mk :: (fst : α) (snd : β fst)
 
-  open affinity.le
+  notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
+
+  def affinity.le : affinity → affinity → Prop
+  | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
+    a < b ∨ (Σ∧ (x : a = b), cast (congr_arg (λ x, fin x → fin x → option ℝ≥0) x) f ≤ g)
 
   protected theorem affinity.le_refl : ∀ M, affinity.le M M
-  | ⟨ a, f ⟩ := on_fun a (le_refl f)
+  | ⟨ a, f, _ ⟩ := or.inr ⟨ rfl, le_refl f ⟩
 
   protected theorem affinity.le_trans :
     ∀ M N O, affinity.le M N → affinity.le N O → affinity.le M O
-  | ⟨ _, fm ⟩ ⟨ _, fn ⟩ ⟨ _, fo ⟩ (on_fun a le) (on_fun _ le')
-    := (on_fun a (le_trans le le'))
-  | ⟨ _, fm ⟩ ⟨ _, fn ⟩ ⟨ ao, fo ⟩ (on_fun am le) (on_arity lt) := on_arity lt
-  | ⟨ am, fm ⟩ ⟨ _, fn ⟩ ⟨ _, fo ⟩ (on_arity lt) (on_fun ao le) := on_arity lt
-  | ⟨ am, fm ⟩ ⟨ an, fn ⟩ ⟨ ao, fo ⟩ (on_arity lt) (on_arity lt') := on_arity (lt_trans lt lt')
+  | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ ⟨ c, h, sh ⟩ (or.inl lt) (or.inl lt')
+    := or.inl (lt_trans lt lt')
+  | ⟨ a, f, sf ⟩ ⟨ _, g, sg ⟩ ⟨ _, h, sh ⟩ (or.inl lt) (or.inr ⟨ eq.refl b, le ⟩)
+    := or.inl lt
+  | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ ⟨ c, h, sh ⟩ (or.inr ⟨ eq.refl a, le ⟩) (or.inl lt)
+    := or.inl lt
+  | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ ⟨ _, h, sh ⟩ (or.inr ⟨ eq.refl _, le ⟩) (or.inr ⟨ eq.refl a, le' ⟩)
+    := or.inr ⟨ rfl, le_trans le le' ⟩
 
   protected theorem affinity.le_antisymm :
     ∀ M N, affinity.le M N → affinity.le N M → M = N
-  | ⟨ _, f ⟩ ⟨ _, g ⟩ (on_fun a le) (on_fun b le') := by { simp, from le_antisymm le le' }
-  | ⟨ _, f ⟩ ⟨ _, g ⟩ (on_fun a _) (on_arity lt) := false.elim (lt_irrefl _ lt)
-  | ⟨ _, f ⟩ ⟨ _, g ⟩ (on_arity lt) (on_fun b _) := false.elim (lt_irrefl _ lt)
-  | ⟨ _, f ⟩ ⟨ _, g ⟩ (on_arity lt) (on_arity lt') := false.elim (lt_asymm lt lt')
+  | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ (or.inl lt) (or.inl lt')
+    := false.elim (lt_asymm lt lt')
+  | ⟨ a, f, sf ⟩ ⟨ _, g, sg ⟩ (or.inl lt) (or.inr ⟨ eq.refl b, le ⟩)
+    := false.elim (lt_irrefl _ lt)
+  | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ (or.inr ⟨ eq.refl a, le ⟩) (or.inl lt)
+    := false.elim (lt_irrefl _ lt)
+  | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ (or.inr ⟨ eq.refl _, le ⟩) (or.inr ⟨ eq.refl a, le' ⟩)
+    := by { simp, from le_antisymm le le' }
 
   protected theorem affinity.le_total :
     ∀ M N, affinity.le M N ∨ affinity.le N M
-  | ⟨ a, f ⟩ ⟨ b, g ⟩ := begin
+  | ⟨ a, f, _ ⟩ ⟨ b, g, _ ⟩ := begin
     cases le_total a b,
     case or.inl : a_le_b {
       cases lt_or_eq_of_le a_le_b,
-      case or.inl : lt { from or.inl (on_arity lt) },
+      case or.inl : lt { from or.inl (or.inl lt) },
       case or.inr : eq {
         subst eq,
-        from or.imp (on_fun a) (on_fun a) (le_total f g)
+        refine or.imp (λ le, or.inr ⟨ rfl , le ⟩) (λ le, or.inr ⟨ rfl , le ⟩) (le_total f g),
       }
     },
     case or.inr : b_le_a {
       cases lt_or_eq_of_le b_le_a,
-      case or.inl : lt { from or.inr (on_arity lt) },
+      case or.inl : lt { from or.inr (or.inl lt) },
       case or.inr : eq {
         subst eq,
-        from or.imp (on_fun b) (on_fun b) (le_total f g)
+        refine or.imp (λ le, or.inr ⟨ rfl , le ⟩) (λ le, or.inr ⟨ rfl , le ⟩) (le_total f g),
       }
     }
   end
 
   protected noncomputable def affinity.decidable_le :
     ∀ M N, decidable (affinity.le M N)
-  | ⟨ a, f ⟩ ⟨ b, g ⟩ :=
+  | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
     if h : a = b then begin
       subst h,
       cases (decidable_linear_order.decidable_le _ f g),
-      case is_true : h { from is_true (on_fun a h) },
+      case is_true : h { from is_true (or.inr ⟨ rfl, h ⟩) },
       case is_false : h {
-          have : ¬ a < a := lt_irrefl a,
-          from is_false (λ x, by { cases x; contradiction })
+        have : ¬ a < a := lt_irrefl a,
+        from is_false (λ x, by { rcases x with _ | ⟨ _, _ ⟩; contradiction })
       }
     end else if h' : a < b then
-      is_true (on_arity h')
+      is_true (or.inl h')
     else
-      is_false (λ x, by { cases x; contradiction })
+      is_false (λ x, by { rcases x with _ | ⟨ _, _ ⟩; contradiction })
 
   instance affinity.linear_order : linear_order affinity :=
     { le := affinity.le,
