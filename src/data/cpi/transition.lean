@@ -1,4 +1,4 @@
-import data.cpi.concretion
+import data.cpi.concretion data.upair
 
 namespace cpi
 
@@ -70,16 +70,17 @@ inductive label : context → kind → Type
 /- Evolution from one species to another, with a rate determined by an affinity
    network. This is converted into a spontanious interaction when the names
    refer to a global affinity network. -/
-| of_affinity {Γ} (a : name Γ) (b : name Γ) : label Γ kind.species
+| of_affinity {Γ} (k : upair (name Γ)) : label Γ kind.species
 
 notation `#`:max a:max := label.apply a
 notation `τ@'`:max k:max  := label.spontanious k
-notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity a b
+notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity (upair.mk a b)
+notation `τ⟨ `:max p ` ⟩`:max := label.of_affinity p
 
 def label.replace {Γ Δ} (ρ : name Γ → name Δ) : ∀ {k}, label Γ k → label Δ k
 | ._ #a := # (ρ a)
 | ._ τ@'k := τ@'k
-| ._ τ⟨ a, b ⟩ := τ⟨ ρ a, ρ b ⟩
+| ._ τ⟨ ab ⟩ :=  τ⟨ upair.map ρ ab ⟩
 
 inductive transition : Π {Γ} {k}, species ω Γ → label Γ k → production ω Γ k → Type
 
