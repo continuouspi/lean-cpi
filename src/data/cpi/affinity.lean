@@ -1,6 +1,4 @@
-import data.fin.pi_order
-import data.option.order
-import data.real.non_neg
+import data.fin.pi_order data.real.non_neg data.option.order data.pand
 
 run_cmd sanity_check
 set_option profiler true
@@ -21,11 +19,6 @@ structure affinity := intro ::
 
 /- Just show that affinity networks form a decidable linear order. -/
 section ordering
-  private structure pand {α : Prop} (β : α → Prop) : Prop :=
-    mk :: (fst : α) (snd : β fst)
-
-  notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
-
   def affinity.le : affinity → affinity → Prop
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
     a < b ∨ (Σ∧ (x : a = b), cast (congr_arg (λ x, fin x → fin x → option ℝ≥0) x) f ≤ g)

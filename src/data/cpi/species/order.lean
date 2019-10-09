@@ -86,11 +86,6 @@ end
 noncomputable instance species.whole.decidable_eq {Γ} {k} :
   decidable_eq (whole ω k Γ) := species.eq_decidable
 
-private structure pand {α : Prop} (β : α → Prop) : Prop :=
-mk :: (fst : α) (snd : β fst)
-
-notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
-
 protected def species.le : ∀ {Γ} {k}, whole ω k Γ → whole ω k Γ → Prop :=
 λ Γ k A B, begin
   induction A,
