@@ -549,7 +549,8 @@ begin
   },
   case equiv.ν_parallel₂ : Γ b y M F F {
     unfold pseudo_apply,
-    from ν_parallel' M
+    rw ← pseudo_apply.rename name.extend F G,
+    from ν_parallel₁ M
   },
   case equiv.ν_drop : Γ b y M F {
     unfold pseudo_apply,

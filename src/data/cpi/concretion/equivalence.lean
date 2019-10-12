@@ -40,11 +40,11 @@ inductive equiv : ∀ {Γ} {b y}, concretion ω Γ b y → concretion ω Γ b y 
 
 -- Projections for species into parallel/apply
 | ξ_parallel
-    {Γ} {b y} {F : concretion ω Γ b y} {A A' : species ω Γ}
-  : A ≈ A' → equiv (F |₁ A) (F |₁ A')
+    {Γ} {b y} {F : concretion ω Γ b y} {A B : species ω Γ}
+  : A ≈ B → equiv (F |₁ A) (F |₁ B)
 | ξ_apply
-    {Γ} {b y} {bs : vector (name Γ) b} {A A' : species ω (context.extend y Γ)}
-  : A ≈ A' → equiv (#(bs; y) A) (#(bs; y) A')
+    {Γ} {b y} {bs : vector (name Γ) b} {A B : species ω (context.extend y Γ)}
+  : A ≈ B → equiv (#(bs; y) A) (#(bs; y) B)
 
 -- Standard ν rules
 | ν_parallel₁
@@ -53,8 +53,8 @@ inductive equiv : ∀ {Γ} {b y}, concretion ω Γ b y → concretion ω Γ b y 
   : equiv (ν'(M)(species.rename name.extend A |₂ F)) (A |₂ ν'(M) F)
 | ν_parallel₂
     {Γ} {b y} (M : affinity)
-    {A : species ω Γ} {F : concretion ω (context.extend M.arity Γ) b y}
-  : equiv (ν'(M)(F |₁ species.rename name.extend A)) ((ν'(M) F) |₁ A)
+    {A : species ω (context.extend M.arity Γ)} {F : concretion ω Γ b y}
+  : equiv (ν'(M)(concretion.rename name.extend F |₁ A)) (F |₁ (ν(M) A))
 | ν_drop
     {Γ} {b y} (M : affinity) {F : concretion ω Γ b y}
   : equiv (ν'(M) rename name.extend F) F
