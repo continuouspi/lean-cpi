@@ -1,4 +1,4 @@
-# Continuous π-calculus [![Current build status](https://github.com/SquidDev/continuous-pi/workflows/CI/badge.svg)](https://github.com/SquidDev/continuous-pi/actions "Current build status")
+# Continuous π-calculus
 
 This is a machine formalisation of the [Continuous π-calculus][cpi], using the
 [Lean theorem prover][lean].
