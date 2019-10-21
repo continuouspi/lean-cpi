@@ -6,9 +6,9 @@
 
    [1]: https://leanprover.github.io/theorem_proving_in_lean/axioms_and_computation.html#quotients-/
 
-import tactic.sanity_check tactic.tidy data.quot
+import tactic.lint tactic.tidy data.quot
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -73,7 +73,7 @@ namespace upair
 
   protected lemma map_id {α : Type u} : upair.map (@id α) = id := funext upair.map_identity
 
-  protected def map.inj {α β : Type u} {f : α → β}
+  protected lemma map.inj {α β : Type u} {f : α → β}
     (inj : function.injective f) :
     ∀ {p q : upair α}, upair.map f p = upair.map f q → p = q
   | p q eq := begin
@@ -97,4 +97,4 @@ namespace upair
 
 end upair
 
-#sanity_check
+#lint

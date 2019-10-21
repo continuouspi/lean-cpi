@@ -2,9 +2,9 @@
 
    Not quite sure why they're not built-in already. -/
 
-import tactic.sanity_check
+import tactic.lint
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -56,4 +56,4 @@ instance [decidable_linear_order α] : decidable_linear_order (option α)
        decidable_eq := option.decidable_eq,
        ..option.linear_order }
 
-#sanity_check
+#lint

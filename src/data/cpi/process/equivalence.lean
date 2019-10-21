@@ -1,7 +1,7 @@
 import data.cpi.species
 import data.cpi.process.basic
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -39,4 +39,4 @@ instance setoid.is_equiv {Γ} : is_equiv (process ω Γ) has_equiv.equiv :=
 end process
 end cpi
 
-#sanity_check
+#lint

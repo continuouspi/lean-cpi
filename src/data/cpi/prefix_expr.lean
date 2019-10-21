@@ -3,7 +3,7 @@ import data.list.witness
 import data.real.non_neg
 import order.lexicographic
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -374,4 +374,4 @@ end prefix_expr
 
 end cpi
 
-#sanity_check
+#lint

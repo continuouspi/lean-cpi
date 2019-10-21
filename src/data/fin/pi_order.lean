@@ -3,7 +3,7 @@
 import data.fin
 import data.fintype
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -163,4 +163,4 @@ instance [∀ a, decidable_linear_order (β a)] : decidable_linear_order (Π (a 
 end pi
 end fin
 
-#sanity_check
+#lint

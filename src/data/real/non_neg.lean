@@ -1,6 +1,6 @@
-import data.real.basic tactic.sanity_check
+import data.real.basic tactic.lint
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -19,4 +19,4 @@ namespace real_non_neg
     := subtype.decidable_linear_order (λ val, val ≥ 0)
 end real_non_neg
 
-#sanity_check
+#lint

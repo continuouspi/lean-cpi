@@ -1,6 +1,6 @@
-import tactic.sanity_check
+import tactic.lint
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -9,4 +9,4 @@ structure pand {α : Prop} (β : α → Prop) : Prop :=
 
 notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
 
-#sanity_check
+#lint

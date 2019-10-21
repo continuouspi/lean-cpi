@@ -1,7 +1,7 @@
 import data.cpi.species.equivalence data.cpi.species.order
 import data.list.sort
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -227,4 +227,4 @@ end
 end species
 end cpi
 
-#sanity_check
+#lint

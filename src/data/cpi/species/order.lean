@@ -1,7 +1,7 @@
 import data.cpi.species.basic
 import order.lex_like
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -574,4 +574,4 @@ end choice
 
 end cpi
 
-#sanity_check
+#lint

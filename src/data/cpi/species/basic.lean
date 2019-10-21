@@ -2,7 +2,7 @@ import data.cpi.prefix_expr
 import data.cpi.affinity
 import tactic.custom_wf
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -375,4 +375,4 @@ export cpi.species (renaming
   species → cpi.species
 )
 
-#sanity_check
+#lint

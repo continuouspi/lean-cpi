@@ -1,6 +1,6 @@
 import data.fin.pi_order data.real.non_neg data.option.order data.pand
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -102,4 +102,4 @@ end ordering
 
 end cpi
 
-#sanity_check
+#lint

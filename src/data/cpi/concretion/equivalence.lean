@@ -1,6 +1,6 @@
 import data.cpi.concretion.basic
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -97,4 +97,4 @@ protected lemma equiv.parallel_assoc₃
 end concretion
 end cpi
 
-#sanity_check
+#lint

@@ -1,6 +1,6 @@
 import data.cpi.transition.basic
 
-run_cmd sanity_check
+run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -698,4 +698,4 @@ end
 end transition
 end cpi
 
-#sanity_check
+#lint
