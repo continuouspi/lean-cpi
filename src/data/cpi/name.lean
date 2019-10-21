@@ -348,6 +348,20 @@ namespace name
     lemma swap_comp_ext_extend {Γ} {m n : ℕ}
       : (@name.swap Γ m n ∘ name.ext name.extend) = name.extend
       := funext $ λ a, by { cases a; from rfl }
+
+    /-- Swapping twice does nothing. -/
+    lemma swap_swap_identity :
+      ∀ {Γ} {a b : ℕ} (a : name (context.extend b (context.extend a Γ)))
+      , name.swap (name.swap a) = a
+      | Γ a b (name.zero _) := rfl
+      | Γ a b (name.extend (name.zero _)) := rfl
+      | Γ a b (name.extend (name.extend _)) := rfl
+
+    /-- Swapping twice gives the identity. -/
+    lemma swap_swap :
+      ∀ {Γ} {a b : ℕ}
+      , (@name.swap Γ a b) ∘ name.swap = id
+      | Γ a b := funext swap_swap_identity
   end swap
 
   section application

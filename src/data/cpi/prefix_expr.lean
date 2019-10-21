@@ -346,6 +346,30 @@ namespace prefix_expr
       := funext $ λ a, by { cases π; from rfl }
   end rename
 
+  section rename_equations
+    variables {Γ Δ : context} {ρ : name Γ → name Δ}
+
+    @[simp]
+    lemma rename_communicate (a :  name Γ) (b : list (name Γ)) (y : ℕ)
+      : rename ρ (a#(b; y)) = ((ρ a)#(list.map ρ b; y))
+      := by simp [rename, rename_with, list.map_witness_to_map]
+
+    @[simp]
+    lemma rename_spontanious (k : ℝ≥0)
+      : rename ρ τ@k = τ@k
+      := by simp only [rename, rename_with]
+
+    @[simp]
+    lemma ext_communicate {η} (a :  name η) (b : list (name η)) (y : ℕ)
+      : ext (a#(b; y)) ρ = name.ext ρ
+      := funext $ λ x, by unfold ext ext_with
+
+    @[simp]
+    lemma ext_spontanious {η} (k : ℝ≥0)
+      : ext (@spontanious η k) ρ = ρ
+      := funext $ λ x, by unfold ext ext_with
+  end rename_equations
+
 end prefix_expr
 
 end cpi

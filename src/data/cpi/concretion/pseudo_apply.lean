@@ -208,7 +208,7 @@ private lemma pseudo_apply.restriction_swap {a b}:
     ... ≈ ν(M) ν(N) pseudo_apply (rename (name.ext name.extend) F) (rename name.extend G)
           : by rw [name.swap_comp_extend, name.swap_comp_ext_extend]
 
-private lemma pseudo_apply.on_restriction :
+lemma pseudo_apply.on_restriction :
   ∀ {Γ} {a b} (F : concretion ω Γ a b) (M : affinity)
     (G : concretion ω (context.extend M.arity Γ) b a)
   , pseudo_apply F (ν'(M) G) ≈ ν(M) (pseudo_apply (rename name.extend F) G)

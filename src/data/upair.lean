@@ -6,7 +6,7 @@
 
    [1]: https://leanprover.github.io/theorem_proving_in_lean/axioms_and_computation.html#quotients-/
 
-import tactic.sanity_check tactic.tidy
+import tactic.sanity_check tactic.tidy data.quot
 
 run_cmd sanity_check
 set_option profiler true
@@ -47,6 +47,9 @@ def upair (α : Type u) : Type u := quotient (@upair.setoid α)
 namespace upair
   protected def mk {α : Type u} (a b : α) : upair α := ⟦ ⟨ a, b ⟩ ⟧
 
+  protected lemma eq {α : Type} (a b : α) : upair.mk a b = upair.mk b a
+    := quot.sound (or.inr ⟨rfl, rfl⟩)
+
   private def pair_map {α β : Type u} (f : α → β) : pair α → pair β
   | ⟨ a, b ⟩ := ⟨ f a, f b ⟩
 
@@ -57,6 +60,40 @@ namespace upair
 
   protected def map {α β : Type u} (f : α → β) (p : upair α) : upair β
     := quot.lift_on p (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p))
+
+  protected lemma map_compose {α β γ : Type u} (f : α → β) (g : β → γ) (p : upair α)
+    : upair.map g (upair.map f p) = upair.map (g ∘ f) p
+    := quot.rec_on p (λ ⟨ a, b ⟩, quot.sound (or.inl ⟨ rfl, rfl ⟩)) (λ _ _ _, rfl)
+
+  protected lemma map_identity {α : Type u} (p : upair α)
+    : upair.map id p = p := begin
+      rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
+      from quot.sound (or.inl ⟨ rfl, rfl ⟩)
+    end
+
+  protected lemma map_id {α : Type u} : upair.map (@id α) = id := funext upair.map_identity
+
+  protected def map.inj {α β : Type u} {f : α → β}
+    (inj : function.injective f) :
+    ∀ {p q : upair α}, upair.map f p = upair.map f q → p = q
+  | p q eq := begin
+    rcases quot.exists_rep p with ⟨ ⟨ a₁, b₁ ⟩, ⟨ _ ⟩ ⟩,
+    rcases quot.exists_rep q with ⟨ ⟨ a₂, b₂ ⟩, ⟨ _ ⟩ ⟩,
+
+    have eq' : ⟦pair_map f ⟨ a₁, b₁ ⟩⟧ = ⟦pair_map f ⟨ a₂, b₂ ⟩⟧,
+      have h := quot.lift_beta (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p)) ⟨ a₁, b₁ ⟩,
+      have g := quot.lift_beta (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p)) ⟨ a₂, b₂ ⟩,
+      from trans (symm h) (trans eq g),
+
+    cases quotient.exact eq',
+    case or.inl : h { cases inj h.1, cases inj h.2, from rfl },
+    case or.inr : h { cases inj h.1, cases inj h.2, from quot.sound (or.inr ⟨ rfl, rfl ⟩) },
+  end
+
+  protected lemma map_beta
+    {α β : Type u} (f : α → β) (a b : α)
+    : upair.map f (upair.mk a b) = upair.mk (f a) (f b)
+    := quot.sound (or.inl ⟨ rfl, rfl ⟩)
 
 end upair
 

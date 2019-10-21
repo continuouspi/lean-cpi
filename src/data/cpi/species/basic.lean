@@ -171,7 +171,7 @@ section rename
     end
 
   /-- Renaming with the identity function is the identity. -/
-  lemma rename_id {Γ} {k} (A : whole ω k Γ) : rename id A = A := rename_with_id A
+  lemma rename_id {Γ} {k} (A : whole ω k Γ): rename id A = A := rename_with_id A
 
   /-- Renaming twice is the same as renaming with a composed function. -/
   lemma rename_with_compose :
