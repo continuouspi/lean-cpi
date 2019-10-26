@@ -1,8 +1,4 @@
-open tactic
-open interactive
-open interactive.types
-open lean.parser
-open expr
+open tactic interactive interactive.types lean.parser expr
 
 private meta def set_cases_tags (in_tag : tag) (rs : list name) : tactic unit := do
   te ← tags_enabled,

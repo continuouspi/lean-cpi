@@ -1,6 +1,5 @@
 import data.cpi.concretion.equivalence
 
-run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 

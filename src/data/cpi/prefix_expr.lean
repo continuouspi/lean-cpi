@@ -1,9 +1,6 @@
 import data.cpi.name
-import data.list.witness
-import data.real.non_neg
-import order.lexicographic
+import data.list.witness data.real.non_neg order.lexicographic
 
-run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -327,7 +324,7 @@ namespace prefix_expr
         (ρ : Π (x : name Γ), name.to_level x ∈ π → name Δ)
         (l : level η)
       : raise π l = raise (rename_with π ρ) l
-    := by { cases π; from rfl }
+      := by { cases π; from rfl }
 
     /-- Extending with a renamed prefix has the same effect as the original one. -/
     lemma rename_with_ext_with

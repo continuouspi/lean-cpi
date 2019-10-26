@@ -1,7 +1,5 @@
-import data.cpi.species
-import data.cpi.process.basic
+import data.cpi.species data.cpi.process.basic
 
-run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 

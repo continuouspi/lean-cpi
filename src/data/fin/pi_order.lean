@@ -1,9 +1,7 @@
 /- Ordering for functions which have a finite number of possible arguments. -/
 
-import data.fin
-import data.fintype
+import data.fin data.fintype
 
-run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 

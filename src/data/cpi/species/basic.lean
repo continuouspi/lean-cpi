@@ -1,8 +1,6 @@
-import data.cpi.prefix_expr
-import data.cpi.affinity
-import tactic.custom_wf
+import data.cpi.prefix_expr data.cpi.affinity
+import tactic.custom_wf tactic.known_induct
 
-run_cmd lint
 set_option profiler true
 set_option profiler.threshold 0.5
 
@@ -10,6 +8,9 @@ namespace cpi
 
 namespace species
 
+/-- As the doc-strinct of 'whole' says, species and their choices are bundled
+    into one type. We index on this "kind", which says whether this constructor
+    represents a species, or is part of a guarded choice. -/
 inductive kind
 | species
 | choices
@@ -320,6 +321,30 @@ namespace parallel
   | (M :: M' :: Ms) := begin
     simp only [from_list, rename.parallel, list.map],
     from ⟨ rfl, rename_from_list (M' :: Ms) ⟩
+  end
+
+  /-- to_list should contian no non-nil elements. -/
+  lemma to_list_nonnil {Γ}: ∀ (A : species ω Γ), nil ∉ to_list A
+  | A := begin
+    known_induction whole @whole.rec_on ω
+      (λ k c A, begin
+        cases k,
+        case kind.species { from nil ∉ to_list A },
+        case kind.choices { from true },
+      end) kind.species Γ A,
+
+    case nil : Γ mem { unfold to_list at mem, from list.not_mem_nil nil mem },
+    case parallel : Γ A B iha ihb mem {
+      unfold to_list at mem,
+      from or.elim (list.mem_append.mp mem) iha ihb,
+    },
+
+    -- All remaining species and choices.
+    repeat {
+      intros, simp only [to_list, has_mem.mem, list.mem],
+      assume mem, cases mem; contradiction
+    },
+    repeat { intros, from true.intro },
   end
 end parallel
 
