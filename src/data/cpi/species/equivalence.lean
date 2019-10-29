@@ -206,18 +206,18 @@ namespace parallel
   | [] := equiv.parallel_nil₂
   | (B :: Bs) := refl _
 
-  lemma from_to_append {Γ} :
-    ∀ (As : list (species ω Γ)) (B : species ω Γ)
-    , from_list (As ++ to_list B) ≈ (from_list As |ₛ from_list (to_list B))
+  lemma from_append {Γ} :
+    ∀ (As : list (species ω Γ)) (Bs : list (species ω Γ))
+    , from_list (As ++ Bs) ≈ (from_list As |ₛ from_list Bs)
   | [] B := by { simp only [list.nil_append], from symm equiv.parallel_nil' }
   | [A] B := from_list_cons A _
   | (A :: A' :: As) B := begin
-      have h := from_to_append (A' :: As) B,
+      have h := from_append (A' :: As) B,
       simp only [from_list, list.cons_append],
-      from calc  (A |ₛ from_list (A' :: (As ++ to_list B)))
-               ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list (to_list B)))
+      from calc  (A |ₛ from_list (A' :: (As ++ B)))
+               ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list B))
                  : equiv.ξ_parallel₂ h
-           ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list (to_list B))
+           ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list B)
                 : symm equiv.parallel_assoc₁
     end
 
@@ -231,12 +231,12 @@ namespace parallel
       have a := from_to A, have b := from_to B,
       from calc  from_list (to_list A ++ to_list B)
                ≈ (from_list (to_list A) |ₛ from_list (to_list B))
-                 : from_to_append (to_list A) B
+                 : from_append (to_list A) (to_list B)
            ... ≈ (from_list (to_list A) |ₛ B) : equiv.ξ_parallel₂ b
            ... ≈ (A |ₛ B) : equiv.ξ_parallel₁ a,
     end
 
-  lemma from_to_append₂ {Γ} (A B : species ω Γ)
+  lemma from_to_append {Γ} (A B : species ω Γ)
     : from_list (to_list A ++ to_list B) ≈ (A |ₛ B) := begin
     have h : to_list A ++ to_list B = to_list (A |ₛ B), unfold to_list,
     rw h, from from_to _,

@@ -163,7 +163,7 @@ noncomputable def normalise_to : ∀ {k} {Γ} (A : whole ω k Γ), equivalence_o
   ⟨ parallel.from_list (list.insertion_sort (≤) as),
     calc  (A |ₛ B)
         ≈ (A' |ₛ B') : trans (equiv.ξ_parallel₁ ea) (equiv.ξ_parallel₂ eb)
-    ... ≈ parallel.from_list as : symm (parallel.from_to_append₂ A' B')
+    ... ≈ parallel.from_list as : symm (parallel.from_to_append A' B')
     ... ≈ parallel.from_list (list.insertion_sort has_le.le as)
           : parallel.permute (list.perm.symm (list.perm_insertion_sort (≤) _)) ⟩
 | ._ Γ (ν(M) A) :=
