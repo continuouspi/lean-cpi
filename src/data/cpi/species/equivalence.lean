@@ -271,6 +271,83 @@ namespace parallel
     },
     case list.perm.trans : As Bs Cs ab bc ih_ab ih_bc { from trans ih_ab ih_bc }
   end
+
+  namespace quot
+    /-- Make a parallel species from a quotient of two species. -/
+    def mk {Γ} : quotient (@species.setoid ω Γ) → quotient (@species.setoid ω Γ) → quotient (@species.setoid ω Γ)
+    | A B := quotient.lift_on₂ A B (λ A B, ⟦ A |ₛ B ⟧)
+        (λ A B A' B' eqA eqB, quot.sound (trans (equiv.ξ_parallel₁ eqA) ((equiv.ξ_parallel₂ eqB))))
+
+    lemma assoc {Γ} (A B C : quotient (@species.setoid ω Γ))
+      : mk A (mk B C) = mk (mk A B) C
+      := begin
+        rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
+        rcases quot.exists_rep B with ⟨ B, ⟨ _ ⟩ ⟩,
+        rcases quot.exists_rep C with ⟨ C, ⟨ _ ⟩ ⟩,
+        from quot.sound equiv.parallel_assoc₂,
+      end
+
+    /-- parallel.from_list, lifted to the level of quotients. -/
+    def from_list {Γ} :
+      list (quotient (@species.setoid ω Γ)) → quotient (@species.setoid ω Γ)
+    | [] := ⟦ nil ⟧
+    | [A] := A
+    | (A :: As) := mk A (from_list As)
+
+    lemma from_append {Γ} :
+      ∀ (A B : list (quotient (@species.setoid ω Γ)))
+      , from_list (A ++ B) = mk (from_list A) (from_list B)
+    | [] B := begin
+        simp only [list.nil_append],
+        from quot.induction_on (from_list B) (λ B, quot.sound (symm equiv.parallel_nil')),
+      end
+    | [A] [] := quot.induction_on A (λ A, quot.sound equiv.parallel_nil₂)
+    | [A] (B :: Bs) := rfl
+    | (A :: A' :: As) B := begin
+        show mk A (from_list (A' :: As ++ B)) = mk (mk A (from_list (A' :: As))) (from_list B),
+        rw (from_append (A' :: As) B),
+        from assoc _ _ _,
+      end
+
+    private lemma from_cons {Γ} :
+      ∀ (A : quotient (@species.setoid ω Γ)) {As Bs : list _}
+      , from_list As = from_list Bs
+      → from_list (A :: As) = from_list (A :: Bs)
+    | A [] [] _ := refl _
+    | A [] (B' :: Bs) eq := begin
+        rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
+        simp only [from_list, symm eq],
+        from quot.sound equiv.parallel_nil₂,
+      end
+    | A (A' :: As) [] eq := begin
+        rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
+        simp only [from_list, eq],
+        from quot.sound equiv.parallel_nil₁,
+      end
+    | A (A' :: As) (B' :: Bs') eq := by simp only [from_list, eq]
+
+    lemma permute {Γ} :
+      ∀ {As Bs : list (quotient (@species.setoid ω Γ))}
+      , As ≈ Bs → from_list As = from_list Bs := λ _ _ perm, begin
+      induction perm,
+
+      case list.perm.nil { from refl _ },
+      case list.perm.skip : A As Bs pm ih { from from_cons A ih },
+      case list.perm.swap : A B As {
+        rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
+        rcases quot.exists_rep B with ⟨ B, ⟨ _ ⟩ ⟩,
+
+        cases As,
+        case list.nil { from quot.sound equiv.parallel_symm },
+        case list.cons {
+          unfold from_list,
+          from quotient.induction_on (from_list (As_hd :: As_tl))
+            (λ _, quot.sound equiv.parallel_symm₁),
+        },
+      },
+      case list.perm.trans : As Bs Cs ab bc ih_ab ih_bc { from trans ih_ab ih_bc }
+    end
+  end quot
 end parallel
 
 namespace choice

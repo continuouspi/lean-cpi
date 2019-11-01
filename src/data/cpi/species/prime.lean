@@ -24,6 +24,12 @@ lemma prime.equivalent {Γ} {A B : species ω Γ} : A ≈ B → prime A = prime 
 def prime_species : context → context → Type
 | ω Γ := { A : species ω Γ // prime A }
 
+instance prime_species.setoid {ω Γ} : setoid (prime_species ω Γ)
+  := ⟨ λ A B, A.val ≈ B.val, ⟨ λ _, equiv.refl, λ _ _, equiv.symm, λ _ _ _, equiv.trans ⟩ ⟩
+
+def prime_species.unwrap {ω Γ} : quotient (@prime_species.setoid ω Γ) → quotient (@species.setoid ω Γ)
+| A := quot.lift_on A (λ B, ⟦ B.val ⟧) (λ _ _ eq, quot.sound eq)
+
 end species
 end cpi
 

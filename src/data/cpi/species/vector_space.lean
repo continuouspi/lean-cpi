@@ -75,22 +75,21 @@ section depth
   }
 end depth
 
-/-- Convert a multiset back into a species. -/
-def parallel.from_multiset {Γ} : multiset (species ω Γ) → quotient (@species.setoid ω Γ)
-| ms := quot.lift
-    (λ x, ⟦ parallel.from_list x ⟧)
-    (λ _ _ p, quotient.sound (parallel.permute p))
-    ms
+/-- Construct a species from a prime decomposition of species. -/
+def parallel.from_prime_decompose {Γ} : multiset (quotient (@prime_species.setoid ω Γ)) → quotient (@species.setoid ω Γ)
+| ms := quot.lift_on ms
+  (λ xs, parallel.quot.from_list (list.map prime_species.unwrap xs))
+  (λ _ _ eq, parallel.quot.permute (list.perm_map prime_species.unwrap eq))
 
 /-- A proof that a prime decomposition exists. -/
 lemma has_prime_decompose :
   ∀ {Γ} (A : species ω Γ)
-  , ∃ (As : multiset (species ω Γ))
-  , ⟦ A ⟧ = parallel.from_multiset As ∧ ∀ x ∈ As, prime x
+  , ∃ (As : multiset (quotient (@prime_species.setoid ω Γ)))
+  , ⟦ A ⟧ = parallel.from_prime_decompose As
 | Γ A :=
   match classical.dec (A ≈ nil) with
   | is_true is_nil :=
-    ⟨ [], quot.sound is_nil, λ x mem, by cases mem ⟩
+    ⟨ [], quot.sound is_nil ⟩
   | is_false non_nil :=
     match classical.dec (∃ B C, ¬ B ≈ nil ∧ ¬ C ≈ nil ∧ A ≈ (B |ₛ C)) with
     | is_true ⟨ B, C, nB, nC, eq ⟩ :=
@@ -103,33 +102,34 @@ lemma has_prime_decompose :
             from lt_add_of_pos_left _ (nat.pos_of_ne_zero (λ x, nB (depth_nil_rev x)))
           end in
         begin
-          rcases has_prime_decompose B with ⟨ Bs, eqB, pb ⟩,
-          rcases has_prime_decompose C with ⟨ Cs, eqC, pc ⟩,
-          clear lB lC,
-
+          rcases has_prime_decompose B with ⟨ Bs, eqB ⟩,
+          rcases has_prime_decompose C with ⟨ Cs, eqC ⟩,
           rcases quot.exists_rep Bs with ⟨ Bs, ⟨ _ ⟩ ⟩,
           rcases quot.exists_rep Cs with ⟨ Cs, ⟨ _ ⟩ ⟩,
 
-          suffices : A ≈ parallel.from_list (Bs ++ Cs),
-            from ⟨ quot.mk setoid.r Bs + quot.mk setoid.r Cs, quot.sound this,
-                  λ x mem, or.elim (list.mem_append.mp mem) (pb x) (pc x) ⟩,
-          from calc  A
-                   ≈ (B |ₛ C) : eq
-               ... ≈ (parallel.from_list Bs |ₛ C) : equiv.ξ_parallel₁ (quotient.exact eqB)
-               ... ≈ (parallel.from_list Bs |ₛ parallel.from_list Cs) : equiv.ξ_parallel₂ (quotient.exact eqC)
-               ... ≈ parallel.from_list (Bs ++ Cs) : symm (species.parallel.from_append Bs Cs)
+          suffices : ⟦A⟧ = parallel.quot.from_list (list.map prime_species.unwrap (Bs ++ Cs)),
+            from ⟨ ⟦ Bs ++ Cs ⟧, this ⟩,
+
+          suffices : ⟦ B |ₛ C ⟧ = parallel.quot.from_list (list.map prime_species.unwrap Bs ++ list.map prime_species.unwrap Cs),
+            rw list.map_append,
+            from trans (quot.sound eq) this,
+
+          suffices
+            : parallel.quot.mk (parallel.from_prime_decompose ⟦Bs⟧) (parallel.from_prime_decompose ⟦Cs⟧)
+            = parallel.quot.from_list (list.map prime_species.unwrap Bs ++ list.map prime_species.unwrap Cs),
+            unfold quotient.mk at this, rw [← eqB, ← eqC] at this, from this,
+
+          from symm (parallel.quot.from_append
+            (list.map prime_species.unwrap Bs) (list.map prime_species.unwrap Cs)),
       end
     | is_false no_decompose :=
-        ⟨ [A], refl _,
-          λ x mem, begin
-            cases ((or_false _).mp mem),
-            from ⟨ non_nil, λ B C eq,
-              match classical.dec (B ≈ nil), classical.dec (C ≈ nil) with
-              | is_true is_nil, _ := or.inl is_nil
-              | _, is_true is_nil := or.inr is_nil
-              | is_false nnB, is_false nnC := false.elim (no_decompose ⟨ B, C, nnB, nnC, eq ⟩)
-              end ⟩
-          end ⟩
+      let this : prime A := ⟨ non_nil, λ B C eq,
+        match classical.dec (B ≈ nil), classical.dec (C ≈ nil) with
+        | is_true is_nil, _ := or.inl is_nil
+        | _, is_true is_nil := or.inr is_nil
+        | is_false nnB, is_false nnC := false.elim (no_decompose ⟨ B, C, nnB, nnC, eq ⟩)
+        end ⟩
+      in ⟨ quotient.mk [ ⟦ ⟨ A, this ⟩ ⟧ ], by from rfl ⟩
     end
   end
 using_well_founded {
@@ -139,23 +139,45 @@ using_well_founded {
 
 def process_space (ω Γ : context) := prime_species ω Γ → ℝ
 
+instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
+  := by { unfold process_space, apply_instance }
 instance process_space.add_comm_group {ω Γ} : add_comm_group (process_space ω Γ)
   := by { unfold process_space, apply_instance }
 
 /-- Convert a single prime species into a process space. This returns one when
     the process is present, and 0 otherwise. -/
 private noncomputable def to_process_space_of {Γ} (A : prime_species ω Γ) : process_space ω Γ
-| ⟨ B, p' ⟩ :=
-  match classical.dec (A.val ≈ B) with
-  | is_true _ := 1
-  | is_false _ := 0
-  end
+| ⟨ B, p' ⟩ := decidable.cases_on (classical.dec (A.val ≈ B)) (λ _, 0) (λ _, 1)
+
+lemma decidable.false_ext : ∀ x, x = is_false not_false
+| (is_true h) := false.elim h
+| (is_false h) := congr_arg is_false rfl
+
+lemma decidable.true_ext : ∀ x, x = is_true true.intro
+| (is_true true.intro) := rfl
+| (is_false h) := false.elim (h true.intro)
+
+private lemma to_process_space_of_equiv {Γ} {A B : prime_species ω Γ} :
+  A.val ≈ B.val → to_process_space_of A = to_process_space_of B
+| eq := funext $ λ ⟨ C, p' ⟩, begin
+  unfold to_process_space_of,
+  cases (classical.dec (A.val ≈ C)),
+  case decidable.is_false {
+    have : (B.val ≈ C) = false := propext ⟨ λ x, h (trans eq x) , λ x, by contradiction ⟩,
+    rw [this, decidable.false_ext (classical.dec false)],
+  },
+  case decidable.is_true {
+    simp only [],
+    have : (B.val ≈ C) = true := propext (iff_true_intro (trans (symm eq) h)),
+    rw [this, decidable.true_ext (classical.dec true)],
+  },
+end
 
 /-- Convert a species into a process space. This computes the prime
     decomposition, and then converts it to a process space. -/
-noncomputable def to_process_space {Γ} (A : multiset (prime_species ω Γ)) : process_space ω Γ
+noncomputable def to_process_space {Γ} (A : multiset (quotient (@prime_species.setoid ω Γ))) : process_space ω Γ
   := quot.lift_on A
-      (list.foldr (λ B s, to_process_space_of B + s) 0)
+      (list.foldr (λ B s, quot.lift_on B to_process_space_of (@to_process_space_of_equiv ω Γ) + s) 0)
       (λ a b p, begin
         induction p,
         case list.perm.nil { from rfl },
