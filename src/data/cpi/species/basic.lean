@@ -228,11 +228,11 @@ section rename
     end
 
   /-- Renaming twice is the same as renaming with a composed function. -/
-  lemma rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : species ω Γ)
+  lemma rename_compose {Γ Δ η k} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : whole ω k Γ)
     : rename σ (rename ρ A) = rename (σ ∘ ρ) A
     := rename_with_compose A (λ x _, ρ x) σ
 
-  lemma rename_ext {Γ Δ} {ρ : name Γ → name Δ} {n : ℕ} (A : species ω Γ)
+  lemma rename_ext {Γ Δ k} {ρ : name Γ → name Δ} {n : ℕ} (A : whole ω k Γ)
     : rename name.extend (rename ρ A)
     = rename (name.ext ρ) (rename (@name.extend _ n) A)
     := by rw [rename_compose, ← name.ext_extend, rename_compose]

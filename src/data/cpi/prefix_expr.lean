@@ -1,5 +1,6 @@
 import data.cpi.name
 import data.list.witness data.real.non_neg order.lexicographic
+import tactic.known_induct
 
 namespace cpi
 
@@ -362,6 +363,39 @@ namespace prefix_expr
     lemma ext_spontanious {η} (k : ℝ≥0)
       : ext (@spontanious η k) ρ = ρ
       := funext $ λ x, by unfold ext ext_with
+
+    private lemma rename_inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
+      : ∀ {f₁ f₂} {π₁ : prefix_expr Γ f₁} {π₂ : prefix_expr Γ f₂}
+      , wrap.intro (rename ρ π₁) = wrap.intro (rename ρ π₂)
+      → π₁ == π₂
+    | _ _ (a#(b; y)) (a'#(b'; y')) eq := begin
+        simp only [rename_communicate] at eq,
+        rcases eq with ⟨ eqC, eqπ ⟩,
+
+        have : y = y' := (context.extend.inj (congr_fun eqC Γ)).left, cases this,
+        simp only [heq_iff_eq] at eqπ ⊢,
+
+        from ⟨ inj eqπ.left, list.injective_map_iff.mpr inj eqπ.right ⟩,
+      end
+    | _ _ (a#(b; y)) τ@k eq := begin
+      simp only [rename_communicate, rename_spontanious] at eq,
+        rcases eq with ⟨ eqC, eqπ ⟩,
+        from absurd (congr_fun eqC Γ) no_extend,
+    end
+    | _ _ τ@k (a#(b; y)) eq := begin
+        simp only [rename_communicate, rename_spontanious] at eq,
+        rcases eq with ⟨ eqC, eqπ ⟩,
+        from absurd (congr_fun (symm eqC) Γ) no_extend,
+      end
+    | _ _ τ@k τ@k' eq := begin
+        simp only [rename_spontanious] at eq,
+        rcases eq with ⟨ eqC, eqπ ⟩,
+        cases eqπ, from heq.refl _,
+      end
+
+    lemma rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
+      : ∀ {f}, function.injective (@rename Γ Δ f ρ)
+    | f π₁ π₂ eq := eq_of_heq (rename_inj inj (congr_arg wrap.intro eq))
   end rename_equations
 
 end prefix_expr
