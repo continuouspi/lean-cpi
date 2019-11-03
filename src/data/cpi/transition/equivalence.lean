@@ -48,7 +48,7 @@ private lemma on_parallel_assoc₁ :
             ≈ concretion.pseudo_apply (F' |₁ B) G
               : concretion.pseudo_apply.equiv (symm eqF) (refl _)
         ... ≈ concretion.pseudo_apply F' (B |₂ G)
-              : concretion.psuedo_apply.parallel_shift F' B G,
+              : concretion.pseudo_apply.parallel_shift F' B G,
 
     -- Using B's transition: build B|C, and wrap into A.
     suffices : (concretion.pseudo_apply F G) ≈ (A |ₛ concretion.pseudo_apply F' G),
@@ -154,7 +154,7 @@ private lemma on_parallel_assoc₂ :
              ≈ concretion.pseudo_apply F (B |₂ G')
                : concretion.pseudo_apply.equiv (refl _) (symm eqG)
          ... ≈ concretion.pseudo_apply (F |₁ B) G'
-               : symm (concretion.psuedo_apply.parallel_shift F B G')
+               : symm (concretion.pseudo_apply.parallel_shift F B G')
   end
 | Γ k α A B C ._ (@parₗ _ _ _ _ _ _ E t) := begin
     suffices

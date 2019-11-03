@@ -380,6 +380,11 @@ namespace name
       : mk_apply bs ∘ (@extend Γ b) = id
       := funext $λ α, by { cases α; unfold mk_apply id function.comp }
   end application
+
+  /-- Get the index of a name in the singleton context . -/
+  def to_idx {n : ℕ} : name (context.extend n context.nil) → fin n
+  | (name.zero i) := i
+  | (name.extend a) := by cases a
 end name
 
 end cpi

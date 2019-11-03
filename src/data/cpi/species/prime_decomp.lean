@@ -1,5 +1,4 @@
 import data.cpi.species.prime
-import algebra.pi_instances
 
 set_option profiler true
 set_option profiler.threshold 0.5
@@ -136,55 +135,6 @@ using_well_founded {
   rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, depth x.2 ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
-
-def process_space (ω Γ : context) := prime_species ω Γ → ℝ
-
-instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
-  := by { unfold process_space, apply_instance }
-instance process_space.add_comm_group {ω Γ} : add_comm_group (process_space ω Γ)
-  := by { unfold process_space, apply_instance }
-
-/-- Convert a single prime species into a process space. This returns one when
-    the process is present, and 0 otherwise. -/
-private noncomputable def to_process_space_of {Γ} (A : prime_species ω Γ) : process_space ω Γ
-| ⟨ B, p' ⟩ := decidable.cases_on (classical.dec (A.val ≈ B)) (λ _, 0) (λ _, 1)
-
-lemma decidable.false_ext : ∀ x, x = is_false not_false
-| (is_true h) := false.elim h
-| (is_false h) := congr_arg is_false rfl
-
-lemma decidable.true_ext : ∀ x, x = is_true true.intro
-| (is_true true.intro) := rfl
-| (is_false h) := false.elim (h true.intro)
-
-private lemma to_process_space_of_equiv {Γ} {A B : prime_species ω Γ} :
-  A.val ≈ B.val → to_process_space_of A = to_process_space_of B
-| eq := funext $ λ ⟨ C, p' ⟩, begin
-  unfold to_process_space_of,
-  cases (classical.dec (A.val ≈ C)),
-  case decidable.is_false {
-    have : (B.val ≈ C) = false := propext ⟨ λ x, h (trans eq x) , λ x, by contradiction ⟩,
-    rw [this, decidable.false_ext (classical.dec false)],
-  },
-  case decidable.is_true {
-    simp only [],
-    have : (B.val ≈ C) = true := propext (iff_true_intro (trans (symm eq) h)),
-    rw [this, decidable.true_ext (classical.dec true)],
-  },
-end
-
-/-- Convert a species into a process space. This computes the prime
-    decomposition, and then converts it to a process space. -/
-noncomputable def to_process_space {Γ} (A : multiset (quotient (@prime_species.setoid ω Γ))) : process_space ω Γ
-  := quot.lift_on A
-      (list.foldr (λ B s, quot.lift_on B to_process_space_of (@to_process_space_of_equiv ω Γ) + s) 0)
-      (λ a b p, begin
-        induction p,
-        case list.perm.nil { from rfl },
-        case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
-        case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
-        case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
-      end)
 
 end species
 end cpi

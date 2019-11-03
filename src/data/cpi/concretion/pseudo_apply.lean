@@ -594,7 +594,7 @@ protected lemma pseudo_apply.on_parallel₂'
   ... ≈ (A |ₛ pseudo_apply G F) : pseudo_apply.on_parallel₂ G A F
   ... ≈ (A |ₛ pseudo_apply F G) : ξ_parallel₂ (pseudo_apply.symm G F)
 
-protected lemma psuedo_apply.parallel_shift
+protected lemma pseudo_apply.parallel_shift
     {Γ} {a b} (F : concretion ω Γ a b) (A : species ω Γ) (G : concretion ω Γ b a)
   : pseudo_apply (F |₁ A) G ≈ pseudo_apply F (A |₂ G) :=
   calc  pseudo_apply (F |₁ A) G
@@ -604,6 +604,13 @@ protected lemma psuedo_apply.parallel_shift
   ... ≈ (A |ₛ pseudo_apply F G) : ξ_parallel₂ (pseudo_apply.symm G F)
   ... ≈ pseudo_apply F (A |₂ G) : symm (pseudo_apply.on_parallel₂ F A G)
 
+/-- Pseudo application lifted to the level of quotients. -/
+def pseudo_apply.quotient {Γ a b}
+  : quotient (@concretion.setoid ω Γ a b) → quotient (@concretion.setoid ω Γ b a)
+  → quotient (@species.setoid ω Γ)
+| F G := quotient.lift_on₂ F G
+  (λ F G, ⟦ pseudo_apply F G ⟧)
+  (λ F G F' G' eqF eqG, quot.sound (pseudo_apply.equiv eqF eqG))
 
 end concretion
 end cpi
