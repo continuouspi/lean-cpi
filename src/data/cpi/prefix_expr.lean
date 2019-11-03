@@ -1,9 +1,6 @@
 import data.cpi.name
 import data.list.witness data.real.non_neg order.lexicographic
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 
 /-- A prefix expression. This can either be one of:

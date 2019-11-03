@@ -1,8 +1,5 @@
 import algebra.pi_instances data.finset
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 /-- A function which is defined everywhere, but only has "interesting" values in
     a finite set of locations.
 

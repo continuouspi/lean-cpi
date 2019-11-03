@@ -2,9 +2,6 @@
 
 import data.fin data.fintype
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace fin
 namespace pi
 variables {n : ℕ} {β : fin n → Type*}

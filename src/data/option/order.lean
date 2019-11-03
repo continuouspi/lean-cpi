@@ -4,10 +4,6 @@
 
 import tactic.lint
 
-run_cmd lint
-set_option profiler true
-set_option profiler.threshold 0.5
-
 variable {α : Type*}
 
 protected def option.le [has_le α] : option α → option α → Prop

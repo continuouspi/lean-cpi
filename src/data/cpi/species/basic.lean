@@ -1,9 +1,6 @@
 import data.cpi.prefix_expr data.cpi.affinity
 import tactic.custom_wf tactic.known_induct
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 
 namespace species

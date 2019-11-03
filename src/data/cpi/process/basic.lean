@@ -1,8 +1,5 @@
 import data.cpi.species
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 
 /-- The set of processes. Defined as one or more species, each with a

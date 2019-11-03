@@ -29,11 +29,7 @@
   [1]: Proof-relevant π-calculus: a constructive account of concurrency and
        causality, Roly Perera, James Cheney
 -/
-import tactic.lint data.fin data.vector data.vector2
-
-run_cmd lint
-set_option profiler true
-set_option profiler.threshold 0.5
+import data.fin data.vector data.vector2
 
 namespace cpi
 

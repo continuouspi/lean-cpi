@@ -1,8 +1,5 @@
 import data.fin.pi_order data.real.non_neg data.option.order data.pand
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 
 /-- An affinity network.

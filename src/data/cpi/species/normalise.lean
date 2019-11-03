@@ -1,9 +1,6 @@
 import data.cpi.species.equivalence data.cpi.species.order
 import data.list.sort
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 namespace species
 

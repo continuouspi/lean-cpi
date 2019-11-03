@@ -1,9 +1,6 @@
 import data.cpi.species data.cpi.concretion
 import data.fin_fn
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 
 variable {ω : context}

@@ -1,9 +1,6 @@
 import data.cpi.species.basic
 import tactic.known_induct
 
-set_option profiler true
-set_option profiler.threshold 0.5
-
 namespace cpi
 namespace species
 
