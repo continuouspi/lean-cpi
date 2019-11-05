@@ -396,6 +396,14 @@ namespace prefix_expr
     lemma rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
       : ∀ {f}, function.injective (@rename Γ Δ f ρ)
     | f π₁ π₂ eq := eq_of_heq (rename_inj inj (congr_arg wrap.intro eq))
+
+    lemma ext.inj {Γ Δ η} {ρ : name Γ → name Δ}
+      : ∀ {f} (π : prefix_expr η f), function.injective ρ → function.injective (ext π ρ)
+    | ._ (_#(_; y)) inj a b eq := begin
+        simp only [ext_communicate] at eq,
+        from name.ext.inj inj eq,
+      end
+    | ._ (τ@_) inj a b eq := by { simp only [ext_spontanious] at eq, from inj eq, }
   end rename_equations
 
 end prefix_expr

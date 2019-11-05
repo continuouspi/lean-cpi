@@ -310,6 +310,13 @@ namespace name
       : (ext_with P (λ a _, ρ a))
       = (λ a _, name.ext_with (λ _x, true) (λ x _, ρ x) a true.intro)
       := funext $ λ a, funext $ λ free, by { cases a; from rfl }
+
+    lemma ext.inj {Γ Δ n} {ρ : name Γ → name Δ} (inj : function.injective ρ)
+      : function.injective (@ext Γ Δ n ρ)
+    | (name.zero i) (name.zero j) eq := by { cases eq, from rfl }
+    | (name.zero i) (name.extend b) eq := by contradiction
+    | (name.extend i) (name.zero j) eq := by contradiction
+    | (name.extend a) (name.extend b) eq := congr_arg extend (inj (extend.inj eq))
   end rename
 
   section swap

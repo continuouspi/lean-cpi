@@ -292,6 +292,79 @@ section rename_equations
       rw prefix_expr.ext_with_discard π (λ l, _) ρ
     end
 
+  lemma rename.inj :
+    ∀ {Γ Δ k} {ρ : name Γ → name Δ}
+    , function.injective ρ → function.injective (@rename ω Γ Δ k ρ)
+  | Γ Δ _ ρ inj nil B eq := begin
+      cases B;
+      simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
+      contradiction,
+    end
+  | Γ Δ _ ρ inj (apply D as) B eq := begin
+      cases B;
+      simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
+      try { contradiction },
+      case apply : n D' as' {
+        rcases eq with ⟨ ⟨ _ ⟩, ⟨ eqD ⟩, eqAs ⟩,
+
+        -- Show the vector is equal
+        rcases as with ⟨ as, asL ⟩, rcases as' with ⟨ as', asL' ⟩,
+        have eqAs := eq_of_heq eqAs,
+        simp only [vector.map, subtype.mk_eq_mk] at eqAs,
+        cases (list.injective_map_iff.mpr inj eqAs),
+
+        from rfl,
+      },
+    end
+  | Γ Δ _ ρ inj (A |ₛ B) C eq := begin
+      cases C;
+      simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
+      try { contradiction },
+
+      case whole.parallel {
+        cases rename.inj inj eq.left,
+        cases rename.inj inj eq.right,
+        from rfl,
+      },
+    end
+  | Γ Δ _ ρ inj (Σ# As) B eq := begin
+      cases B;
+      simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
+      try { contradiction },
+      case choice {
+        cases rename.inj inj eq, from rfl,
+      },
+    end
+  | Γ Δ _ ρ inj (ν(M) A) B eq := begin
+      cases B;
+      simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
+      try { contradiction },
+      case restriction {
+        rcases eq with ⟨ ⟨ _ ⟩, eqB ⟩,
+        cases (rename.inj (name.ext.inj inj) (eq_of_heq eqB)),
+        from rfl,
+      }
+    end
+
+  | Γ Δ _ ρ inj whole.empty B eq := begin
+      cases B;
+      simp only [rename.empty, rename.cons] at eq;
+      contradiction,
+    end
+  | Γ Δ _ ρ inj (whole.cons π A As) B eq := begin
+      cases B;
+      simp only [rename.empty, rename.cons] at eq;
+      try { contradiction },
+      case whole.cons : f π₂ B Bs {
+        rcases eq with ⟨ ⟨ _ ⟩, eqπ, eqA, eqAs ⟩,
+        cases prefix_expr.rename.inj inj (eq_of_heq eqπ),
+        cases rename.inj inj eqAs,
+        cases (rename.inj (prefix_expr.ext.inj π inj) (eq_of_heq eqA)),
+        from rfl,
+      }
+    end
+
+
 end rename_equations
 
 /- Show parallel can be converted to/from a list (though not isomorphic). -/
