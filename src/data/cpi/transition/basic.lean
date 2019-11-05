@@ -152,7 +152,6 @@ lemma label.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.inject
   | ._ τ@'k τ⟨ _ ⟩ eq := by contradiction
   | ._ τ⟨ _ ⟩ τ@'k eq := by contradiction
 
-
 lemma label.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η)
   : ∀ {k} (l : label Γ k)
   , label.rename σ (label.rename ρ l) = label.rename (σ ∘ ρ) l
@@ -165,81 +164,113 @@ lemma label.rename_id {Γ} : ∀ {k} (l : label Γ k), label.rename id l = l
 | ._ τ@'k := rfl
 | ._ τ⟨ p ⟩ := by { unfold label.rename, rw upair.map_identity }
 
-inductive transition : Π {Γ} {k}, species ω Γ → label Γ k → production ω Γ k → Prop
+/-- A function to look up names within the environment. -/
+def lookup (ω Γ : context) := ∀ n, reference n ω → species.choices ω (context.extend n Γ)
+
+/-- Rename a lookup function, embedding the returned species into another
+    context.-/
+def lookup.rename {Γ Δ} (ρ : name Γ → name Δ) : lookup ω Γ → lookup ω Δ
+| f n r := species.rename (name.ext ρ) (f n r)
+
+/-- Rewrite lemma for when lookups get expanded incorrectly. -/
+lemma lookup.rename.def {Γ Δ} (ρ : name Γ → name Δ) (ℓ : lookup ω Γ)
+  : (λ n r, species.rename (name.ext ρ) (ℓ n r)) = lookup.rename ρ ℓ
+  := rfl
+
+lemma lookup.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
+  : function.injective (@lookup.rename ω Γ Δ ρ)
+| x y eq := funext $ λ n, funext $ λ r, begin
+  have : species.rename (name.ext ρ) (x n r) = species.rename (name.ext ρ) (y n r)
+    := congr_fun (congr_fun eq n) r,
+  from species.rename.inj (name.ext.inj inj) this,
+end
+
+lemma lookup.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η)
+  : ∀ (ℓ : lookup ω Γ)
+  , lookup.rename σ (lookup.rename ρ ℓ) = lookup.rename (σ ∘ ρ) ℓ
+| f := funext $ λ n, funext $ λ r, begin
+  simp only [lookup.rename, function.comp],
+  rw [species.rename_compose (name.ext ρ) (name.ext σ) (f n r), name.ext_comp],
+end
+
+inductive transition :
+  Π {Γ} {k}
+  , species ω Γ → lookup ω Γ → label Γ k → production ω Γ k
+  → Prop
 
 /- Additional transition to project project into where our choiceₙ rules apply. -/
 | ξ_choice
-    {Γ} {f} {π : prefix_expr Γ f} {A : species ω (f Γ)} {As : species.choices ω Γ}
+    {Γ ℓ f} {π : prefix_expr Γ f} {A : species ω (f Γ)} {As : species.choices ω Γ}
     {k} {l : label Γ k} {E : production ω Γ k}
 
-  : transition (Σ# As) l E
-  → transition (Σ# species.whole.cons π A As) l E
+  : transition (Σ# As) ℓ l E
+  → transition (Σ# species.whole.cons π A As) ℓ l E
 
 | choice₁
-    {Γ}
+    {Γ ℓ}
 
     (a : name Γ) (b : list (name Γ)) (y : ℕ) (A : species ω (context.extend y Γ))
     (As : species.choices ω Γ)
   : transition (Σ# species.whole.cons (a#(b; y)) A As)
-               (#a)
+               ℓ (#a)
                (#(⟨ b, rfl ⟩; y) A)
 | choice₂
-    {Γ}
+    {Γ ℓ}
 
     (k : ℝ≥0) (A : species ω Γ) (As : species.choices ω Γ)
-  : transition (Σ# species.whole.cons (τ@k) A As) τ@'k A
+  : transition (Σ# species.whole.cons (τ@k) A As) ℓ τ@'k A
 
 | com₁
-    {Γ} {x y} {A B : species ω Γ} {a b : name Γ}
+    {Γ ℓ x y} {A B : species ω Γ} {a b : name Γ}
     {F : concretion ω Γ x y} {G : concretion ω Γ y x}
 
-  : transition A (#a) F
-  → transition B (#b) G
-  → transition (A |ₛ B) τ⟨ a, b ⟩ (concretion.pseudo_apply F G)
+  : transition A ℓ (#a) F
+  → transition B ℓ(#b) G
+  → transition (A |ₛ B) ℓ τ⟨ a, b ⟩ (concretion.pseudo_apply F G)
 
 | com₂
-    {Γ} (M : affinity) {a b : fin M.arity}
+    {Γ ℓ} (M : affinity) {a b : fin M.arity}
     {A B : species ω (context.extend M.arity Γ)}
 
     (k : option.is_some (M.f a b))
-  : transition A τ⟨ name.zero a, name.zero b ⟩ B
-  → transition (ν(M) A) τ@'(option.get k) (ν(M) B)
+  : transition A (lookup.rename name.extend ℓ) τ⟨ name.zero a, name.zero b ⟩ B
+  → transition (ν(M) A) ℓ τ@'(option.get k) (ν(M) B)
 
 | parₗ
-    {Γ} {A : species ω Γ} (B : species ω Γ)
+    {Γ ℓ} {A : species ω Γ} (B : species ω Γ)
     {k} {l : label Γ k} {E}
 
-  : transition A l E
-  → transition (A |ₛ B) l (production.map (λ x, x |ₛ B) (λ _ _ x, x |₁ B) E)
+  : transition A ℓ l E
+  → transition (A |ₛ B) ℓ l (production.map (λ x, x |ₛ B) (λ _ _ x, x |₁ B) E)
 | parᵣ
-    {Γ} (A : species ω Γ) {B : species ω Γ}
+    {Γ ℓ} (A : species ω Γ) {B : species ω Γ}
     {k} {l : label Γ k} {E}
 
-  : transition B l E
-  → transition (A |ₛ B) l (production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x) E)
+  : transition B ℓ l E
+  → transition (A |ₛ B) ℓ l (production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x) E)
 
 | ν₁
-    {Γ} (M : affinity) {A : species ω (context.extend M.arity Γ)}
+    {Γ ℓ} (M : affinity) {A : species ω (context.extend M.arity Γ)}
     {k} {l : label Γ k} {E : production ω (context.extend M.arity Γ) k}
 
-  : transition A (label.rename name.extend l) E
-  → transition (ν(M) A) l (production.map (λ x, ν(M) x) (λ _ _ x, ν'(M) x) E)
+  : transition A (lookup.rename name.extend ℓ) (label.rename name.extend l) E
+  → transition (ν(M) A) ℓ l (production.map (λ x, ν(M) x) (λ _ _ x, ν'(M) x) E)
 
 
 | defn
     {Γ} {n} {l : label (context.extend n Γ) kind.species}
-    (f : ∀ {n}, reference n ω → species ω (context.extend n Γ))
+    (ℓ : ∀ n, reference n ω → species.choices ω (context.extend n Γ))
 
-    (B E : species ω (context.extend n Γ))
+    (E : species ω (context.extend n Γ))
     (D : reference n ω) (as : vector (name Γ) n)
-    (eq : f D = B)
-  : transition B l E
+  : transition (Σ# (ℓ n D)) (lookup.rename name.extend ℓ) l E
   → transition
       (species.apply D as)
+      ℓ
       (label.rename (name.mk_apply as) l)
       (species.rename (name.mk_apply as) E)
 
-notation A ` [`:max l `]⟶ ` E:max := transition A l E
+notation A ` [`:max ℓ `, ` l `]⟶ ` E:max := transition A ℓ l E
 
 namespace transition
   private lemma congr_arg_heq₂
@@ -247,31 +278,25 @@ namespace transition
     : ∀ {a₁ a₂ : α} {b₁ : β a₁} {b₂ : β a₂}, a₁ = a₂ → b₁ == b₂ → f a₁ b₁ == f a₂ b₂
   | a _ b _ rfl heq.rfl := heq.rfl
 
-  private def rename_env
-      {Γ Δ} (ρ : name Γ → name Δ)
-      (f : ∀ {n}, reference n ω → species ω (context.extend n Γ))
-    : ∀ n, reference n ω → species ω (context.extend n Δ)
-  | n r := species.rename (name.ext ρ) (f r)
-
   protected lemma rename_to :
-    ∀ {Γ Δ} {k}
+    ∀ {Γ Δ ℓ k}
       {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
       (ρ : name Γ → name Δ)
-    , A [l]⟶ E
+    , A [ℓ, l]⟶ E
     → ∃ (l' : label Δ k) (E' : production ω Δ k)
-    , (species.rename ρ A) [l']⟶ E'
+    , (species.rename ρ A) [lookup.rename ρ ℓ, l']⟶ E'
     ∧ label.rename ρ l = l'
     ∧ production.rename ρ E = E'
-  | Γ Δ k A l E ρ t := begin
+  | Γ Δ ℓ k A l E ρ t := begin
     induction t generalizing Δ,
 
-    case ξ_choice : Γ f π A As k l E t ih {
+    case ξ_choice : Γ ℓ f π A As k l E t ih {
       simp only [species.rename.choice, species.rename.cons] at ih ⊢,
       rcases ih _ ρ with ⟨ l', E', t', eql, eqE ⟩,
       from ⟨ l', E', ξ_choice t', eql, eqE ⟩,
     },
 
-    case choice₁ : Γ a b y A As {
+    case choice₁ : Γ ℓ a b y A As {
       simp only [ rename.choice, rename.cons,
                   prefix_expr.ext_communicate, prefix_expr.rename_communicate,
                   list.length, list.map ],
@@ -294,12 +319,12 @@ namespace transition
       simp only [list.length_map, iff_self, eq_iff_iff, eq_mpr_heq],
     },
 
-    case choice₂ : Γ k A As {
+    case choice₂ : Γ ℓ k A As {
       simp only [species.rename.choice, species.rename.cons],
       from ⟨ τ@'k, _, choice₂ k (species.rename ρ A) (species.rename ρ As), rfl, rfl ⟩
     },
 
-    case com₁ : Γ x y A B a b F G tf tg ihf ihg {
+    case com₁ : Γ ℓ x y A B a b F G tf tg ihf ihg {
       simp only [species.rename.parallel],
       rcases ihf _ ρ with ⟨ _, _, tf', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       rcases ihg _ ρ with ⟨ _, _, tg', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
@@ -307,14 +332,15 @@ namespace transition
              congr_arg production.species (concretion.pseudo_apply.rename ρ F G) ⟩
     },
 
-    case com₂ : Γ M a b A B k t ih {
+    case com₂ : Γ ℓ M a b A B k t ih {
       simp only [species.rename.restriction],
       rcases ih _ (name.ext ρ) with ⟨ _, _, tf', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+      rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at tf',
       from ⟨ _, _, com₂ M k tf', rfl,
-             congr_arg production.species (species.rename.restriction M _) ⟩
+             congr_arg production.species (species.rename.restriction M _) ⟩,
     },
 
-    case parₗ : Γ A B k l E t ih {
+    case parₗ : Γ ℓ A B k l E t ih {
       simp only [species.rename.parallel],
       rcases ih _ ρ with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       refine ⟨ label.rename ρ l, _, parₗ _ t', rfl, _ ⟩,
@@ -325,7 +351,7 @@ namespace transition
       }
     },
 
-    case parᵣ : Γ A B k l E t ih {
+    case parᵣ : Γ ℓ A B k l E t ih {
       simp only [species.rename.parallel],
       rcases ih _ ρ with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       refine ⟨ label.rename ρ l, _, parᵣ _ t', rfl, _ ⟩,
@@ -336,10 +362,11 @@ namespace transition
       }
     },
 
-    case ν₁ : Γ M A k l E t ih {
+    case ν₁ : Γ ℓ M A k l E t ih {
       simp only [species.rename.restriction],
       rcases ih _ (name.ext ρ) with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       rw [label.rename_compose, name.ext_extend, ← label.rename_compose] at t',
+      rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
       refine ⟨ _, _, ν₁ M t', rfl, _ ⟩,
       cases E,
       case production.concretion { from rfl },
@@ -348,12 +375,12 @@ namespace transition
       }
     },
 
-    case defn : Γ n l f B E D as eq t ih {
+    case defn : Γ n l f E D as t ih {
       rcases ih _ (name.ext ρ) with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       simp only [species.rename.invoke],
-      have eq' : rename_env ρ @f n D = cpi.species.rename (name.ext ρ) B,
-        rw ← eq, from rfl,
-      refine ⟨ _, _, defn (rename_env ρ @f) _ _ _ _ eq' t', _, _ ⟩,
+      simp only [species.rename.choice] at t',
+      rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
+      refine ⟨ _, _, defn (lookup.rename ρ f) _ D _ t', _, _ ⟩,
 
       rw [label.rename_compose, label.rename_compose, name.mk_apply_rename],
       refine congr_arg production.species _,
@@ -362,12 +389,12 @@ namespace transition
   end
 
   protected lemma rename :
-    ∀ {Γ Δ} {k}
+    ∀ {Γ Δ f k}
       {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
       (ρ : name Γ → name Δ)
-    , A [l]⟶ E
-    → (species.rename ρ A) [label.rename ρ l]⟶ (production.rename ρ E)
-  | Γ Δ k A l E ρ t := begin
+    , A [f, l]⟶ E
+    → (species.rename ρ A) [lookup.rename ρ f, label.rename ρ l]⟶ (production.rename ρ E)
+  | Γ Δ f k A l E ρ t := begin
     rcases transition.rename_to ρ t with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
     from t',
   end
@@ -375,15 +402,15 @@ namespace transition
   /-- FIXME: Actually prove this. I'm 99% sure it's true, but showing it has
       proved to be rather annoying. -/
   protected axiom rename_from :
-    ∀ {Γ Δ} {k}
+    ∀ {Γ Δ f k}
       {A : species ω Γ} {l : label Δ k} {E : production ω Δ k}
       (ρ : name Γ → name Δ)
-    , species.rename ρ A [l]⟶ E
-    → ∃ (l' : label Γ k) (E' : production ω Γ k)
-    , A [l']⟶ E'
+    , species.rename ρ A [f, l]⟶ E
+    → ∃ (f' : lookup ω Γ) (l' : label Γ k) (E' : production ω Γ k)
+    , A [f' , l']⟶ E'
+    ∧ lookup.rename ρ f' = f
     ∧ label.rename ρ l' = l
     ∧ production.rename ρ E' = E
-
 
 end transition
 
