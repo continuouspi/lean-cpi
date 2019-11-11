@@ -7,6 +7,7 @@ variable {ω : context}
 
 open species.equiv (hiding refl trans symm)
 
+/-
 private lemma com₁_unpair_con :
   ∀ {Γ ℓ} {α : label Γ kind.concretion}
     {A B : species ω Γ}
@@ -704,7 +705,7 @@ theorem equivalent :
   case ν_swap₁ { from on_ν_swap₁ t₁ },
   case ν_swap₂ { from on_ν_swap₂ t₁ },
 end
-
+-/
 end transition
 end cpi
 

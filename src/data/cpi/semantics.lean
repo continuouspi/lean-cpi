@@ -1,4 +1,4 @@
-import data.cpi.species data.cpi.concretion
+import data.cpi.species data.cpi.concretion data.cpi.process data.cpi.transition
 import data.fin_fn
 
 namespace cpi
@@ -68,8 +68,18 @@ noncomputable instance interaction_space.add_comm_monoid {ω Γ}
   : add_comm_monoid (interaction_space ω Γ)
   := fin_fn.add_comm_monoid _ ℝ
 
-variable do_prime_decompose :
+noncomputable instance interaction_space.has_sub {ω Γ} : has_sub (interaction_space ω Γ)
+  := fin_fn.has_sub _ ℝ
+
+noncomputable instance interaction_space.has_scalar {ω Γ} : has_scalar ℝ (interaction_space ω Γ)
+  := fin_fn.has_scalar _ ℝ
+
+constant do_prime_decompose :
   ∀ {Γ}, species' ω Γ → multiset (quotient (@prime_species.setoid ω Γ))
+
+noncomputable def to_process_space' {Γ} (A : species' ω Γ)
+  : process_space ω Γ
+  := to_process_space (do_prime_decompose A)
 
 /-- Compute the interaction tensor between two elements in the interaction
     space. -/
@@ -83,7 +93,7 @@ noncomputable def interaction_tensor (M : affinity)
   | option.some aff :=
     if h : bF = yG ∧ yF = bG then
       let to_space := λ x,
-        to_process_space (@do_prime_decompose (context.extend M.arity context.nil) x) in
+        @to_process_space' ω (context.extend M.arity context.nil) x in
       begin
         rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
         have fg := to_space (concretion.pseudo_apply.quotient F G),
@@ -92,6 +102,77 @@ noncomputable def interaction_tensor (M : affinity)
     else 0
   end)
 
+private noncomputable def potential_interaction_space {Γ} {ℓ : lookup ω Γ} {A : species ω Γ}
+  : transition.transition_from ℓ A
+  → interaction_space ω Γ
+| ⟨ _, # a , @production.concretion _ _ b y G, tr ⟩ :=
+  { space := λ B, decidable.cases_on (classical.dec (B = ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩)) (λ _, 0) (λ _, 1),
+    defined := finset.singleton ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩,
+    defined_if := λ B nZero, begin
+      cases (classical.dec (B = ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩)),
+      case decidable.is_false { by contradiction },
+      case decidable.is_true { from finset.mem_singleton.mpr h }
+    end }
+| ⟨ _, τ@'_, E, tr ⟩ := 0
+| ⟨ _, τ⟨_⟩, E, tr ⟩ := 0
+
+private noncomputable def immediate_process_space
+    {M : affinity} {ℓ : lookup ω (context.extend M.arity context.nil)} {A : species ω (context.extend M.arity context.nil)}
+  : transition.transition_from ℓ A
+  → process_space ω (context.extend M.arity context.nil)
+| ⟨ _, # a , _, tr ⟩ := 0
+| ⟨ _, τ@'k, production.species B, tr ⟩ :=
+  k.val • (to_process_space' ⟦ B ⟧ - to_process_space' ⟦ A ⟧)
+| ⟨ _, τ⟨ n ⟩, production.species B, tr ⟩ :=
+  let arity := quot.lift_on n
+    (λ ⟨ a, b ⟩, M.f (name.to_idx a) (name.to_idx b))
+    (λ ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ eq, begin
+      rcases eq with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+      from rfl,
+      from M.symm (name.to_idx a₁) (name.to_idx b₁),
+    end) in
+  match arity with
+  | none := 0
+  | some k := k.val • (to_process_space' ⟦ B ⟧ - to_process_space' ⟦ A ⟧)
+  end
+
+/-- The vector space of potential interactions of a process. -/
+noncomputable def process_potential
+    (M : affinity) (ℓ : lookup ω (context.extend M.arity context.nil))
+  : process ω (context.extend M.arity context.nil)
+  → interaction_space ω (context.extend M.arity context.nil)
+| (c ◯ A) :=
+  let transitions := transition.enumerate ℓ A in
+  c.val • quot.lift_on transitions.elems.val
+    (list.foldr (λ B s, potential_interaction_space B + s) 0)
+    (λ a b p, begin
+      induction p,
+      case list.perm.nil { from rfl },
+      case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
+      case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
+      case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
+    end)
+| (P |ₚ Q) := process_potential P + process_potential Q
+
+noncomputable def process_immediate
+    (M : affinity) (ℓ : lookup ω (context.extend M.arity context.nil))
+  : process ω (context.extend M.arity context.nil)
+  → process_space ω (context.extend M.arity context.nil)
+| (c ◯ A) :=
+  let transitions := transition.enumerate ℓ A in
+  c.val • quot.lift_on transitions.elems.val
+    (list.foldr (λ B s, immediate_process_space B + s) 0)
+    (λ a b p, begin
+      induction p,
+      case list.perm.nil { from rfl },
+      case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
+      case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
+      case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
+    end)
+  + 0.5 • interaction_tensor M (process_potential M ℓ (c ◯ A)) (process_potential M ℓ (c ◯ A))
+| (P |ₚ Q)
+  := process_immediate P + process_immediate Q
+   + interaction_tensor M (process_potential M ℓ P) (process_potential M ℓ Q)
 end cpi
 
 #lint

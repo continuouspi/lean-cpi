@@ -11,7 +11,7 @@ inductive process (ω : context) : context → Type
 | one      {Γ} : ℝ≥0 → species ω Γ → process Γ
 | parallel {Γ} : process Γ → process Γ → process Γ
 
-infix ` • `:60 := process.one
+infix ` ◯ `:60 := process.one
 infixr ` |ₚ `:50 := process.parallel
 
 end cpi

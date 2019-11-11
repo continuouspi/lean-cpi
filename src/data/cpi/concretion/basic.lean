@@ -2,6 +2,7 @@ import data.cpi.species
 
 namespace cpi
 
+@[derive decidable_eq]
 inductive concretion (ω : context) : context → ℕ → ℕ → Type
 | apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
         , species ω (context.extend y Γ)

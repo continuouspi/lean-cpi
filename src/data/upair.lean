@@ -36,12 +36,18 @@ namespace upair
     := ⟨ equiv_refl, equiv_symm, equiv_trans ⟩
 
   instance setoid : setoid (pair α) := setoid.mk upair.equiv is_equiv
+
+  instance decidable_rel [decidable_eq α] : decidable_rel (@upair.equiv α)
+  | ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ := by { unfold upair.equiv, apply_instance }
 end upair
 
 def upair (α : Type u) : Type u := quotient (@upair.setoid α)
 
 namespace upair
   protected def mk {α : Type u} (a b : α) : upair α := ⟦ ⟨ a, b ⟩ ⟧
+
+  instance {α : Type u} [decidable_eq α] : decidable_eq (upair α)
+    := quotient.decidable_eq
 
   protected lemma eq {α : Type} (a b : α) : upair.mk a b = upair.mk b a
     := quot.sound (or.inr ⟨rfl, rfl⟩)

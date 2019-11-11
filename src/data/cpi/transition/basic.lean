@@ -5,11 +5,13 @@ namespace cpi
 variable {ω : context}
 
 /-- The kind of a production, either a species or concretion-/
+@[derive decidable_eq]
 inductive kind
 | species
 | concretion
 
 /-- The right hand side of a transition, determined by a specific kind. -/
+@[derive decidable_eq]
 inductive production (ω : context) (Γ : context) : kind → Type
 | species (A : species ω Γ) : production kind.species
 | concretion {b y} (F : concretion ω Γ b y) : production kind.concretion
@@ -22,6 +24,7 @@ instance production.lift_species {Γ}
 instance production.lift_concretion {Γ} {b y}
   : has_coe (concretion ω Γ b y) (production ω Γ kind.concretion) := ⟨ production.concretion ⟩
 
+/-- Map over a production, transforming either the concretion or species inside. -/
 def production.map
     {Γ Δ} (s : species ω Γ → species ω Δ)
     (c : ∀ {b y}, concretion ω Γ b y → concretion ω Δ b y)
@@ -29,23 +32,20 @@ def production.map
 | ._ (production.species A) := s A
 | ._ (production.concretion F) := c F
 
+/-- Rename a production. This just wraps renaming for species and concretions. -/
 def production.rename
   {Γ Δ} (ρ : name Γ → name Δ)
   : ∀ {k}, production ω Γ k → production ω Δ k
 | ._ (production.species A) := production.species (species.rename ρ A)
 | ._ (production.concretion A) := production.concretion (concretion.rename ρ A)
 
-def production.rename_id
+lemma production.rename_id
   {Γ} : ∀ {k} (E : production ω Γ k), production.rename id E = E
   | ._ (production.species A) := by { unfold production.rename, rw species.rename_id A }
   | ._ (production.concretion F) := by { unfold production.rename, rw concretion.rename_id F }
 
-def production.free_in : ∀ {Γ} {k} (l : level Γ), production ω Γ k → Prop
-| Γ ._ l (production.species A) := l ∈ A
-| Γ ._ l (production.concretion F) := l ∈ F
-
-instance production.has_mem {Γ} {k} : has_mem (level Γ) (production ω Γ k) := ⟨ production.free_in ⟩
-
+/-- Equivalence of productions. This just wraps equivalence of species and
+    concretions. -/
 inductive production.equiv {Γ} :
   ∀ {k : kind}, production ω Γ k → production ω Γ k → Prop
 | species {A B : species ω Γ}                 : A ≈ B → @production.equiv kind.species A B
@@ -116,6 +116,7 @@ lemma production.map_compose {Γ Δ η} {k : kind}
 := by { cases E; repeat { simp only [production.map], unfold_coes } }
 
 /-- A transition from a species to some production of a given kind. -/
+@[derive decidable_eq]
 inductive label : context → kind → Type
 /- From a species to a concretion. Sends $b$ values on channel $a$ and evolves
    into whatever species the concretion applies, substituting $y$ variables
@@ -136,6 +137,7 @@ notation `τ@'`:max k:max  := label.spontanious k
 notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity (upair.mk a b)
 notation `τ⟨ `:max p ` ⟩`:max := label.of_affinity p
 
+/-- Rename all names within a label. -/
 def label.rename {Γ Δ} (ρ : name Γ → name Δ) : ∀ {k}, label Γ k → label Δ k
 | ._ #a := # (ρ a)
 | ._ τ@'k := τ@'k
@@ -193,10 +195,13 @@ lemma lookup.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ 
   rw [species.rename_compose (name.ext ρ) (name.ext σ) (f n r), name.ext_comp],
 end
 
+/-- A transition from one species to a production. This represents the potential
+    for a reaction. The label indicates the kind of reaction (spontantious or
+    communicating). -/
 inductive transition :
   Π {Γ} {k}
   , species ω Γ → lookup ω Γ → label Γ k → production ω Γ k
-  → Prop
+  → Type
 
 /- Additional transition to project project into where our choiceₙ rules apply. -/
 | ξ_choice
@@ -278,21 +283,29 @@ namespace transition
     : ∀ {a₁ a₂ : α} {b₁ : β a₁} {b₂ : β a₂}, a₁ = a₂ → b₁ == b₂ → f a₁ b₁ == f a₂ b₂
   | a _ b _ rfl heq.rfl := heq.rfl
 
-  protected lemma rename_to :
+  /-- Rename a transition.
+
+      This definition is a little complex, in that it returns a pair of the
+      transition, its label/output and equalities relating the renamed
+      label/outputs to the original. This makes the proof a bit simpler in
+      places,  as we don't need to worry about some of the more complex
+      equalities.
+      Mostly it's like this because I thought I needed this instead of
+      rename_from - I was wrong. -/
+  protected def rename_to :
     ∀ {Γ Δ ℓ k}
       {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
       (ρ : name Γ → name Δ)
     , A [ℓ, l]⟶ E
-    → ∃ (l' : label Δ k) (E' : production ω Δ k)
-    , (species.rename ρ A) [lookup.rename ρ ℓ, l']⟶ E'
-    ∧ label.rename ρ l = l'
-    ∧ production.rename ρ E = E'
+    → Σ' (l' : label Δ k) (E' : production ω Δ k)
+    , pprod ((species.rename ρ A) [lookup.rename ρ ℓ, l']⟶ E')
+            (label.rename ρ l = l' ∧ production.rename ρ E = E')
   | Γ Δ ℓ k A l E ρ t := begin
     induction t generalizing Δ,
 
     case ξ_choice : Γ ℓ f π A As k l E t ih {
-      simp only [species.rename.choice, species.rename.cons] at ih ⊢,
       rcases ih _ ρ with ⟨ l', E', t', eql, eqE ⟩,
+      simp only [species.rename.choice, species.rename.cons] at t' ⊢,
       from ⟨ l', E', ξ_choice t', eql, eqE ⟩,
     },
 
@@ -388,7 +401,8 @@ namespace transition
     }
   end
 
-  protected lemma rename :
+  /-- Rename a transition with a basic renaming function. --/
+  protected def rename :
     ∀ {Γ Δ f k}
       {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
       (ρ : name Γ → name Δ)
@@ -399,18 +413,16 @@ namespace transition
     from t',
   end
 
-  /-- FIXME: Actually prove this. I'm 99% sure it's true, but showing it has
+  /-- FIXME: Actually prove this. I'm 99% sure it exists, but showing it has
       proved to be rather annoying. -/
-  protected axiom rename_from :
+  protected constant rename_from :
     ∀ {Γ Δ f k}
       {A : species ω Γ} {l : label Δ k} {E : production ω Δ k}
       (ρ : name Γ → name Δ)
     , species.rename ρ A [f, l]⟶ E
-    → ∃ (f' : lookup ω Γ) (l' : label Γ k) (E' : production ω Γ k)
-    , A [f' , l']⟶ E'
-    ∧ lookup.rename ρ f' = f
-    ∧ label.rename ρ l' = l
-    ∧ production.rename ρ E' = E
+    → Σ' (f' : lookup ω Γ) (l' : label Γ k) (E' : production ω Γ k)
+    , pprod (A [f' , l']⟶ E')
+            (lookup.rename ρ f' = f ∧ label.rename ρ l' = l ∧ production.rename ρ E' = E)
 
 end transition
 
