@@ -540,9 +540,11 @@ private def on_ν_swap₂ :
   }
 end
 
-noncomputable def equivalent :
+/-- Convert a transition from one species to a transition from another
+    equivalent species, with the same label and equivalent production. -/
+noncomputable def equivalent_of :
   ∀ {Γ ℓ k} {A : species ω Γ} {B : species ω Γ} {α : label Γ k} {E : production ω Γ k}
-  , equivalent A B → A [ℓ, α]⟶ E
+  , species.equivalent A B → A [ℓ, α]⟶ E
   → Σ' (E' : production ω Γ k) (eq : E ≈ E'), B [ℓ, α]⟶ E'
 | Γ₁ ℓ₁ k₁ A₁ B₁ α₁ E₁ equ t₁ := begin
   induction equ generalizing k₁,
@@ -686,6 +688,37 @@ noncomputable def equivalent :
   case species.equivalent.ν_swap₁ { from on_ν_swap₁ t₁ },
   case species.equivalent.ν_swap₂ { from on_ν_swap₂ t₁ },
 end
+
+/-- Wraps 'equivalent_of' into a 'transition_from' -/
+noncomputable def equivalent_of.transition_from :
+  ∀ {Γ ℓ} {A : species ω Γ} {B : species ω Γ}
+  , species.equivalent A B
+  → transition_from ℓ A → transition_from ℓ B
+| Γ ℓ A B eq ⟨ k, α, E, t ⟩ :=
+  let ⟨ E', _, t' ⟩ := equivalent_of eq t in
+  ⟨ k, α, E', t' ⟩
+
+/-- Show that 'equivalent_of' twice yields the same thing. This is not going to
+    be fun. -/
+axiom equivalent_of.transition_from_eq :
+  ∀ {Γ ℓ} {A : species ω Γ} {B : species ω Γ}
+    (eq : species.equivalent A B) (t : transition_from ℓ A)
+  , t = equivalent_of.transition_from (species.equivalent.symm eq) (equivalent_of.transition_from eq t)
+
+/-- Show that two equivalent species's transition sets are equivalent. -/
+noncomputable def equivalent_of.is_equiv :
+  ∀ {Γ ℓ} {A : species ω Γ} {B : species ω Γ}
+  , species.equivalent A B
+  → transition_from ℓ A ≃ transition_from ℓ B
+| Γ ℓ A B eq :=
+{ to_fun := equivalent_of.transition_from eq,
+  inv_fun := equivalent_of.transition_from (species.equivalent.symm eq),
+  left_inv := λ x, symm (equivalent_of.transition_from_eq eq x),
+  right_inv := λ x, begin
+    have h := equivalent_of.transition_from_eq (species.equivalent.symm eq) x,
+    rw ← species.equivalent.symm_symm eq at h,
+    from symm h,
+  end }
 
 end transition
 end cpi

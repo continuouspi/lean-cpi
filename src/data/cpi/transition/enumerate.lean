@@ -5,25 +5,6 @@ namespace transition
 
 variable {ω : context}
 
-/-- A transition from a specific species, to any production. -/
-def transition_from {ω Γ} (ℓ : lookup ω Γ) (A : species ω Γ) : Type
-  := (Σ' k (α : label Γ k) E, A [ℓ, α]⟶ E)
-
-/-- Construct a new transition_from, wrapping a transition. -/
-@[pattern]
-def transition_from.mk
-    {Γ} {ℓ : lookup ω Γ} {A : species ω Γ} {k} {α : label Γ k} {E} (t : A [ℓ, α]⟶ E)
-  : transition_from ℓ A
-  := ⟨ k, α, E, t ⟩
-
-/-- Construct a new transition_from with an explicit lookup function, wrapping a
-    transition. -/
-@[pattern]
-def transition_from.mk_with
-    {Γ} (ℓ : lookup ω Γ) {A : species ω Γ} {k} {α : label Γ k} {E} (t : A [ℓ, α]⟶ E)
-  : transition_from ℓ A
-  := ⟨ k, α, E, t ⟩
-
 noncomputable instance transition_from.decidable_eq {ω Γ} (ℓ : lookup ω Γ) (A : species ω Γ)
   : decidable_eq (transition_from ℓ A)
   := classical.dec_eq _ -- TODO: Make this decidable

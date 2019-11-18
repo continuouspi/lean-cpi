@@ -96,6 +96,24 @@ namespace equivalent
     case ν_swap₂ : Γ M N { from ν_swap₁ M N },
   end
 
+  protected def symm_symm :
+    ∀ {Γ} {A B : species ω Γ} (eq : equivalent A B)
+    , eq = equivalent.symm (equivalent.symm eq)
+  | Γ A B eq := begin
+    induction eq,
+    case equivalent.refl { from rfl },
+    case equivalent.trans : Γ A B C ab bc ih_ab ih_bc {
+      from congr_arg2 trans ih_ab ih_bc,
+    },
+    case ξ_parallel₁ : Γ A A' B eq ih { from congr_arg ξ_parallel₁ ih, },
+    case ξ_parallel₂ : Γ A A' B eq ih { from congr_arg ξ_parallel₂ ih },
+    case ξ_restriction : Γ M A A' eq ih { from congr_arg (ξ_restriction M) ih },
+    case ξ_choice_here : Γ f π A A' As eq ih { from congr_arg (ξ_choice_here π) ih },
+    case ξ_choice_there : Γ f π A A' As eq ih { from congr_arg (ξ_choice_there π) ih },
+
+    repeat { from rfl },
+  end
+
   local infix ` ~ ` := equivalent
 
   private def rename_swap
