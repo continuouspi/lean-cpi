@@ -42,18 +42,22 @@ private noncomputable def to_process_space_of {Γ} (A : prime_species' ω Γ) : 
         case decidable.is_true { from finset.mem_singleton.mpr (symm h) }
        end }
 
+/-- Map elements together and sum them. -/
+def sum_map {α β : Type} [add_comm_monoid β] (f : α → β) (xs : quotient (list.is_setoid α)) : β
+  := quot.lift_on xs
+    (list.foldr (λ x s, f x + s) 0)
+    (λ a b p, begin
+      induction p,
+      case list.perm.nil { from rfl },
+      case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
+      case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
+      case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
+    end)
+
 /-- Convert a species into a process space. This computes the prime
     decomposition, and then converts it to a process space. -/
 noncomputable def to_process_space {Γ} (A : multiset (prime_species' ω Γ)) : process_space ω Γ
-  := quot.lift_on A
-      (list.foldr (λ B s, to_process_space_of B + s) 0)
-      (λ a b p, begin
-        induction p,
-        case list.perm.nil { from rfl },
-        case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
-        case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
-        case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
-      end)
+  := sum_map to_process_space_of A
 
 -- TODO: Show that this satisfies the required function.
 
@@ -143,15 +147,7 @@ noncomputable def process_potential
   → interaction_space ω (context.extend M.arity context.nil)
 | (c ◯ A) :=
   let transitions := transition.enumerate ℓ A in
-  c.val • quot.lift_on transitions.elems.val
-    (list.foldr (λ B s, potential_interaction_space B + s) 0)
-    (λ a b p, begin
-      induction p,
-      case list.perm.nil { from rfl },
-      case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
-      case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
-      case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
-    end)
+  c.val • sum_map potential_interaction_space transitions.elems.val
 | (P |ₚ Q) := process_potential P + process_potential Q
 
 noncomputable def process_immediate
@@ -160,19 +156,12 @@ noncomputable def process_immediate
   → process_space ω (context.extend M.arity context.nil)
 | (c ◯ A) :=
   let transitions := transition.enumerate ℓ A in
-  c.val • quot.lift_on transitions.elems.val
-    (list.foldr (λ B s, immediate_process_space B + s) 0)
-    (λ a b p, begin
-      induction p,
-      case list.perm.nil { from rfl },
-      case list.perm.skip : A l₁ l₂ eq ih { unfold list.foldr, rw ih },
-      case list.perm.swap : A B l { simp only [add_comm, list.foldr, add_left_comm] },
-      case list.perm.trans : l₁ l₂ l₃ ab bc ihab ihbc { from trans ihab ihbc },
-    end)
+  c.val • sum_map immediate_process_space transitions.elems.val
   + 0.5 • interaction_tensor M (process_potential M ℓ (c ◯ A)) (process_potential M ℓ (c ◯ A))
 | (P |ₚ Q)
   := process_immediate P + process_immediate Q
    + interaction_tensor M (process_potential M ℓ P) (process_potential M ℓ Q)
+
 end cpi
 
 #lint
