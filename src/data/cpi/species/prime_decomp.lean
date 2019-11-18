@@ -34,13 +34,13 @@ section depth
   }
 
   private lemma depth_eq : ∀ {Γ} {A B : species ω Γ}, A ≈ B → depth A = depth B
-  | Γ A B eq := begin
+  | Γ A B ⟨ eq ⟩ := begin
     induction eq,
-    case equiv.refl { from rfl },
-    case equiv.trans : _ A' B' C' ab bc ihab ihbc { from trans ihab ihbc },
-    case equiv.ξ_parallel₁ : _ A' A'' B eq ih { unfold depth, rw ih },
-    case equiv.ξ_parallel₂ : _ A B' B' eq ih { unfold depth, rw ih },
-    case equiv.ξ_restriction : _ M A A' eq ih { unfold depth, rw ih },
+    case equivalent.refl { from rfl },
+    case equivalent.trans : _ A' B' C' ab bc ihab ihbc { from trans ihab ihbc },
+    case equivalent.ξ_parallel₁ : _ A' A'' B eq ih { unfold depth, rw ih },
+    case equivalent.ξ_parallel₂ : _ A B' B' eq ih { unfold depth, rw ih },
+    case equivalent.ξ_restriction : _ M A A' eq ih { unfold depth, rw ih },
     all_goals { repeat { unfold depth <|> simp only [add_zero, zero_add, add_comm, add_assoc, depth_rename] } },
   end
 

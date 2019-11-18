@@ -73,6 +73,38 @@ namespace production
     production.is_equiv
 end production
 
+lemma production.equiv.unwrap_s :
+  ∀ {Γ} {A B : species ω Γ}, production.species A ≈ production.species B → A ≈ B
+| Γ A B (production.equiv.species eq) := eq
+
+/-- If two concretions are equivalent under a production, cast one to the type
+    of the other. -/
+def production.cast_c :
+  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+  , production.concretion F ≈ production.concretion G
+  → concretion ω Γ a x
+| Γ a b x y F G eq := cast (by { cases eq, from rfl }) G
+
+/-- An alternative to 'cast_c', which casts some other concretion of the same
+    type. -/
+def production.cast_with_c :
+  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G G' : concretion ω Γ b y}
+  , production.concretion F ≈ production.concretion G
+  → concretion ω Γ a x
+| Γ a b x y F G G' eq := cast (by { cases eq, from rfl }) G' -- TODO: Remove this?
+
+lemma production.cast_c.equiv :
+  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+    (eq : production.concretion F ≈ production.concretion G)
+  , F ≈ production.cast_c eq
+| Γ a b x y F G (production.equiv.concretion eq) := eq
+
+lemma production.cast_c.eq :
+  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+    (eq : production.concretion F ≈ production.concretion G)
+  , production.concretion G = production.concretion (production.cast_c eq)
+| Γ a b x y F G (production.equiv.concretion eq) := rfl
+
 lemma production.equiv.map {Γ Δ} :
   ∀ {k : kind}
     {s : species ω Γ → species ω Δ}
@@ -230,7 +262,7 @@ inductive transition :
     {F : concretion ω Γ x y} {G : concretion ω Γ y x}
 
   : transition A ℓ (#a) F
-  → transition B ℓ(#b) G
+  → transition B ℓ (#b) G
   → transition (A |ₛ B) ℓ τ⟨ a, b ⟩ (concretion.pseudo_apply F G)
 
 | com₂

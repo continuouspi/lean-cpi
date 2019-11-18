@@ -6,15 +6,17 @@
 
    [1]: https://leanprover.github.io/theorem_proving_in_lean/axioms_and_computation.html#quotients-/
 
-import tactic.lint tactic.tidy data.quot
+import tactic.lint tactic.basic data.quot logic.function
 
 universe u
 
 namespace upair
   variable {α : Type u}
 
+  /-- A pair of items, both of the same type. -/
   protected structure pair (α : Type u) := (fst snd : α)
 
+  /-- Two pairs are equivalent if they are equal or equal when swapped. -/
   protected def equiv : pair α → pair α → Prop
   | ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ := (a₁ = a₂ ∧ b₁ = b₂) ∨ (a₁ = b₂ ∧ a₂ = b₁)
 
@@ -41,9 +43,11 @@ namespace upair
   | ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ := by { unfold upair.equiv, apply_instance }
 end upair
 
+/-- An unordered pair of items. -/
 def upair (α : Type u) : Type u := quotient (@upair.setoid α)
 
 namespace upair
+  /-- Construct a new unordered pair. -/
   protected def mk {α : Type u} (a b : α) : upair α := ⟦ ⟨ a, b ⟩ ⟧
 
   instance {α : Type u} [decidable_eq α] : decidable_eq (upair α)
@@ -60,6 +64,7 @@ namespace upair
   | ⟨ a, b ⟩ ⟨ _, _ ⟩ (or.inl ⟨ rfl, rfl ⟩) := or.inl ⟨ rfl, rfl ⟩
   | ⟨ a, b ⟩ ⟨ _, _ ⟩ (or.inr ⟨ rfl, rfl ⟩) := or.inr ⟨ rfl, rfl ⟩
 
+  /-- Map over the contents of an unordered pair. -/
   protected def map {α β : Type u} (f : α → β) (p : upair α) : upair β
     := quot.lift_on p (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p))
 
@@ -97,6 +102,56 @@ namespace upair
     : upair.map f (upair.mk a b) = upair.mk (f a) (f b)
     := quot.sound (or.inl ⟨ rfl, rfl ⟩)
 
+  private def do_unpair₁ {α β : Type u} [decidable_eq β] (f : α → β) {a : α} {b : β}
+    : ∀ {p : pair α}
+    , upair.map f (quot.mk setoid.r p) = upair.mk (f a) b → Σ' b', f b' = b
+  | ⟨ a', b' ⟩ eq :=
+    if eqA : (f a' = b) then ⟨ a', eqA ⟩
+    else if eqB : (f b' = b) then ⟨ b', eqB ⟩
+    else false.elim (or.elim (quotient.exact eq) (λ x, eqB x.2) (λ x, eqA x.1))
+
+  protected def unpair₁
+      {α β : Type u} [deq : decidable_eq β] {f : α → β} (inj : function.injective f)
+    : ∀ {a : α} {b : β} {p : upair α}
+    , upair.map f p = upair.mk (f a) b → Σ' b', f b' = b
+  | a b p eq := quot.hrec_on p
+      (λ p eq, do_unpair₁ f eq)
+      (λ ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ r, function.hfunext
+        (congr_arg (λ x, upair.map f x = upair.mk (f a) b) (quot.sound r))
+        (λ eqA eqB eqEq, begin
+          clear _fun_match _fun_match _x _x eq,
+
+          simp only [heq_iff_eq],
+          rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+          { from rfl },
+          {
+            unfold do_unpair₁ dite upair.map,
+            rcases quotient.exact eqA with ⟨ eqA, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, eqB ⟩,
+            {
+              cases (deq (f a₁) (f b₁)),
+              case is_true : is_eq {
+                cases inj is_eq,
+                have : (deq (f a₁) (f a₁)) = is_true rfl := subsingleton.elim _ _,
+                rw this,
+              },
+              case is_false { simp },
+            },
+            {
+              cases (deq (f a₁) (f b₁)),
+              case is_true : is_eq {
+                cases inj is_eq,
+                have : (deq (f a₁) (f a₁)) = is_true rfl := subsingleton.elim _ _,
+                rw this,
+              },
+              case is_false {
+                have : (deq (f b₁) (f a₁)) = is_false (ne.symm h) := subsingleton.elim _ _,
+                rw this,
+              },
+            }
+
+          }
+        end))
+      eq
 end upair
 
 #lint

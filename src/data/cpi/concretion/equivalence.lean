@@ -5,6 +5,7 @@ namespace concretion
 
 variable {ω : context}
 
+/-- Structural congruence between concretions. -/
 inductive equiv : ∀ {Γ} {b y}, concretion ω Γ b y → concretion ω Γ b y → Prop
 | refl  {Γ} {b y} {F : concretion ω Γ b y} : equiv F F
 | trans {Γ} {b y} {F G H : concretion ω Γ b y} : equiv F G → equiv G H → equiv F H

@@ -6,68 +6,69 @@ namespace species
 
 variable {ω : context}
 
-/-- A chain of rewrite rule, to transform a species from one kind to another
+/-- A chain of rewrite rules, to transform a species from one kind to another
     equivalent one. -/
-inductive equiv : ∀ {Γ} (A B : species ω Γ), Prop
-| refl  {Γ} {A : species ω Γ} : equiv A A
-| trans {Γ} {A B C : species ω Γ} : equiv A B → equiv B C → equiv A C
+inductive equivalent : ∀ {Γ} (A B : species ω Γ), Type
+| refl  {Γ} {A : species ω Γ} : equivalent A A
+| trans {Γ} {A B C : species ω Γ} : equivalent A B → equivalent B C → equivalent A C
 
 -- Protections into the body of a species.
 | ξ_parallel₁
       {Γ} {A A' B : species ω Γ}
-    : equiv A A' → equiv (A |ₛ B) (A' |ₛ B)
+    : equivalent A A' → equivalent (A |ₛ B) (A' |ₛ B)
 | ξ_parallel₂
       {Γ} {A B B' : species ω Γ}
-    : equiv B B' → equiv (A |ₛ B) (A |ₛ B')
+    : equivalent B B' → equivalent (A |ₛ B) (A |ₛ B')
 | ξ_restriction
       {Γ} (M : affinity) {A A' : species ω (context.extend (M.arity) Γ)}
-    : equiv A A' → equiv (ν(M) A) (ν(M) A')
+    : equivalent A A' → equivalent (ν(M) A) (ν(M) A')
 | ξ_choice_here
       {Γ} {f} (π : prefix_expr Γ f) {A A' : species ω (f Γ)} {As : choices ω Γ}
-    : equiv A A'
-    → equiv (Σ# (whole.cons π A As)) (Σ# (whole.cons π A' As))
+    : equivalent A A'
+    → equivalent (Σ# (whole.cons π A As)) (Σ# (whole.cons π A' As))
 | ξ_choice_there
       {Γ} {f} (π : prefix_expr Γ f) {A : species ω (f Γ)} {As As' : choices ω Γ}
-    : equiv (Σ# As) (Σ# As')
-    → equiv (Σ# (whole.cons π A As)) (Σ# (whole.cons π A As'))
+    : equivalent (Σ# As) (Σ# As')
+    → equivalent (Σ# (whole.cons π A As)) (Σ# (whole.cons π A As'))
 
 -- | An element in the choice array can be swapped.
 | choice_swap
     {Γ} {f g} (π₁ : prefix_expr Γ f) (π₂ : prefix_expr Γ g)
     {A : species ω (f Γ)} {B : species ω (g Γ)} {As : choices ω Γ}
-  : equiv (Σ# (whole.cons π₁ A (whole.cons π₂ B As)))
+  : equivalent (Σ# (whole.cons π₁ A (whole.cons π₂ B As)))
           (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
 
 -- Species forms a commutative monoid using parallel.
-| parallel_nil₁   : ∀ {Γ} {A : species ω Γ},     equiv (A |ₛ nil) A
-| parallel_nil₂   : ∀ {Γ} {A : species ω Γ},     equiv A (A |ₛ nil)
-| parallel_symm   : ∀ {Γ} {A B : species ω Γ},   equiv (A |ₛ B) (B |ₛ A)
-| parallel_assoc₁ : ∀ {Γ} {A B C : species ω Γ}, equiv ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
-| parallel_assoc₂ : ∀ {Γ} {A B C : species ω Γ}, equiv (A |ₛ (B |ₛ C)) ((A |ₛ B) |ₛ C)
+| parallel_nil₁   : ∀ {Γ} {A : species ω Γ},     equivalent (A |ₛ nil) A
+| parallel_nil₂   : ∀ {Γ} {A : species ω Γ},     equivalent A (A |ₛ nil)
+| parallel_symm   : ∀ {Γ} {A B : species ω Γ},   equivalent (A |ₛ B) (B |ₛ A)
+| parallel_assoc₁ : ∀ {Γ} {A B C : species ω Γ}, equivalent ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
+| parallel_assoc₂ : ∀ {Γ} {A B C : species ω Γ}, equivalent (A |ₛ (B |ₛ C)) ((A |ₛ B) |ₛ C)
 
 | ν_parallel₁
     {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
-  : equiv (ν(M) (rename name.extend A |ₛ B)) (A |ₛ ν(M)B)
+  : equivalent (ν(M) (rename name.extend A |ₛ B)) (A |ₛ ν(M)B)
 | ν_parallel₂
     {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
-  : equiv (A |ₛ ν(M)B) (ν(M) (rename name.extend A |ₛ B))
+  : equivalent (A |ₛ ν(M)B) (ν(M) (rename name.extend A |ₛ B))
 | ν_drop₁
     {Γ} (M : affinity) {A : species ω Γ}
-  : equiv (ν(M) (rename name.extend A)) A
+  : equivalent (ν(M) (rename name.extend A)) A
 | ν_drop₂
     {Γ} (M : affinity) {A : species ω Γ}
-  : equiv A (ν(M) (rename name.extend A))
+  : equivalent A (ν(M) (rename name.extend A))
 | ν_swap₁
     {Γ} (M N : affinity)
     {A  : species ω (context.extend N.arity (context.extend M.arity Γ))}
-  : @equiv Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
+  : @equivalent Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
 | ν_swap₂ -- Strictly the same as ν_swap₁, as name.swap is symmetric, but...
     {Γ} (M N : affinity)
     {A  : species ω (context.extend N.arity (context.extend M.arity Γ))}
-  : @equiv Γ (ν(N)ν(M) rename name.swap A) (ν(M)ν(N) A)
+  : @equivalent Γ (ν(N)ν(M) rename name.swap A) (ν(M)ν(N) A)
 
-namespace equiv
-  protected lemma symm : ∀ {Γ} {A B : species ω Γ}, equiv A B → equiv B A
+namespace equivalent
+  /-- Flip an equivalence relationship. -/
+  protected def symm : ∀ {Γ} {A B : species ω Γ}, equivalent A B → equivalent B A
   | Γ A B eq := begin
     induction eq,
     case refl { from refl },
@@ -95,11 +96,180 @@ namespace equiv
     case ν_swap₂ : Γ M N { from ν_swap₁ M N },
   end
 
+  local infix ` ~ ` := equivalent
+
+  private def rename_swap
+    {Γ Δ} {ρ : name Γ → name Δ} {M N : affinity}
+    (A' : species ω (context.extend M.arity (context.extend N.arity Γ)))
+    : rename (name.ext (name.ext ρ)) (rename name.swap A')
+    = rename name.swap (rename (name.ext (name.ext ρ)) A')
+    := by rw [rename_compose, name.swap_ext_ext, rename_compose]
+
+  /-- Rename an equivalence relationship. -/
+  protected def rename :
+      ∀ {Γ Δ} {A B : species ω Γ} (ρ : name Γ → name Δ)
+      , A ~ B → rename ρ A ~ rename ρ B
+    | Γ Δ A B ρ eq := begin
+      induction eq generalizing Δ,
+
+      case refl : Γ A Δ ρ { from refl },
+      case trans : Γ A B C ab bc ih_ab ih_bc { from trans (ih_ab _ ρ) (ih_bc _ ρ) },
+
+      -- Projection
+      case ξ_parallel₁ : Γ A A' B eq ih { simp, from ξ_parallel₁ (ih _ ρ) },
+      case ξ_parallel₂ : Γ A A' B eq ih { simp, from ξ_parallel₂ (ih _ ρ) },
+      case ξ_restriction : Γ M A A' eq ih {
+        simp,
+        from ξ_restriction M (ih _ (name.ext ρ))
+      },
+      case ξ_choice_here : Γ f π A A' As eq ih {
+        simp,
+        from ξ_choice_here (prefix_expr.rename ρ π) (ih _ (prefix_expr.ext π ρ))
+      },
+      case ξ_choice_there : Γ f π A As As' eq ih {
+        simp,
+        have h := ih _ ρ,
+        have g : (Σ# species.rename ρ As) ~ (Σ# species.rename ρ As'), simp at h, from h,
+        from ξ_choice_there (prefix_expr.rename ρ π) g
+      },
+
+      -- Choice
+      case choice_swap : Γ f g π₁ π₂ A B As { simp, from choice_swap _ _ },
+
+      -- Parallel
+      case parallel_nil₁ : Γ A { simp, from parallel_nil₁ },
+      case parallel_nil₂ : Γ A { simp, from parallel_nil₂ },
+      case parallel_symm : Γ A B { simp, from parallel_symm },
+      case parallel_assoc₁ : Γ A B C { simp, from parallel_assoc₁ },
+      case parallel_assoc₂ : Γ A B C { simp, from parallel_assoc₂ },
+
+      -- Restriction
+      case ν_parallel₁ : Γ M A B {
+        simp, rw ← species.rename_ext _, from ν_parallel₁ M
+      },
+      case ν_parallel₂ : Γ M A B {
+        simp, rw ← species.rename_ext _, from ν_parallel₂ M
+      },
+      case ν_drop₁ : Γ M A {
+        simp, rw ← species.rename_ext _, from ν_drop₁ M
+      },
+      case ν_drop₂ : Γ M A {
+        simp, rw ← species.rename_ext _, from ν_drop₂ M
+      },
+      case ν_swap₁ : Γ M N A { simp, rw rename_swap _, from ν_swap₁ M N },
+      case ν_swap₂ : Γ M N A { simp, rw rename_swap _, from ν_swap₂ M N },
+    end
+end equivalent
+
+/-- Lower an equivalence relationship to a proof-irrelevant proposition.
+
+    This allows us to use it as a normal proof object, while -/
+inductive equiv {Γ} (A B : species ω Γ) : Prop
+| intro : equivalent A B → equiv
+
+namespace equiv
+  local infix ` ~ ` := equiv
+  @[pattern]
+  protected lemma refl {Γ} (A : species ω Γ) : A ~ A := ⟨ equivalent.refl ⟩
+
+  @[pattern]
+  protected lemma rfl {Γ} {A : species ω Γ} : A ~ A := equiv.refl A
+
+  protected lemma symm {Γ} {A B : species ω Γ} : A ~ B → B ~ A
+  | ⟨ eq ⟩ := ⟨ equivalent.symm eq ⟩
+
+  @[pattern]
+  protected lemma trans {Γ} {A B C : species ω Γ} : A ~ B → B ~ C → A ~ C
+  | ⟨ ab ⟩ ⟨ bc ⟩ := ⟨ equivalent.trans ab bc ⟩
+
+  protected lemma rename {Γ Δ} {A B : species ω Γ} (ρ : name Γ → name Δ)
+    : A ~ B → rename ρ A ~ rename ρ B
+  | ⟨ eq ⟩ := ⟨ equivalent.rename ρ eq ⟩
+
+  @[pattern]
+  lemma ξ_parallel₁ {Γ} {A A' B : species ω Γ} : A ~ A' → (A |ₛ B) ~ (A' |ₛ B)
+  | ⟨ eq ⟩ := ⟨ equivalent.ξ_parallel₁ eq ⟩
+
+  @[pattern]
+  lemma ξ_parallel₂ {Γ} {A B B' : species ω Γ} : B ~ B' → (A |ₛ B) ~ (A |ₛ B')
+  | ⟨ eq ⟩ := ⟨ equivalent.ξ_parallel₂ eq ⟩
+
+  @[pattern]
+  lemma ξ_restriction {Γ} (M : affinity) {A A' : species ω (context.extend (M.arity) Γ)}
+    : A ~ A' → (ν(M) A) ~ (ν(M) A')
+  | ⟨ eq ⟩ := ⟨ equivalent.ξ_restriction M eq ⟩
+
+  @[pattern]
+  lemma ξ_choice_here
+      {Γ} {f} (π : prefix_expr Γ f) {A A' : species ω (f Γ)} {As : choices ω Γ}
+    : A ~ A' → (Σ# (whole.cons π A As)) ~ (Σ# (whole.cons π A' As))
+  | ⟨ eq ⟩ := ⟨ equivalent.ξ_choice_here π eq ⟩
+
+  @[pattern]
+  lemma ξ_choice_there
+      {Γ} {f} (π : prefix_expr Γ f) {A : species ω (f Γ)} {As As' : choices ω Γ}
+    : (Σ# As) ~ (Σ# As')
+    → (Σ# (whole.cons π A As)) ~ (Σ# (whole.cons π A As'))
+  | ⟨ eq ⟩ := ⟨ equivalent.ξ_choice_there π eq ⟩
+
+  @[pattern]
+  lemma choice_swap
+      {Γ} {f g} (π₁ : prefix_expr Γ f) (π₂ : prefix_expr Γ g)
+      {A : species ω (f Γ)} {B : species ω (g Γ)} {As : choices ω Γ}
+    : (Σ# (whole.cons π₁ A (whole.cons π₂ B As))) ~ (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
+    := ⟨ equivalent.choice_swap π₁ π₂ ⟩
+
+  @[pattern]
+  lemma parallel_nil₁   {Γ} {A : species ω Γ}     : (A |ₛ nil) ~ A := ⟨ equivalent.parallel_nil₁ ⟩
+
+  @[pattern]
+  lemma parallel_nil₂   {Γ} {A : species ω Γ}     : A ~ (A |ₛ nil) := ⟨ equivalent.parallel_nil₂ ⟩
+
+  @[pattern]
+  lemma parallel_symm   {Γ} {A B : species ω Γ}   : (A |ₛ B) ~ (B |ₛ A) := ⟨ equivalent.parallel_symm ⟩
+
+  @[pattern]
+  lemma parallel_assoc₁ {Γ} {A B C : species ω Γ} : ((A |ₛ B) |ₛ C) ~ (A |ₛ (B |ₛ C)) := ⟨ equivalent.parallel_assoc₁ ⟩
+
+  @[pattern]
+  lemma parallel_assoc₂ {Γ} {A B C : species ω Γ} : (A |ₛ (B |ₛ C)) ~ ((A |ₛ B) |ₛ C) := ⟨ equivalent.parallel_assoc₂ ⟩
+
+  @[pattern]
+  lemma ν_parallel₁
+      {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
+    : (ν(M) (rename name.extend A |ₛ B)) ~ (A |ₛ ν(M)B)
+    := ⟨ equivalent.ν_parallel₁ M ⟩
+
+  @[pattern]
+  lemma ν_parallel₂
+      {Γ} (M : affinity) {A : species ω Γ} {B : species ω (context.extend M.arity Γ)}
+    : (A |ₛ ν(M)B) ~ (ν(M) (rename name.extend A |ₛ B))
+    := ⟨ equivalent.ν_parallel₂ M ⟩
+
+  @[pattern]
+  lemma ν_drop₁ {Γ} (M : affinity) {A : species ω Γ} : (ν(M) (rename name.extend A)) ~ A
+    := ⟨ equivalent.ν_drop₁ M ⟩
+
+  @[pattern]
+  lemma ν_drop₂ {Γ} (M : affinity) {A : species ω Γ} : A ~ (ν(M) (rename name.extend A))
+    := ⟨ equivalent.ν_drop₂ M ⟩
+
+  @[pattern]
+  lemma ν_swap₁
+      {Γ} (M N : affinity) {A : species ω (context.extend N.arity (context.extend M.arity Γ))}
+    : (ν(M)ν(N) A) ~ (ν(N)ν(M) rename name.swap A)
+    := ⟨ equivalent.ν_swap₁ M N ⟩
+
+  @[pattern]
+  lemma ν_swap₂ -- Strictly the same as ν_swap₁, as name.swap is symmetric, but...
+      {Γ} (M N : affinity) {A : species ω (context.extend N.arity (context.extend M.arity Γ))}
+    : (ν(N)ν(M) rename name.swap A) ~ (ν(M)ν(N) A)
+    := ⟨ equivalent.ν_swap₂ M N ⟩
 end equiv
 
 instance {Γ} : is_equiv (species ω Γ) equiv :=
-  { refl := @equiv.refl _ Γ, symm := @equiv.symm _ Γ, trans := @equiv.trans _ Γ }
-instance {Γ} : is_refl (species ω Γ) equiv := ⟨ λ _, equiv.refl ⟩
+  { refl := equiv.refl, symm := @equiv.symm _ Γ, trans := @equiv.trans _ Γ }
+instance {Γ} : is_refl (species ω Γ) equiv := ⟨ equiv.refl ⟩
 instance {Γ} : setoid (species ω Γ) :=
   ⟨ equiv, ⟨ @equiv.refl _ Γ, @equiv.symm _ Γ, @equiv.trans _ Γ ⟩ ⟩
 
@@ -108,93 +278,29 @@ instance setoid.is_equiv {Γ} : is_equiv (species ω Γ) has_equiv.equiv :=
   species.is_equiv
 
 namespace equiv
-  private lemma rename_swap
-    {Γ Δ} {ρ : name Γ → name Δ} {M N : affinity}
-    (A' : species ω (context.extend M.arity (context.extend N.arity Γ)))
-    : rename (name.ext (name.ext ρ)) (rename name.swap A')
-    = rename name.swap (rename (name.ext (name.ext ρ)) A')
-    := by rw [rename_compose, name.swap_ext_ext, rename_compose]
+  lemma parallel_symm₁ {Γ} {A B C : species ω Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
+    calc  (A |ₛ (B |ₛ C))
+        ≈ ((A |ₛ B) |ₛ C) : parallel_assoc₂
+    ... ≈ ((B |ₛ A) |ₛ C) : ξ_parallel₁ parallel_symm
+    ... ≈ (B |ₛ (A |ₛ C)) : parallel_assoc₁
 
-  protected lemma rename :
-      ∀ {Γ Δ} {A B : species ω Γ} (ρ : name Γ → name Δ)
-      , A ≈ B → rename ρ A ≈ rename ρ B
-    := begin
-      intros _Γ _Δ _A _B _ρ _eq,
-      known_induction species.equiv @equiv.rec_on ω
-        (λ Γ A B, Π {Δ} (ρ : name Γ → name Δ), rename ρ A ≈ rename ρ B)
-        _Γ _A _B _eq,
+  lemma parallel_symm₂ {Γ} {A B C : species ω Γ} : ((A |ₛ B) |ₛ C) ≈ ((A |ₛ C) |ₛ B) :=
+    calc  ((A |ₛ B) |ₛ C)
+        ≈ (A |ₛ (B |ₛ C)) : parallel_assoc₁
+    ... ≈ (A |ₛ (C |ₛ B)) : ξ_parallel₂ parallel_symm
+    ... ≈ ((A |ₛ C) |ₛ B) : parallel_assoc₂
 
-      case refl : Γ A Δ ρ { from refl },
-      case trans : Γ A B C ab bc ih_ab ih_bc Δ ρ { from trans (ih_ab ρ) (ih_bc ρ) },
+  lemma ν_parallel' {Γ} (M : affinity) {A : species ω (context.extend M.arity Γ)} {B : species ω Γ}
+    : (ν(M) (A |ₛ rename name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
+    calc  (ν(M) A |ₛ rename name.extend B)
+        ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
+    ... ≈ (B |ₛ ν(M) A) : ν_parallel₁ M
+    ... ≈ ((ν(M) A) |ₛ B) : parallel_symm
 
-      -- Projection
-      case ξ_parallel₁ : Γ A A' B eq ih Δ ρ { simp, from ξ_parallel₁ (ih ρ) },
-      case ξ_parallel₂ : Γ A A' B eq ih Δ ρ { simp, from ξ_parallel₂ (ih ρ) },
-      case ξ_restriction : Γ M A A' eq ih Δ ρ {
-        simp,
-        from ξ_restriction M (ih (name.ext ρ))
-      },
-      case ξ_choice_here : Γ f π A A' As eq ih Δ ρ {
-        simp,
-        from ξ_choice_here (prefix_expr.rename ρ π) (ih (prefix_expr.ext π ρ))
-      },
-      case ξ_choice_there : Γ f π A As As' eq ih Δ ρ {
-        simp,
-        have h := ih ρ,
-        have g : (Σ# rename ρ As) ≈ (Σ# rename ρ As'), simp at h, from h,
-        from ξ_choice_there (prefix_expr.rename ρ π) g
-      },
-
-      -- Choice
-      case choice_swap : Γ f g π₁ π₂ A B As Δ ρ { simp, from choice_swap _ _ },
-
-      -- Parallel
-      case parallel_nil₁ : Γ A Δ ρ { simp, from parallel_nil₁ },
-      case parallel_nil₂ : Γ A Δ ρ { simp, from parallel_nil₂ },
-      case parallel_symm : Γ A B Δ ρ { simp, from parallel_symm },
-      case parallel_assoc₁ : Γ A B C Δ ρ { simp, from parallel_assoc₁ },
-      case parallel_assoc₂ : Γ A B C Δ ρ { simp, from parallel_assoc₂ },
-
-      -- Restriction
-      case ν_parallel₁ : Γ M A B Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_parallel₁ M
-      },
-      case ν_parallel₂ : Γ M A B Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_parallel₂ M
-      },
-      case ν_drop₁ : Γ M A Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_drop₁ M
-      },
-      case ν_drop₂ : Γ M A Δ ρ {
-        simp, rw ← species.rename_ext _, from ν_drop₂ M
-      },
-      case ν_swap₁ : Γ M N A Δ ρ { simp, rw rename_swap _, from ν_swap₁ M N },
-      case ν_swap₂ : Γ M N A Δ ρ { simp, rw rename_swap _, from ν_swap₂ M N },
-    end
-
-    lemma parallel_symm₁ {Γ} {A B C : species ω Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
-      calc  (A |ₛ (B |ₛ C))
-          ≈ ((A |ₛ B) |ₛ C) : parallel_assoc₂
-      ... ≈ ((B |ₛ A) |ₛ C) : ξ_parallel₁ parallel_symm
-      ... ≈ (B |ₛ (A |ₛ C)) : parallel_assoc₁
-
-    lemma parallel_symm₂ {Γ} {A B C : species ω Γ} : ((A |ₛ B) |ₛ C) ≈ ((A |ₛ C) |ₛ B) :=
-      calc  ((A |ₛ B) |ₛ C)
-          ≈ (A |ₛ (B |ₛ C)) : parallel_assoc₁
-      ... ≈ (A |ₛ (C |ₛ B)) : ξ_parallel₂ parallel_symm
-      ... ≈ ((A |ₛ C) |ₛ B) : parallel_assoc₂
-
-    lemma ν_parallel' {Γ} (M : affinity) {A : species ω (context.extend M.arity Γ)} {B : species ω Γ}
-      : (ν(M) (A |ₛ rename name.extend B)) ≈ ((ν(M)A) |ₛ B) :=
-      calc  (ν(M) A |ₛ rename name.extend B)
-          ≈ (ν(M) rename name.extend B |ₛ A) : ξ_restriction M parallel_symm
-      ... ≈ (B |ₛ ν(M) A) : ν_parallel₁ M
-      ... ≈ ((ν(M) A) |ₛ B) : parallel_symm
-
-    lemma parallel_nil' {Γ} {A : species ω Γ} : (nil |ₛ A) ≈ A :=
-      calc  (nil |ₛ A)
-          ≈ (A |ₛ nil) : parallel_symm
-      ... ≈ A : parallel_nil₁
+  lemma parallel_nil' {Γ} {A : species ω Γ} : (nil |ₛ A) ≈ A :=
+    calc  (nil |ₛ A)
+        ≈ (A |ₛ nil) : parallel_symm
+    ... ≈ A : parallel_nil₁
 end equiv
 
 namespace parallel

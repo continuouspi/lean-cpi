@@ -2,6 +2,8 @@ import data.cpi.species
 
 namespace cpi
 
+/-- A concretion represents the potential for a species to interact with another.
+    -/
 @[derive decidable_eq]
 inductive concretion (ω : context) : context → ℕ → ℕ → Type
 | apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
@@ -28,6 +30,7 @@ variable {ω : context}
 namespace concretion
 
 section free
+  /-- Determine whether a level occurs within a concretion. -/
   def free_in : ∀ {Γ} {b y} (l : level Γ) (F : concretion ω Γ b y), Prop
   | Γ b y l (#(bs; _) A) := (∃ b ∈ bs.val, l ∈ b) ∨ level.extend l ∈ A
   | Γ b y l (F |₁ A) := free_in l F ∨ l ∈ A
@@ -47,6 +50,7 @@ section free
 end free
 
 section rename
+  /-- Rename a concretion. -/
   def rename : ∀ {Γ Δ} {b y} (ρ : name Γ → name Δ), concretion ω Γ b y → concretion ω Δ b y
   | Γ Δ b y ρ (#(bs; _) A) := #( vector.map ρ bs; y) species.rename (name.ext ρ) A
   | Γ Δ b y ρ (F |₁ A) := rename ρ F |₁ species.rename ρ A
