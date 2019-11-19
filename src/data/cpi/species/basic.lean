@@ -32,29 +32,29 @@ inductive kind
     In order to avoid these problems, we represent mutually-recursive type the
     same way that Lean does (as a single type indexed by what group it belongs
     to), but avoid the indirection that such a definition would introduce. -/
-inductive whole (ω : context) : kind → context → Type
+inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 /- Species -/
 | nil {} {Γ} : whole kind.species Γ
-| apply {Γ} {n} : reference n ω → vector (name Γ) n → whole kind.species Γ
+| apply {} {Γ} {n} : reference n ω → vector (name Γ) n → whole kind.species Γ
 | choice {Γ} : whole kind.choices Γ → whole kind.species Γ
 | parallel {Γ} : whole kind.species Γ → whole kind.species Γ → whole kind.species Γ
-| restriction {Γ} (M : affinity) :
+| restriction {Γ} (M : affinity ℍ) :
     whole kind.species (context.extend M.arity Γ) → whole kind.species Γ
 /- Elements in the sum -/
 | empty {} {Γ} : whole kind.choices Γ
-| cons {Γ} {f} (π : prefix_expr Γ f) :
+| cons {Γ} {f} (π : prefix_expr ℍ Γ f) :
     whole kind.species (f Γ) → whole kind.choices Γ → whole kind.choices Γ
 
 
 /-- An alias for species within the `whole' datatype. -/
 @[reducible]
-def species (ω : context) := @whole ω kind.species
+def species (ℍ : Type) (ω : context) := @whole ℍ ω kind.species
 
 /-- An alias for choices within the `whole' datatype. -/
 @[reducible]
-def choices (ω : context) := @whole ω kind.choices
+def choices (ℍ : Type) (ω : context) := @whole ℍ ω kind.choices
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 export whole (nil apply choice parallel restriction)
 open whole
@@ -68,7 +68,7 @@ reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
 section free
-  def free_in {Γ} {k} (l : level Γ) (A : whole ω k Γ) : Prop := begin
+  def free_in {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : Prop := begin
     induction A,
     case nil { from false },
     case apply : Γ n D as { from ∃ a ∈ as.val, l ∈ a },
@@ -81,9 +81,9 @@ section free
     }
   end
 
-  instance {Γ} {k} : has_mem (level Γ) (whole ω k Γ) := ⟨ free_in ⟩
+  instance {Γ} {k} : has_mem (level Γ) (whole ℍ ω k Γ) := ⟨ free_in ⟩
 
-  private def free_in_decide {Γ} {k} (l : level Γ) (A : whole ω k Γ) : decidable (free_in l A) := begin
+  private def free_in_decide {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : decidable (free_in l A) := begin
     induction A,
 
     case nil { from decidable.false },
@@ -98,16 +98,16 @@ section free
     }
   end
 
-  instance free_in.decidable {Γ} {k} {l} {A: whole ω k Γ} : decidable (free_in l A)
+  instance free_in.decidable {Γ} {k} {l} {A: whole ℍ ω k Γ} : decidable (free_in l A)
     := free_in_decide l A
 end free
 
 section rename
   /-- Apply a renaming function to a species, with a witness of presence. -/
-  def rename_with : ∀ {Γ Δ} {k} (A : whole ω k Γ)
-    (ρ : Π (a : name Γ), name.to_level a ∈ A → name Δ), whole ω k Δ
+  def rename_with : ∀ {Γ Δ} {k} (A : whole ℍ ω k Γ)
+    (ρ : Π (a : name Γ), name.to_level a ∈ A → name Δ), whole ℍ ω k Δ
   | Γ Δ ._ nil ρ := nil
-  | Γ Δ ._ (@apply _ _ n D as) ρ :=
+  | Γ Δ ._ (@apply _ _ _ n D as) ρ :=
     let as' := list.map_witness as.val (λ x mem, ρ x ⟨ x, mem, name.to_level_at x ⟩) in
     let eq : list.length as' = n := by { rw (list.map_witness_length as.val _), from as.property } in
     apply D ⟨ as', eq ⟩
@@ -134,11 +134,11 @@ section rename
 
   /-- A simpler version of rename_with, which does not require a witness. -/
   @[reducible]
-  def rename {Γ Δ} {k} (ρ : name Γ → name Δ) (A : whole ω k Γ) : whole ω k Δ
+  def rename {Γ Δ} {k} (ρ : name Γ → name Δ) (A : whole ℍ ω k Γ) : whole ℍ ω k Δ
     := rename_with A (λ a _, ρ a)
 
   /-- Renaming with the identity function does nothing. -/
-  lemma rename_with_id : ∀ {Γ} {k} (A : whole ω k Γ), rename_with A (λ x _, x) = A
+  lemma rename_with_id : ∀ {Γ} {k} (A : whole ℍ ω k Γ), rename_with A (λ x _, x) = A
   | Γ ._ nil := by unfold rename_with
   | Γ ._ (apply D as) := by simp [rename_with]
   | Γ ._ (A |ₛ B) :=
@@ -169,12 +169,12 @@ section rename
     end
 
   /-- Renaming with the identity function is the identity. -/
-  lemma rename_id {Γ} {k} (A : whole ω k Γ): rename id A = A := rename_with_id A
+  lemma rename_id {Γ} {k} (A : whole ℍ ω k Γ): rename id A = A := rename_with_id A
 
   /-- Renaming twice is the same as renaming with a composed function. -/
   lemma rename_with_compose :
     ∀ {Γ Δ η} {k}
-      (A : whole ω k Γ)
+      (A : whole ℍ ω k Γ)
       (ρ : (Π (a : name Γ), name.to_level a ∈ A → name Δ))
       (σ : name Δ → name η)
     , rename σ (rename_with A ρ) = rename_with A (λ x f, σ (ρ x f))
@@ -228,11 +228,11 @@ section rename
     end
 
   /-- Renaming twice is the same as renaming with a composed function. -/
-  lemma rename_compose {Γ Δ η k} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : whole ω k Γ)
+  lemma rename_compose {Γ Δ η k} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : whole ℍ ω k Γ)
     : rename σ (rename ρ A) = rename (σ ∘ ρ) A
     := rename_with_compose A (λ x _, ρ x) σ
 
-  lemma rename_ext {Γ Δ k} {ρ : name Γ → name Δ} {n : ℕ} (A : whole ω k Γ)
+  lemma rename_ext {Γ Δ k} {ρ : name Γ → name Δ} {n : ℕ} (A : whole ℍ ω k Γ)
     : rename name.extend (rename ρ A)
     = rename (name.ext ρ) (rename (@name.extend _ n) A)
     := by rw [rename_compose, ← name.ext_extend, rename_compose]
@@ -246,11 +246,11 @@ section rename_equations
   variables {Γ Δ : context} {ρ : name Γ → name Δ}
 
   @[simp]
-  lemma rename.nil : rename ρ (@nil ω Γ) = nil := by unfold rename rename_with
+  lemma rename.nil : rename ρ (@nil ℍ ω Γ) = nil := by unfold rename rename_with
 
   @[simp]
   lemma rename.invoke {n} (D : reference n ω) (as : vector (name Γ) n)
-    : rename ρ (apply D as) = apply D (vector.map ρ as)
+    : rename ρ (apply D as) = @apply ℍ _ _ _ D (vector.map ρ as)
     := begin
       cases as with as p,
       unfold rename rename_with vector.map, simp,
@@ -258,12 +258,12 @@ section rename_equations
     end
 
   @[simp]
-  lemma rename.parallel (A B : species ω Γ)
+  lemma rename.parallel (A B : species ℍ ω Γ)
     : rename ρ (A |ₛ B) = (rename ρ A |ₛ rename ρ B)
     := by unfold rename rename_with
 
   @[simp]
-  lemma rename.restriction (M : affinity) (A : species ω (context.extend M.arity Γ))
+  lemma rename.restriction (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
     : rename ρ (ν(M)A ) = ν(M) (rename (name.ext ρ) A)
     := begin
       unfold rename rename_with name.ext,
@@ -272,7 +272,7 @@ section rename_equations
     end
 
   @[simp]
-  lemma rename.choice (As : choices ω Γ): rename ρ (Σ# As) = Σ# (rename ρ As) := begin
+  lemma rename.choice (As : choices ℍ ω Γ): rename ρ (Σ# As) = Σ# (rename ρ As) := begin
     unfold rename rename_with,
     have : (λ (a : name Γ) (free : name.to_level a ∈ Σ# As), ρ a)
          = (λ (a : name Γ) (free : name.to_level a ∈ As), ρ a)
@@ -281,10 +281,10 @@ section rename_equations
   end
 
   @[simp]
-  lemma rename.empty : rename ρ (@whole.empty ω Γ) = empty := by unfold rename rename_with
+  lemma rename.empty : rename ρ (@whole.empty ℍ ω Γ) = empty := by unfold rename rename_with
 
   @[simp]
-  lemma rename.cons {f} (π : prefix_expr Γ f) (A : species ω (f Γ)) (As : choices ω Γ)
+  lemma rename.cons {f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) (As : choices ℍ ω Γ)
     : rename ρ (cons π A As)
     = cons (prefix_expr.rename ρ π) (rename (prefix_expr.ext π ρ) A) (rename ρ As)
     := begin
@@ -294,7 +294,7 @@ section rename_equations
 
   lemma rename.inj :
     ∀ {Γ Δ k} {ρ : name Γ → name Δ}
-    , function.injective ρ → function.injective (@rename ω Γ Δ k ρ)
+    , function.injective ρ → function.injective (@rename ℍ ω Γ Δ k ρ)
   | Γ Δ _ ρ inj nil B eq := begin
       cases B;
       simp only [rename.nil, rename.invoke, rename.parallel, rename.choice, rename.restriction] at eq;
@@ -369,22 +369,22 @@ end rename_equations
 
 /- Show parallel can be converted to/from a list (though not isomorphic). -/
 namespace parallel
-  def to_list {Γ} : species ω Γ → list (species ω Γ)
+  def to_list {Γ} : species ℍ ω Γ → list (species ℍ ω Γ)
   | nil := []
   | (A |ₛ B) := to_list A ++ to_list B
   | A := [A]
 
-  def from_list {Γ} : list (species ω Γ) → species ω Γ
+  def from_list {Γ} : list (species ℍ ω Γ) → species ℍ ω Γ
   | [] := nil
   | [A] := A
   | (A :: As) := A |ₛ (from_list As)
 
-  instance lift_to {Γ} : has_lift (species ω Γ) (list (species ω Γ)) := ⟨ to_list ⟩
-  instance lift_from {Γ} : has_lift (list (species ω Γ)) (species ω Γ) := ⟨ from_list ⟩
+  instance lift_to {Γ} : has_lift (species ℍ ω Γ) (list (species ℍ ω Γ)) := ⟨ to_list ⟩
+  instance lift_from {Γ} : has_lift (list (species ℍ ω Γ)) (species ℍ ω Γ) := ⟨ from_list ⟩
 
   @[simp]
   lemma rename_from_list {Γ Δ} (ρ : name Γ → name Δ) :
-    ∀ (As : list (species ω Γ))
+    ∀ (As : list (species ℍ ω Γ))
     , rename ρ (from_list As) = from_list (list.map (rename ρ) As)
   | [] := rename.nil
   | [M] := rfl
@@ -394,9 +394,9 @@ namespace parallel
   end
 
   /-- to_list should contian no non-nil elements. -/
-  lemma to_list_nonnil {Γ}: ∀ (A : species ω Γ), nil ∉ to_list A
+  lemma to_list_nonnil {Γ}: ∀ (A : species ℍ ω Γ), nil ∉ to_list A
   | A := begin
-    known_induction whole @whole.rec_on ω
+    known_induction whole @whole.rec_on ℍ ω
       (λ k c A, begin
         cases k,
         case kind.species { from nil ∉ to_list A },
@@ -420,25 +420,25 @@ end parallel
 
 /- Show choice can be converted to/from a list and is isomorphic. -/
 namespace choice
-  def to_list {Γ} : choices ω Γ → list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ))
+  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ))
   | empty := []
   | (cons π A As) := ⟨ _, π, A ⟩ :: to_list As
 
-  def from_list {Γ} : list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)) → choices ω Γ
+  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)) → choices ℍ ω Γ
   | [] := empty
   | (⟨ _, π, A ⟩ :: As) := cons π A (from_list As)
 
-  instance lift_to {Γ} : has_lift (choices ω Γ) (list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)))
+  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)))
     := ⟨ to_list ⟩
-  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ))) (choices ω Γ)
+  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ))) (choices ℍ ω Γ)
     := ⟨ from_list ⟩
 
-  lemma from_to {Γ} : ∀ (A : choices ω Γ), from_list (to_list A) = A
+  lemma from_to {Γ} : ∀ (A : choices ℍ ω Γ), from_list (to_list A) = A
   | empty := by unfold to_list from_list
   | (cons π A As) := by { simp [to_list, from_list], from from_to As }
 
   lemma to_from {Γ} :
-    ∀ (As : list (Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)))
+    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)))
     , to_list (from_list As) = As
   | [] := by unfold to_list from_list
   | (⟨ _, π,  A⟩ :: As) := by { simp [to_list, from_list], from to_from As }

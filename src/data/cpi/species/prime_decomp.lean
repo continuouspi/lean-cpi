@@ -2,21 +2,22 @@ import data.cpi.species.prime
 
 namespace cpi
 namespace species
-variable {ω : context}
+
+variables {ℍ : Type} {ω : context}
 
 section depth
-  private def depth : ∀ {Γ}, species ω Γ → ℕ
+  private def depth : ∀ {Γ}, species ℍ ω Γ → ℕ
   | _ nil := 0
   | _ (apply _ _) := 1
   | _ (Σ# _) := 1
   | _ (A |ₛ B) := depth A + depth B
   | Γ (ν(_) A) := depth A
   using_well_founded {
-    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ω kind.species x.fst x.snd ) ⟩ ],
+    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ℍ ω kind.species x.fst x.snd ) ⟩ ],
     dec_tac := tactic.fst_dec_tac,
   }
 
-  private lemma depth_rename : ∀ {Γ Δ} (ρ : name Γ → name Δ) (A : species ω Γ), depth (rename ρ A) = depth A
+  private lemma depth_rename : ∀ {Γ Δ} (ρ : name Γ → name Δ) (A : species ℍ ω Γ), depth (rename ρ A) = depth A
   | _ _ ρ nil := by simp only [rename.nil, depth]
   | _ _ ρ (apply _ _) := by simp only [rename.invoke, depth]
   | _ _ ρ (Σ# _) := by simp only [rename.choice, depth]
@@ -29,11 +30,11 @@ section depth
     from depth_rename (name.ext ρ) A,
   end
   using_well_founded {
-    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ω kind.species x.1 x.2.2.2 ) ⟩ ],
+    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ℍ ω kind.species x.1 x.2.2.2 ) ⟩ ],
     dec_tac := tactic.fst_dec_tac,
   }
 
-  private lemma depth_eq : ∀ {Γ} {A B : species ω Γ}, A ≈ B → depth A = depth B
+  private lemma depth_eq : ∀ {Γ} {A B : species ℍ ω Γ}, A ≈ B → depth A = depth B
   | Γ A B ⟨ eq ⟩ := begin
     induction eq,
     case equivalent.refl { from rfl },
@@ -44,10 +45,10 @@ section depth
     all_goals { repeat { unfold depth <|> simp only [add_zero, zero_add, add_comm, add_assoc, depth_rename] } },
   end
 
-  private lemma depth_nil : ∀ {Γ} {A : species ω Γ}, A ≈ nil → depth A = 0
+  private lemma depth_nil : ∀ {Γ} {A : species ℍ ω Γ}, A ≈ nil → depth A = 0
   | Γ A eq := by { have eq := depth_eq eq, unfold depth at eq, from eq }
 
-  private lemma depth_nil_rev : ∀ {Γ} {A : species ω Γ}, depth A = 0 → A ≈ nil
+  private lemma depth_nil_rev : ∀ {Γ} {A : species ℍ ω Γ}, depth A = 0 → A ≈ nil
   | _ nil eq := refl _
   | _ (apply _ _) eq := by { unfold depth at eq, contradiction }
   | _ (Σ# _) eq:= by { unfold depth at eq, contradiction }
@@ -66,21 +67,21 @@ section depth
         ... ≈ nil : equiv.ν_drop₁ M
   end
   using_well_founded {
-    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ω kind.species x.1 x.2.1 ) ⟩ ],
+    rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ℍ ω kind.species x.1 x.2.1 ) ⟩ ],
     dec_tac := tactic.fst_dec_tac,
   }
 end depth
 
 /-- Construct a species from a prime decomposition of species. -/
-def parallel.from_prime_decompose {Γ} : multiset (quotient (@prime_species.setoid ω Γ)) → quotient (@species.setoid ω Γ)
+def parallel.from_prime_decompose {Γ} : multiset (quotient (@prime_species.setoid ℍ ω Γ)) → quotient (@species.setoid ℍ ω Γ)
 | ms := quot.lift_on ms
   (λ xs, parallel.quot.from_list (list.map prime_species.unwrap xs))
   (λ _ _ eq, parallel.quot.permute (list.perm_map prime_species.unwrap eq))
 
 /-- A proof that a prime decomposition exists. -/
 lemma has_prime_decompose :
-  ∀ {Γ} (A : species ω Γ)
-  , ∃ (As : multiset (quotient (@prime_species.setoid ω Γ)))
+  ∀ {Γ} (A : species ℍ ω Γ)
+  , ∃ (As : multiset (quotient (@prime_species.setoid ℍ ω Γ)))
   , ⟦ A ⟧ = parallel.from_prime_decompose As
 | Γ A :=
   match classical.dec (A ≈ nil) with

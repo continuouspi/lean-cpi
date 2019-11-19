@@ -3,11 +3,11 @@ import data.cpi.transition.basic
 namespace cpi
 namespace transition
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 private lemma ξ_choice.embed
-    {Γ f} (ℓ : lookup ω Γ)
-    (π : prefix_expr Γ f) (A : species ω (f Γ)) (As : species.choices ω Γ)
+    {Γ f} (ℓ : lookup ℍ ω Γ)
+    (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) (As : species.choices ℍ ω Γ)
   : transition_from ℓ (Σ# As) ↪ transition_from ℓ (Σ# (whole.cons π A As))
   := { to_fun := λ t, ⟨ _, _, _, ξ_choice t.2.2.2 ⟩,
        inj := λ ⟨ k, α, E, t ⟩ ⟨ k', α', E', t' ⟩ eq, begin
@@ -18,7 +18,7 @@ private lemma ξ_choice.embed
 /-- Show that the available transitions from a choices species is finite and
     thus enumerable.-/
 constant enumerate_choices :
-  ∀ {Γ} (ℓ : lookup ω Γ) (As : species.choices ω Γ), fintype (transition_from ℓ (Σ# As))
+  ∀ {Γ} (ℓ : lookup ℍ ω Γ) (As : species.choices ℍ ω Γ), fintype (transition_from ℓ (Σ# As))
 /-
 | Γ ℓ species.whole.empty :=
   { elems := finset.empty,
@@ -38,7 +38,7 @@ constant enumerate_choices :
 /-- Show that the available transitions from a species is finite and thus
     enumerable.-/
 constant enumerate :
-  ∀ {Γ} (ℓ : lookup ω Γ) (A : species ω Γ)
+  ∀ {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
   , fintype (transition_from ℓ A)
 /-
 | Γ ℓ nil :=
@@ -50,7 +50,8 @@ constant enumerate :
 | Γ ℓ (ν(M) A) := {!!}
 -/
 
-noncomputable instance {Γ} (ℓ : lookup ω Γ) (A : species ω Γ) : fintype (transition_from ℓ A)
+noncomputable instance {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
+  : fintype (transition_from ℓ A)
   := enumerate ℓ A
 
 end transition

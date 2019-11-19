@@ -2,7 +2,7 @@ import data.cpi.concretion data.upair
 
 namespace cpi
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 /-- The kind of a production, either a species or concretion-/
 @[derive decidable_eq]
@@ -12,107 +12,107 @@ inductive kind
 
 /-- The right hand side of a transition, determined by a specific kind. -/
 @[derive decidable_eq]
-inductive production (ω : context) (Γ : context) : kind → Type
-| species (A : species ω Γ) : production kind.species
-| concretion {b y} (F : concretion ω Γ b y) : production kind.concretion
+inductive production (ℍ : Type) (ω : context) (Γ : context) : kind → Type
+| species (A : species ℍ ω Γ) : production kind.species
+| concretion {b y} (F : concretion ℍ ω Γ b y) : production kind.concretion
 
 @[reducible]
 instance production.lift_species {Γ}
-  : has_coe (species ω Γ) (production ω Γ kind.species) := ⟨ production.species ⟩
+  : has_coe (species ℍ ω Γ) (production ℍ ω Γ kind.species) := ⟨ production.species ⟩
 
 @[reducible]
 instance production.lift_concretion {Γ} {b y}
-  : has_coe (concretion ω Γ b y) (production ω Γ kind.concretion) := ⟨ production.concretion ⟩
+  : has_coe (concretion ℍ ω Γ b y) (production ℍ ω Γ kind.concretion) := ⟨ production.concretion ⟩
 
 /-- Map over a production, transforming either the concretion or species inside. -/
 def production.map
-    {Γ Δ} (s : species ω Γ → species ω Δ)
-    (c : ∀ {b y}, concretion ω Γ b y → concretion ω Δ b y)
-  : ∀ {k}, production ω Γ k → production ω Δ k
+    {Γ Δ} (s : species ℍ ω Γ → species ℍ ω Δ)
+    (c : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y)
+  : ∀ {k}, production ℍ ω Γ k → production ℍ ω Δ k
 | ._ (production.species A) := s A
 | ._ (production.concretion F) := c F
 
 /-- Rename a production. This just wraps renaming for species and concretions. -/
 def production.rename
   {Γ Δ} (ρ : name Γ → name Δ)
-  : ∀ {k}, production ω Γ k → production ω Δ k
+  : ∀ {k}, production ℍ ω Γ k → production ℍ ω Δ k
 | ._ (production.species A) := production.species (species.rename ρ A)
 | ._ (production.concretion A) := production.concretion (concretion.rename ρ A)
 
 lemma production.rename_id
-  {Γ} : ∀ {k} (E : production ω Γ k), production.rename id E = E
+  {Γ} : ∀ {k} (E : production ℍ ω Γ k), production.rename id E = E
   | ._ (production.species A) := by { unfold production.rename, rw species.rename_id A }
   | ._ (production.concretion F) := by { unfold production.rename, rw concretion.rename_id F }
 
 /-- Equivalence of productions. This just wraps equivalence of species and
     concretions. -/
 inductive production.equiv {Γ} :
-  ∀ {k : kind}, production ω Γ k → production ω Γ k → Prop
-| species {A B : species ω Γ}                 : A ≈ B → @production.equiv kind.species A B
-| concretion {b y} {F G : concretion ω Γ b y} : F ≈ G → @production.equiv kind.concretion F G
+  ∀ {k : kind}, production ℍ ω Γ k → production ℍ ω Γ k → Prop
+| species {A B : species ℍ ω Γ}                 : A ≈ B → @production.equiv kind.species A B
+| concretion {b y} {F G : concretion ℍ ω Γ b y} : F ≈ G → @production.equiv kind.concretion F G
 
 namespace production
-  lemma equiv.refl {Γ} : ∀ {k : kind} (E : production ω Γ k), equiv E E
+  lemma equiv.refl {Γ} : ∀ {k : kind} (E : production ℍ ω Γ k), equiv E E
   | ._ (species A) := equiv.species (refl A)
   | ._ (concretion F) := equiv.concretion (refl F)
 
-  lemma equiv.symm {Γ} : ∀ {k : kind} (E F : production ω Γ k), equiv E F → equiv F E
+  lemma equiv.symm {Γ} : ∀ {k : kind} (E F : production ℍ ω Γ k), equiv E F → equiv F E
   | ._ ._ ._ (equiv.species eq) := equiv.species (symm eq)
   | ._ ._ ._ (equiv.concretion eq) := equiv.concretion (symm eq)
 
-  lemma equiv.trans {Γ} : ∀ {k : kind} (E F G : production ω Γ k), equiv E F → equiv F G → equiv E G
+  lemma equiv.trans {Γ} : ∀ {k : kind} (E F G : production ℍ ω Γ k), equiv E F → equiv F G → equiv E G
   | ._ ._ ._ ._ (equiv.species ef) (equiv.species fg) := equiv.species (trans ef fg)
   | ._ ._ ._ ._ (equiv.concretion ef) (equiv.concretion fg) := equiv.concretion (trans ef fg)
 
-  instance {Γ} {k} : is_equiv (production ω Γ k) equiv :=
+  instance {Γ} {k} : is_equiv (production ℍ ω Γ k) equiv :=
     { refl := equiv.refl, symm := equiv.symm, trans := equiv.trans }
-  instance {Γ} {k} : is_refl (production ω Γ k) equiv := ⟨ equiv.refl ⟩
-  instance {Γ} {k} : setoid (production ω Γ k) :=
+  instance {Γ} {k} : is_refl (production ℍ ω Γ k) equiv := ⟨ equiv.refl ⟩
+  instance {Γ} {k} : setoid (production ℍ ω Γ k) :=
     ⟨ equiv, ⟨ equiv.refl, equiv.symm, equiv.trans ⟩ ⟩
-  instance setoid.is_equiv {Γ} {k} : is_equiv (production ω Γ k) has_equiv.equiv :=
+  instance setoid.is_equiv {Γ} {k} : is_equiv (production ℍ ω Γ k) has_equiv.equiv :=
     production.is_equiv
 end production
 
 lemma production.equiv.unwrap_s :
-  ∀ {Γ} {A B : species ω Γ}, production.species A ≈ production.species B → A ≈ B
+  ∀ {Γ} {A B : species ℍ ω Γ}, production.species A ≈ production.species B → A ≈ B
 | Γ A B (production.equiv.species eq) := eq
 
 /-- If two concretions are equivalent under a production, cast one to the type
     of the other. -/
 def production.cast_c :
-  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
-  → concretion ω Γ a x
+  → concretion ℍ ω Γ a x
 | Γ a b x y F G eq := cast (by { cases eq, from rfl }) G
 
 /-- An alternative to 'cast_c', which casts some other concretion of the same
     type. -/
 def production.cast_with_c :
-  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G G' : concretion ω Γ b y}
+  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G G' : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
-  → concretion ω Γ a x
+  → concretion ℍ ω Γ a x
 | Γ a b x y F G G' eq := cast (by { cases eq, from rfl }) G' -- TODO: Remove this?
 
 lemma production.cast_c.equiv :
-  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
     (eq : production.concretion F ≈ production.concretion G)
   , F ≈ production.cast_c eq
 | Γ a b x y F G (production.equiv.concretion eq) := eq
 
 lemma production.cast_c.eq :
-  ∀ {Γ} {a b x y} {F : concretion ω Γ a x} {G : concretion ω Γ b y}
+  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
     (eq : production.concretion F ≈ production.concretion G)
   , production.concretion G = production.concretion (production.cast_c eq)
 | Γ a b x y F G (production.equiv.concretion eq) := rfl
 
 lemma production.equiv.map {Γ Δ} :
   ∀ {k : kind}
-    {s : species ω Γ → species ω Δ}
-    {c : ∀ {b y}, concretion ω Γ b y → concretion ω Δ b y}
+    {s : species ℍ ω Γ → species ℍ ω Δ}
+    {c : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
 
-    {E F : production ω Γ k}
-  , (∀ {A B : species ω Γ}, A ≈ B → s A ≈ s B)
-  → (∀ {b y} {F G : concretion ω Γ b y}, F ≈ G → c F ≈ c G)
+    {E F : production ℍ ω Γ k}
+  , (∀ {A B : species ℍ ω Γ}, A ≈ B → s A ≈ s B)
+  → (∀ {b y} {F G : concretion ℍ ω Γ b y}, F ≈ G → c F ≈ c G)
   → E ≈ F
   → production.map @s @c E ≈ production.map @s @c F
 | ._ s c ._ ._ ms mc (production.equiv.species eq) := production.equiv.species (ms eq)
@@ -120,49 +120,49 @@ lemma production.equiv.map {Γ Δ} :
 
 lemma production.equiv.map_over {Γ Δ} :
   ∀ {k : kind}
-    {s s' : species ω Γ → species ω Δ}
-    {c c' : ∀ {b y}, concretion ω Γ b y → concretion ω Δ b y}
+    {s s' : species ℍ ω Γ → species ℍ ω Δ}
+    {c c' : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
 
-    (ms : ∀ (A : species ω Γ), s A ≈ s' A)
-    (mc : ∀ {b y} (F : concretion ω Γ b y), c F ≈ c' F)
-    (E : production ω Γ k)
+    (ms : ∀ (A : species ℍ ω Γ), s A ≈ s' A)
+    (mc : ∀ {b y} (F : concretion ℍ ω Γ b y), c F ≈ c' F)
+    (E : production ℍ ω Γ k)
   , production.map @s @c E ≈ production.map @s' @c' E
 | ._ s s' c c' ms mc (production.species A) := production.equiv.species (ms A)
 | ._ s s' c c' ms mc (production.concretion F) := production.equiv.concretion (mc F)
 
 lemma production.equiv.parallel_nil {Γ} :
-  ∀ {k : kind} (E : production ω Γ k)
+  ∀ {k : kind} (E : production ℍ ω Γ k)
   , production.map (λ x, x |ₛ nil) (λ _ _ x, x |₁ nil) E ≈ E
 | ._ (production.species _) := production.equiv.species species.equiv.parallel_nil₁
 | ._ (production.concretion _) := production.equiv.concretion concretion.equiv.parallel_nil
 
 @[simp]
 lemma production.map_compose {Γ Δ η} {k : kind}
-    (s  : species ω Γ → species ω Δ)
-    (s' : species ω Δ → species ω η)
-    (c  : ∀ {b y}, concretion ω Γ b y → concretion ω Δ b y)
-    (c' : ∀ {b y}, concretion ω Δ b y → concretion ω η b y)
-    (E : production ω Γ k)
+    (s  : species ℍ ω Γ → species ℍ ω Δ)
+    (s' : species ℍ ω Δ → species ℍ ω η)
+    (c  : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y)
+    (c' : ∀ {b y}, concretion ℍ ω Δ b y → concretion ℍ ω η b y)
+    (E : production ℍ ω Γ k)
   : production.map s' @c' (production.map s @c E)
   = production.map (λ x, s' (s x)) (λ _ _ x, c' (c x)) E
 := by { cases E; repeat { simp only [production.map], unfold_coes } }
 
 /-- A transition from a species to some production of a given kind. -/
 @[derive decidable_eq]
-inductive label : context → kind → Type
+inductive label (ℍ : Type) : context → kind → Type
 /- From a species to a concretion. Sends $b$ values on channel $a$ and evolves
    into whatever species the concretion applies, substituting $y$ variables
    with the values received. -/
-| apply {Γ} (a : name Γ) : label Γ kind.concretion
+| apply {} {Γ} (a : name Γ) : label Γ kind.concretion
 
 /- Evolution from one species to another species without any other interaction,
    at a specific rate. -/
-| spontanious {Γ} (rate : ℝ≥0) : label Γ kind.species
+| spontanious {Γ} (rate : ℍ) : label Γ kind.species
 
 /- Evolution from one species to another, with a rate determined by an affinity
    network. This is converted into a spontanious interaction when the names
    refer to a global affinity network. -/
-| of_affinity {Γ} (k : upair (name Γ)) : label Γ kind.species
+| of_affinity {} {Γ} (k : upair (name Γ)) : label Γ kind.species
 
 notation `#`:max a:max := label.apply a
 notation `τ@'`:max k:max  := label.spontanious k
@@ -170,13 +170,13 @@ notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity (upair.mk a b)
 notation `τ⟨ `:max p ` ⟩`:max := label.of_affinity p
 
 /-- Rename all names within a label. -/
-def label.rename {Γ Δ} (ρ : name Γ → name Δ) : ∀ {k}, label Γ k → label Δ k
+def label.rename {Γ Δ} (ρ : name Γ → name Δ) : ∀ {k}, label ℍ Γ k → label ℍ Δ k
 | ._ #a := # (ρ a)
 | ._ τ@'k := τ@'k
 | ._ τ⟨ ab ⟩ := τ⟨ upair.map ρ ab ⟩
 
 lemma label.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
-  : ∀ {k}, function.injective (@label.rename Γ Δ ρ k)
+  : ∀ {k}, function.injective (@label.rename ℍ Γ Δ ρ k)
   | ._ #a #b eq := by { cases inj (label.apply.inj eq), from rfl }
   | ._ τ@'k τ@'j rfl := rfl
   | ._ τ⟨ a ⟩ τ⟨ b ⟩ eq := begin
@@ -187,32 +187,32 @@ lemma label.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.inject
   | ._ τ⟨ _ ⟩ τ@'k eq := by contradiction
 
 lemma label.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η)
-  : ∀ {k} (l : label Γ k)
+  : ∀ {k} (l : label ℍ Γ k)
   , label.rename σ (label.rename ρ l) = label.rename (σ ∘ ρ) l
 | ._ #a := rfl
 | ._ τ@'k := rfl
 | ._ τ⟨ ab ⟩ := by simp only [label.rename, upair.map_compose]
 
-lemma label.rename_id {Γ} : ∀ {k} (l : label Γ k), label.rename id l = l
+lemma label.rename_id {Γ} : ∀ {k} (l : label ℍ Γ k), label.rename id l = l
 | ._ #a := rfl
 | ._ τ@'k := rfl
 | ._ τ⟨ p ⟩ := by { unfold label.rename, rw upair.map_identity }
 
 /-- A function to look up names within the environment. -/
-def lookup (ω Γ : context) := ∀ n, reference n ω → species.choices ω (context.extend n Γ)
+def lookup (ℍ : Type) (ω Γ : context) := ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ)
 
 /-- Rename a lookup function, embedding the returned species into another
     context.-/
-def lookup.rename {Γ Δ} (ρ : name Γ → name Δ) : lookup ω Γ → lookup ω Δ
+def lookup.rename {Γ Δ} (ρ : name Γ → name Δ) : lookup ℍ ω Γ → lookup ℍ ω Δ
 | f n r := species.rename (name.ext ρ) (f n r)
 
 /-- Rewrite lemma for when lookups get expanded incorrectly. -/
-lemma lookup.rename.def {Γ Δ} (ρ : name Γ → name Δ) (ℓ : lookup ω Γ)
+lemma lookup.rename.def {Γ Δ} (ρ : name Γ → name Δ) (ℓ : lookup ℍ ω Γ)
   : (λ n r, species.rename (name.ext ρ) (ℓ n r)) = lookup.rename ρ ℓ
   := rfl
 
 lemma lookup.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
-  : function.injective (@lookup.rename ω Γ Δ ρ)
+  : function.injective (@lookup.rename ℍ ω Γ Δ ρ)
 | x y eq := funext $ λ n, funext $ λ r, begin
   have : species.rename (name.ext ρ) (x n r) = species.rename (name.ext ρ) (y n r)
     := congr_fun (congr_fun eq n) r,
@@ -220,7 +220,7 @@ lemma lookup.rename.inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injec
 end
 
 lemma lookup.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η)
-  : ∀ (ℓ : lookup ω Γ)
+  : ∀ (ℓ : lookup ℍ ω Γ)
   , lookup.rename σ (lookup.rename ρ ℓ) = lookup.rename (σ ∘ ρ) ℓ
 | f := funext $ λ n, funext $ λ r, begin
   simp only [lookup.rename, function.comp],
@@ -232,13 +232,13 @@ end
     communicating). -/
 inductive transition :
   Π {Γ} {k}
-  , species ω Γ → lookup ω Γ → label Γ k → production ω Γ k
+  , species ℍ ω Γ → lookup ℍ ω Γ → label ℍ Γ k → production ℍ ω Γ k
   → Type
 
 /- Additional transition to project project into where our choiceₙ rules apply. -/
 | ξ_choice
-    {Γ ℓ f} {π : prefix_expr Γ f} {A : species ω (f Γ)} {As : species.choices ω Γ}
-    {k} {l : label Γ k} {E : production ω Γ k}
+    {Γ ℓ f} {π : prefix_expr ℍ Γ f} {A : species ℍ ω (f Γ)} {As : species.choices ℍ ω Γ}
+    {k} {l : label ℍ Γ k} {E : production ℍ ω Γ k}
 
   : transition (Σ# As) ℓ l E
   → transition (Σ# species.whole.cons π A As) ℓ l E
@@ -246,59 +246,59 @@ inductive transition :
 | choice₁
     {Γ ℓ}
 
-    (a : name Γ) (b : list (name Γ)) (y : ℕ) (A : species ω (context.extend y Γ))
-    (As : species.choices ω Γ)
+    (a : name Γ) (b : list (name Γ)) (y : ℕ) (A : species ℍ ω (context.extend y Γ))
+    (As : species.choices ℍ ω Γ)
   : transition (Σ# species.whole.cons (a#(b; y)) A As)
                ℓ (#a)
                (#(⟨ b, rfl ⟩; y) A)
 | choice₂
     {Γ ℓ}
 
-    (k : ℝ≥0) (A : species ω Γ) (As : species.choices ω Γ)
+    (k : ℍ) (A : species ℍ ω Γ) (As : species.choices ℍ ω Γ)
   : transition (Σ# species.whole.cons (τ@k) A As) ℓ τ@'k A
 
 | com₁
-    {Γ ℓ x y} {A B : species ω Γ} {a b : name Γ}
-    {F : concretion ω Γ x y} {G : concretion ω Γ y x}
+    {Γ ℓ x y} {A B : species ℍ ω Γ} {a b : name Γ}
+    {F : concretion ℍ ω Γ x y} {G : concretion ℍ ω Γ y x}
 
   : transition A ℓ (#a) F
   → transition B ℓ (#b) G
   → transition (A |ₛ B) ℓ τ⟨ a, b ⟩ (concretion.pseudo_apply F G)
 
 | com₂
-    {Γ ℓ} (M : affinity) {a b : fin M.arity}
-    {A B : species ω (context.extend M.arity Γ)}
+    {Γ ℓ} (M : affinity ℍ) {a b : fin M.arity}
+    {A B : species ℍ ω (context.extend M.arity Γ)}
 
     (k : option.is_some (M.f a b))
   : transition A (lookup.rename name.extend ℓ) τ⟨ name.zero a, name.zero b ⟩ B
   → transition (ν(M) A) ℓ τ@'(option.get k) (ν(M) B)
 
 | parₗ
-    {Γ ℓ} {A : species ω Γ} (B : species ω Γ)
-    {k} {l : label Γ k} {E}
+    {Γ ℓ} {A : species ℍ ω Γ} (B : species ℍ ω Γ)
+    {k} {l : label ℍ Γ k} {E}
 
   : transition A ℓ l E
   → transition (A |ₛ B) ℓ l (production.map (λ x, x |ₛ B) (λ _ _ x, x |₁ B) E)
 | parᵣ
-    {Γ ℓ} (A : species ω Γ) {B : species ω Γ}
-    {k} {l : label Γ k} {E}
+    {Γ ℓ} (A : species ℍ ω Γ) {B : species ℍ ω Γ}
+    {k} {l : label ℍ Γ k} {E}
 
   : transition B ℓ l E
   → transition (A |ₛ B) ℓ l (production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x) E)
 
 | ν₁
-    {Γ ℓ} (M : affinity) {A : species ω (context.extend M.arity Γ)}
-    {k} {l : label Γ k} {E : production ω (context.extend M.arity Γ) k}
+    {Γ ℓ} (M : affinity ℍ) {A : species ℍ ω (context.extend M.arity Γ)}
+    {k} {l : label ℍ Γ k} {E : production ℍ ω (context.extend M.arity Γ) k}
 
   : transition A (lookup.rename name.extend ℓ) (label.rename name.extend l) E
   → transition (ν(M) A) ℓ l (production.map (λ x, ν(M) x) (λ _ _ x, ν'(M) x) E)
 
 
 | defn
-    {Γ} {n} {l : label (context.extend n Γ) kind.species}
-    (ℓ : ∀ n, reference n ω → species.choices ω (context.extend n Γ))
+    {Γ} {n} {l : label ℍ (context.extend n Γ) kind.species}
+    (ℓ : ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ))
 
-    (E : species ω (context.extend n Γ))
+    (E : species ℍ ω (context.extend n Γ))
     (D : reference n ω) (as : vector (name Γ) n)
   : transition (Σ# (ℓ n D)) (lookup.rename name.extend ℓ) l E
   → transition
@@ -326,10 +326,10 @@ namespace transition
       rename_from - I was wrong. -/
   protected def rename_to :
     ∀ {Γ Δ ℓ k}
-      {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
+      {A : species ℍ ω Γ} {l : label ℍ Γ k} {E : production ℍ ω Γ k}
       (ρ : name Γ → name Δ)
     , A [ℓ, l]⟶ E
-    → Σ' (l' : label Δ k) (E' : production ω Δ k)
+    → Σ' (l' : label ℍ Δ k) (E' : production ℍ ω Δ k)
     , pprod ((species.rename ρ A) [lookup.rename ρ ℓ, l']⟶ E')
             (label.rename ρ l = l' ∧ production.rename ρ E = E')
   | Γ Δ ℓ k A l E ρ t := begin
@@ -354,7 +354,7 @@ namespace transition
       simp [list.length_map, production.rename, concretion.rename, vector.map],
 
       have : list.length (list.map ρ b) = list.length b := list.length_map _ _,
-      refine congr_arg_heq₂ (λ XX YY, @concretion.apply ω Δ XX
+      refine congr_arg_heq₂ (λ XX YY, @concretion.apply ℍ ω Δ XX
           (@subtype.mk (list (name Δ))
             (λ (l : list (name Δ)), list.length l = XX)
             (list.map ρ b)
@@ -436,7 +436,7 @@ namespace transition
   /-- Rename a transition with a basic renaming function. --/
   protected def rename :
     ∀ {Γ Δ f k}
-      {A : species ω Γ} {l : label Γ k} {E : production ω Γ k}
+      {A : species ℍ ω Γ} {l : label ℍ Γ k} {E : production ℍ ω Γ k}
       (ρ : name Γ → name Δ)
     , A [f, l]⟶ E
     → (species.rename ρ A) [lookup.rename ρ f, label.rename ρ l]⟶ (production.rename ρ E)
@@ -449,22 +449,22 @@ namespace transition
       proved to be rather annoying. -/
   protected constant rename_from :
     ∀ {Γ Δ f k}
-      {A : species ω Γ} {l : label Δ k} {E : production ω Δ k}
+      {A : species ℍ ω Γ} {l : label ℍ Δ k} {E : production ℍ ω Δ k}
       (ρ : name Γ → name Δ)
     , species.rename ρ A [f, l]⟶ E
-    → Σ' (f' : lookup ω Γ) (l' : label Γ k) (E' : production ω Γ k)
+    → Σ' (f' : lookup ℍ ω Γ) (l' : label ℍ Γ k) (E' : production ℍ ω Γ k)
     , pprod (A [f' , l']⟶ E')
             (lookup.rename ρ f' = f ∧ label.rename ρ l' = l ∧ production.rename ρ E' = E)
 
 
 /-- A transition from a specific species, to any production. -/
-def transition_from {ω Γ} (ℓ : lookup ω Γ) (A : species ω Γ) : Type
-  := (Σ' k (α : label Γ k) E, A [ℓ, α]⟶ E)
+def transition_from {ω Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) : Type
+  := (Σ' k (α : label ℍ Γ k) E, A [ℓ, α]⟶ E)
 
 /-- Construct a new transition_from, wrapping a transition. -/
 @[pattern]
 def transition_from.mk
-    {Γ} {ℓ : lookup ω Γ} {A : species ω Γ} {k} {α : label Γ k} {E} (t : A [ℓ, α]⟶ E)
+    {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ} {k} {α : label ℍ Γ k} {E} (t : A [ℓ, α]⟶ E)
   : transition_from ℓ A
   := ⟨ k, α, E, t ⟩
 
@@ -472,7 +472,7 @@ def transition_from.mk
     transition. -/
 @[pattern]
 def transition_from.mk_with
-    {Γ} (ℓ : lookup ω Γ) {A : species ω Γ} {k} {α : label Γ k} {E} (t : A [ℓ, α]⟶ E)
+    {Γ} (ℓ : lookup ℍ ω Γ) {A : species ℍ ω Γ} {k} {α : label ℍ Γ k} {E} (t : A [ℓ, α]⟶ E)
   : transition_from ℓ A
   := ⟨ k, α, E, t ⟩
 

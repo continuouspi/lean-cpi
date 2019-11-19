@@ -5,13 +5,13 @@ namespace cpi
 /-- A concretion represents the potential for a species to interact with another.
     -/
 @[derive decidable_eq]
-inductive concretion (ω : context) : context → ℕ → ℕ → Type
+inductive concretion (ℍ : Type) (ω : context) : context → ℕ → ℕ → Type
 | apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
-        , species ω (context.extend y Γ)
+        , species ℍ ω (context.extend y Γ)
         → concretion Γ b y
-| parallel₁ : ∀ {Γ} {b y}, concretion Γ b y → species ω Γ → concretion Γ b y
-| parallel₂ : ∀ {Γ} {b y}, species ω Γ → concretion Γ b y → concretion Γ b y
-| restriction : ∀ {Γ} {b y} (M : affinity)
+| parallel₁ : ∀ {Γ} {b y}, concretion Γ b y → species ℍ ω Γ → concretion Γ b y
+| parallel₂ : ∀ {Γ} {b y}, species ℍ ω Γ → concretion Γ b y → concretion Γ b y
+| restriction : ∀ {Γ} {b y} (M : affinity ℍ)
               , concretion (context.extend M.arity Γ) b y
               → concretion Γ b y
 
@@ -25,40 +25,40 @@ infixr ` |₂ ` := concretion.parallel₂
 
 notation `ν'(` M `) ` A := concretion.restriction M A
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 namespace concretion
 
 section free
   /-- Determine whether a level occurs within a concretion. -/
-  def free_in : ∀ {Γ} {b y} (l : level Γ) (F : concretion ω Γ b y), Prop
+  def free_in : ∀ {Γ} {b y} (l : level Γ) (F : concretion ℍ ω Γ b y), Prop
   | Γ b y l (#(bs; _) A) := (∃ b ∈ bs.val, l ∈ b) ∨ level.extend l ∈ A
   | Γ b y l (F |₁ A) := free_in l F ∨ l ∈ A
   | Γ b y l (A |₂ F) := l ∈ A ∨ free_in l F
   | Γ b y l (ν'(M) F) := free_in (level.extend l) F
 
-  instance {Γ} {b y} : has_mem (level Γ) (concretion ω Γ b y) := ⟨ free_in ⟩
+  instance {Γ} {b y} : has_mem (level Γ) (concretion ℍ ω Γ b y) := ⟨ free_in ⟩
 
-  private def free_in_decide : ∀ {Γ} {b y} (l : level Γ) (F : concretion ω Γ b y), decidable (free_in l F)
+  private def free_in_decide : ∀ {Γ} {b y} (l : level Γ) (F : concretion ℍ ω Γ b y), decidable (free_in l F)
   | Γ b y l (#(bs; _) A) := by { unfold free_in, apply_instance }
   | Γ b y l (F |₁ A) := @or.decidable _ _ (free_in_decide l F) _
   | Γ b y l (A |₂ F) := @or.decidable _ _ _ (free_in_decide l F)
   | Γ b y l (ν'(M) F) := free_in_decide (level.extend l) F
 
-  instance free_in.decidable {Γ} {b y} {l} {F : concretion ω Γ b y} : decidable (l ∈ F)
+  instance free_in.decidable {Γ} {b y} {l} {F : concretion ℍ ω Γ b y} : decidable (l ∈ F)
     := free_in_decide l F
 end free
 
 section rename
   /-- Rename a concretion. -/
-  def rename : ∀ {Γ Δ} {b y} (ρ : name Γ → name Δ), concretion ω Γ b y → concretion ω Δ b y
+  def rename : ∀ {Γ Δ} {b y} (ρ : name Γ → name Δ), concretion ℍ ω Γ b y → concretion ℍ ω Δ b y
   | Γ Δ b y ρ (#(bs; _) A) := #( vector.map ρ bs; y) species.rename (name.ext ρ) A
   | Γ Δ b y ρ (F |₁ A) := rename ρ F |₁ species.rename ρ A
   | Γ Δ b y ρ (A |₂ F) := species.rename ρ A |₂ rename ρ F
   | Γ Δ b y ρ (ν'(M) A) := ν'(M) (rename (name.ext ρ) A)
 
   lemma rename_id
-    : ∀ {Γ} {b y} (F : concretion ω Γ b y)
+    : ∀ {Γ} {b y} (F : concretion ℍ ω Γ b y)
     , rename id F = F
   | Γ b ._ (#(⟨ list, n ⟩; y) A) := begin
       simp only [rename, vector.map, list.map_id, subtype.mk_eq_mk],
@@ -79,7 +79,7 @@ section rename
     end
 
   lemma rename_compose :
-    ∀ {Γ Δ η} {b y} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : concretion ω Γ b y)
+    ∀ {Γ Δ η} {b y} (ρ : name Γ → name Δ) (σ : name Δ → name η) (A : concretion ℍ ω Γ b y)
     , rename σ (rename ρ A) = rename (σ ∘ ρ) A
   | Γ Δ η b ._ ρ σ (#(⟨ elem, n ⟩; y) A) := begin
       unfold rename vector.map,

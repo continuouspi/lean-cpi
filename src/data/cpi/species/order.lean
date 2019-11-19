@@ -3,7 +3,7 @@ import order.lex_like
 
 namespace cpi
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 open species.whole
 
@@ -24,7 +24,7 @@ open species.whole
 
    Yeah, this whole thing is rather ugly. Sorry! -/
 
-private noncomputable def species.eq_decidable {Γ} {k} (A B : whole ω k Γ) :
+private def species.eq_decidable [decidable_eq ℍ] {Γ} {k} (A B : whole ℍ ω k Γ) :
   decidable (A = B) := begin
   induction A,
 
@@ -58,7 +58,7 @@ private noncomputable def species.eq_decidable {Γ} {k} (A B : whole ω k Γ) :
     cases B; simp only []; try { apply_instance },
     case whole.cons : f' π' A' As' {
       have h : decidable (prefix_expr.wrap.intro π = prefix_expr.wrap.intro π'),
-        apply_instance,
+        from prefix_expr.decidable_eq _ _,
 
       cases h,
       case is_false : p {
@@ -79,11 +79,13 @@ private noncomputable def species.eq_decidable {Γ} {k} (A B : whole ω k Γ) :
   }
 end
 
-noncomputable instance species.whole.decidable_eq {Γ} {k} :
-  decidable_eq (whole ω k Γ) := species.eq_decidable
+instance species.whole.decidable_eq {Γ} {k} [decidable_eq ℍ] :
+  decidable_eq (whole ℍ ω k Γ) := species.eq_decidable
 
-protected def species.le : ∀ {Γ} {k}, whole ω k Γ → whole ω k Γ → Prop :=
-λ Γ k A B, begin
+/-- Lexicographic ordering of species. -/
+protected def species.le [decidable_linear_order ℍ] :
+  ∀ {Γ} {k}, whole ℍ ω k Γ → whole ℍ ω k Γ → Prop
+| Γ k A B := begin
   induction A,
 
   case nil { from true },
@@ -140,7 +142,8 @@ protected def species.le : ∀ {Γ} {k}, whole ω k Γ → whole ω k Γ → Pro
   }
 end
 
-protected theorem species.le_refl : ∀ {Γ} {k} (A : whole ω k Γ), species.le A A
+protected theorem species.le_refl [decidable_linear_order ℍ] :
+  ∀ {Γ} {k} (A : whole ℍ ω k Γ), species.le A A
 | ._ ._ nil := true.intro
 | ._ ._ (apply D as) := or.inr ⟨ rfl, or.inr ⟨ rfl, le_refl as.val ⟩ ⟩
 | ._ ._ (Σ# As) := species.le_refl As
@@ -149,10 +152,10 @@ protected theorem species.le_refl : ∀ {Γ} {k} (A : whole ω k Γ), species.le
 | ._ ._ empty := true.intro
 | ._ ._ (cons π A As) := or.inr ⟨ rfl, or.inr ⟨ rfl, species.le_refl As ⟩ ⟩
 
-protected theorem species.le_antisymm :
-  ∀ {Γ} {k} (A B : whole ω k Γ), species.le A B → species.le B A → A = B
+protected theorem species.le_antisymm [decidable_linear_order ℍ] :
+  ∀ {Γ} {k} (A B : whole ℍ ω k Γ), species.le A B → species.le B A → A = B
 | ._ ._ nil nil _ _ := rfl
-| ._ ._ (@apply _ _ n D as) (apply D' as') ab ba :=
+| ._ ._ (@apply _ _ _ n D as) (apply D' as') ab ba :=
   match ab, ba with
   | or.inl lt, or.inl lt' := false.elim (lt_asymm lt lt')
   | or.inl lt, or.inr ⟨ eq, re ⟩ := false.elim (ne_of_lt lt (symm eq))
@@ -231,96 +234,89 @@ protected theorem species.le_antisymm :
 | ._ ._ (cons _ _ _) empty f _ := false.elim f
 | ._ ._ empty (cons _ _ _) _ f := false.elim f
 
-private lemma lt_not_eq {Γ} :
-  ∀ {A B C : species ω Γ}, species.le A B → species.le B C → A ≠ B → A ≠ C
+private lemma lt_not_eq [decidable_linear_order ℍ] {Γ} :
+  ∀ {A B C : species ℍ ω Γ}, species.le A B → species.le B C → A ≠ B → A ≠ C
 | A B C lab lbc ab (eq.refl _) := ab (species.le_antisymm A B lab lbc)
 
-protected theorem species.le_trans :
-  ∀ {Γ} {k} (A B C : whole ω k Γ), species.le A B → species.le B C → species.le A C
-| ._ ._ nil _ _ _ _ := true.intro
+protected theorem species.le_trans [decidable_linear_order ℍ] :
+  ∀ {Γ} {k} (A B C : whole ℍ ω k Γ), species.le A B → species.le B C → species.le A C
+| Γ k A B C ab bc := begin
+  induction A,
+  case species.nil { from true.intro },
+  case species.whole.empty { from true.intro },
 
-| ._ ._ (apply D as) (apply D₂ bs) (apply D₃ cs) ab bc :=
-  match ab, bc with
-  | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
-  | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-  | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+  all_goals {
+    cases C,
+    all_goals { try { from true.intro } },
+    all_goals { cases B, all_goals { from false.elim ab <|> from false.elim bc <|> skip } },
+  },
 
-  | or.inr ⟨ eq, re ⟩, or.inr ⟨ eq', re' ⟩ := begin
-      clear _match, cases eq, cases eq',
-      from or.inr ⟨ rfl, match re, re' with
-      | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
-      | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-      | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
-      | or.inr ⟨ eq, le ⟩, or.inr ⟨ eq', le' ⟩ :=
-        or.inr ⟨ trans eq eq', le_trans le le' ⟩
-      end ⟩
+  case species.apply {
+    from match ab, bc with
+    | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+    | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+    | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+
+    | or.inr ⟨ eq, re ⟩, or.inr ⟨ eq', re' ⟩ := begin
+        clear _match, cases eq, cases eq',
+        from or.inr ⟨ rfl, match re, re' with
+        | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+        | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+        | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+        | or.inr ⟨ eq, le ⟩, or.inr ⟨ eq', le' ⟩ :=
+          or.inr ⟨ trans eq eq', le_trans le le' ⟩
+        end ⟩
+      end
     end
-  end
-| ._ ._ (apply D as) _ (Σ# _) _ _ := true.intro
-| ._ ._ (apply D as) _ (_ |ₛ _) _ _ := true.intro
-| ._ ._ (apply D as) _ (ν(_)_) _ _ := true.intro
+  },
 
-| ._ ._ (Σ# As) (Σ# Bs) (Σ# Cs) ab bc := species.le_trans As Bs Cs ab bc
-| ._ ._ (Σ# As) _ (_ |ₛ _) _ _ := true.intro
-| ._ ._ (Σ# As) _ (ν(_)_) _ _ := true.intro
-
-| ._ ._ (A₁ |ₛ B₁) (A₂ |ₛ B₂) (A₃ |ₛ B₃) ab bc :=
-  match ab, bc with
-  | or.inl ⟨ neq, le ⟩, or.inl ⟨ neq', le' ⟩ :=
-      or.inl ⟨ lt_not_eq le le' neq, species.le_trans _ _ _ le le' ⟩
-  | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-  | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
-  | or.inr ⟨ eq, lt ⟩, or.inr ⟨ eq', lt' ⟩ :=
-    or.inr ⟨ trans eq eq', species.le_trans _ _ _ lt lt' ⟩
-  end
-| ._ ._ (A₁ |ₛ B₁) _ (ν(_)_) _ _ := true.intro
-
-| ._ ._ (ν(M₁) A₁) (ν(M₂) A₂) (ν(M₃) A₃) ab bc :=
-  match ab, bc with
-  | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
-  | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-  | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
-  | or.inr ⟨ eq, lt ⟩, or.inr ⟨ eq', lt' ⟩ :=
-    by { clear _match, subst eq, subst eq', from or.inr ⟨ rfl, species.le_trans _ _ _ lt lt' ⟩ }
-  end
-
-| ._ ._ empty _ _ _ _ := true.intro
-| ._ ._ (cons π₁ A₁ As₁) (cons π₂ A₂ As₂) (cons π₃ A₃ As₃) ab bc :=
-  match ab, bc with
-  | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
-  | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-  | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
-
-  | or.inr ⟨ eq, re ⟩, or.inr ⟨ eq', re' ⟩ := begin
-      clear _match, cases eq, cases eq',
-      from or.inr ⟨ rfl, match re, re' with
-      | or.inl ⟨ neq, le ⟩, or.inl ⟨ neq', le' ⟩ :=
-        or.inl ⟨ lt_not_eq le le' neq, species.le_trans _ _ _ le le' ⟩
-      | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
-      | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
-      | or.inr ⟨ eq, le ⟩, or.inr ⟨ eq', le' ⟩ :=
-        or.inr ⟨ trans eq eq', species.le_trans _ _ _ le le' ⟩
-      end ⟩
+  case species.choice { from A_ih _ _ ab bc, },
+  case species.parallel {
+    from match ab, bc with
+    | or.inl ⟨ neq, le ⟩, or.inl ⟨ neq', le' ⟩ :=
+        or.inl ⟨ lt_not_eq le le' neq, A_ih_a _ _ le le' ⟩
+    | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+    | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+    | or.inr ⟨ eq, lt ⟩, or.inr ⟨ eq', lt' ⟩ :=
+      or.inr ⟨ trans eq eq', A_ih_a_1 _ _ lt lt' ⟩
     end
-  end
+  },
+  case species.restriction {
+    from match ab, bc with
+    | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+    | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+    | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+    | or.inr ⟨ eq, lt ⟩, or.inr ⟨ eq', lt' ⟩ :=
+      by { clear _match, subst eq, subst eq', from or.inr ⟨ rfl, A_ih _ _ lt lt' ⟩ }
+    end
+  },
+  case species.whole.cons {
+    from match ab, bc with
+    | or.inl lt, or.inl lt' := or.inl (lt_trans lt lt')
+    | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+    | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
 
--- All the impossible cases
-| ._ ._ (apply _ _) nil _ f _ := false.elim f
-| ._ ._ (Σ# _) nil _ f _ := false.elim f
-| ._ ._ (_ |ₛ _) nil _ f _ := false.elim f
-| ._ ._ (ν(_) _) nil _ f _ := false.elim f
-| ._ ._ _ (Σ# _) (apply _ _) _ f := false.elim f
-| ._ ._ _ (_ |ₛ _) (Σ# _) _ f := false.elim f
-| ._ ._ _ (ν(M) _) (Σ# _) _ f := false.elim f
-| ._ ._ (cons _ _ _) empty _ f _ := false.elim f
-| ._ ._ _ (cons _ _ _) empty _ f := false.elim f
+    | or.inr ⟨ eq, re ⟩, or.inr ⟨ eq', re' ⟩ := begin
+        clear _match, cases eq, cases eq',
+        from or.inr ⟨ rfl, match re, re' with
+        | or.inl ⟨ neq, le ⟩, or.inl ⟨ neq', le' ⟩ :=
+          or.inl ⟨ lt_not_eq le le' neq, A_ih_a _ _ le le' ⟩
+        | or.inl lt, or.inr ⟨ eq, _ ⟩ := or.inl (eq ▸ lt)
+        | or.inr ⟨ eq, _ ⟩, or.inl lt := or.inl (symm eq ▸ lt)
+        | or.inr ⟨ eq, le ⟩, or.inr ⟨ eq', le' ⟩ :=
+          or.inr ⟨ trans eq eq', A_ih_a_1 _ _ le le' ⟩
+        end ⟩
+      end
+    end
+  }
+end
 
-protected theorem species.le_total :
-  ∀ {Γ} {k} (A B : whole ω k Γ), species.le A B ∨ species.le B A
+protected theorem species.le_total [decidable_linear_order ℍ] :
+  ∀ {Γ} {k} (A B : whole ℍ ω k Γ), species.le A B ∨ species.le B A
 | ._ ._ nil _ := or.inl true.intro
 | ._ ._ _ nil := or.inr true.intro
 
-| ._ ._ (@apply _ _ m D as) (@apply _ _ n D' bs) :=
+| ._ ._ (@apply _ _ _ m D as) (@apply _ _ _ n D' bs) :=
   match le_total m n with
   | or.inl le :=
     match lt_or_eq_of_le le with
@@ -427,11 +423,11 @@ protected theorem species.le_total :
 
 section
 set_option eqn_compiler.lemmas false
-private noncomputable def species.le_decidable :
-  ∀ {Γ} {k} (A B : whole ω k Γ), decidable (species.le A B)
+private def species.le_decidable [decidable_linear_order ℍ] :
+  ∀ {Γ} {k} (A B : whole ℍ ω k Γ), decidable (species.le A B)
 | ._ ._ nil _ := decidable.true
 
-| ._ ._ (@apply _ _ m D as) (@apply _ _ n D' bs) :=
+| ._ ._ (@apply _ _ _ m D as) (@apply _ _ _ n D' bs) :=
   if eqm : m = n then
     begin
       cases eqm,
@@ -546,8 +542,8 @@ private noncomputable def species.le_decidable :
       end)
 end
 
-noncomputable instance species.whole.decidable_linear_order {Γ} {k} :
-  decidable_linear_order (whole ω k Γ) :=
+instance species.whole.decidable_linear_order [decidable_linear_order ℍ] {Γ} {k} :
+  decidable_linear_order (whole ℍ ω k Γ) :=
   { le := species.le,
     le_refl := species.le_refl,
     le_trans := species.le_trans,
@@ -558,13 +554,13 @@ noncomputable instance species.whole.decidable_linear_order {Γ} {k} :
 
 namespace choice
   @[reducible]
-  def pair (ω Γ : context) : Type := Σ' {f} (π : prefix_expr Γ f), species ω (f Γ)
+  def pair (ℍ : Type) (ω Γ : context) : Type := Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)
 
-  def le {Γ} : pair ω Γ → pair ω Γ → Prop
+  def le [decidable_linear_order ℍ] {Γ} : pair ℍ ω Γ → pair ℍ ω Γ → Prop
   | ⟨ f, π₁, A ⟩ ⟨ g, π₂, B ⟩ :=
       (Σ# whole.cons π₁ A whole.empty) ≤ (Σ# whole.cons π₂ B whole.empty)
 
-  noncomputable instance decidable_le {Γ} : decidable_rel (@le ω Γ)
+  instance decidable_le [decidable_linear_order ℍ] {Γ} : decidable_rel (@le ℍ ω _ Γ)
   | ⟨ f, π₁, A ⟩ ⟨ g, π₂, B ⟩ := by { unfold le, apply_instance }
 end choice
 

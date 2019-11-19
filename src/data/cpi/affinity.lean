@@ -1,4 +1,4 @@
-import data.fin.pi_order data.real.non_neg data.option.order data.pand
+import data.fin.pi_order data.option.order data.pand
 
 namespace cpi
 
@@ -8,22 +8,25 @@ namespace cpi
     the affinities between elements of this matrix.
 -/
 @[derive decidable_eq]
-structure affinity := intro ::
+structure affinity (ℍ : Type) := intro ::
   (arity : ℕ)
-  (f : fin arity → fin arity → option ℝ≥0)
+  (f : fin arity → fin arity → option ℍ)
   (symm : ∀ x y, f x y = f y x)
+
+variables {ℍ : Type}
 
 /- Just show that affinity networks form a decidable linear order. -/
 section ordering
-  def affinity.le : affinity → affinity → Prop
+  def affinity.le [partial_order ℍ] : affinity ℍ → affinity ℍ → Prop
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
-    a < b ∨ (Σ∧ (x : a = b), cast (congr_arg (λ x, fin x → fin x → option ℝ≥0) x) f ≤ g)
+    a < b ∨ (Σ∧ (x : a = b), cast (congr_arg (λ x, fin x → fin x → option ℍ) x) f ≤ g)
 
-  protected theorem affinity.le_refl : ∀ M, affinity.le M M
+  protected theorem affinity.le_refl [partial_order ℍ] :
+    ∀ (M : affinity ℍ), affinity.le M M
   | ⟨ a, f, _ ⟩ := or.inr ⟨ rfl, le_refl f ⟩
 
-  protected theorem affinity.le_trans :
-    ∀ M N O, affinity.le M N → affinity.le N O → affinity.le M O
+  protected theorem affinity.le_trans [partial_order ℍ] :
+    ∀ (M N O : affinity ℍ), affinity.le M N → affinity.le N O → affinity.le M O
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ ⟨ c, h, sh ⟩ (or.inl lt) (or.inl lt')
     := or.inl (lt_trans lt lt')
   | ⟨ a, f, sf ⟩ ⟨ _, g, sg ⟩ ⟨ _, h, sh ⟩ (or.inl lt) (or.inr ⟨ eq.refl b, le ⟩)
@@ -33,8 +36,8 @@ section ordering
   | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ ⟨ _, h, sh ⟩ (or.inr ⟨ eq.refl _, le ⟩) (or.inr ⟨ eq.refl a, le' ⟩)
     := or.inr ⟨ rfl, le_trans le le' ⟩
 
-  protected theorem affinity.le_antisymm :
-    ∀ M N, affinity.le M N → affinity.le N M → M = N
+  protected theorem affinity.le_antisymm [partial_order ℍ] :
+    ∀ (M N : affinity ℍ), affinity.le M N → affinity.le N M → M = N
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ (or.inl lt) (or.inl lt')
     := false.elim (lt_asymm lt lt')
   | ⟨ a, f, sf ⟩ ⟨ _, g, sg ⟩ (or.inl lt) (or.inr ⟨ eq.refl b, le ⟩)
@@ -44,8 +47,8 @@ section ordering
   | ⟨ _, f, sf ⟩ ⟨ _, g, sg ⟩ (or.inr ⟨ eq.refl _, le ⟩) (or.inr ⟨ eq.refl a, le' ⟩)
     := by { simp, from le_antisymm le le' }
 
-  protected theorem affinity.le_total :
-    ∀ M N, affinity.le M N ∨ affinity.le N M
+  protected theorem affinity.le_total [linear_order ℍ] :
+    ∀ (M N : affinity ℍ), affinity.le M N ∨ affinity.le N M
   | ⟨ a, f, _ ⟩ ⟨ b, g, _ ⟩ := begin
     cases le_total a b,
     case or.inl : a_le_b {
@@ -66,8 +69,8 @@ section ordering
     }
   end
 
-  protected noncomputable def affinity.decidable_le :
-    ∀ M N, decidable (affinity.le M N)
+  protected def affinity.decidable_le [decidable_linear_order ℍ] :
+    ∀ (M N : affinity ℍ), decidable (affinity.le M N)
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
     if h : a = b then begin
       subst h,
@@ -82,15 +85,15 @@ section ordering
     else
       is_false (λ x, by { rcases x with _ | ⟨ _, _ ⟩; contradiction })
 
-  instance affinity.linear_order : linear_order affinity :=
+  instance affinity.linear_order [linear_order ℍ] : linear_order (affinity ℍ) :=
     { le := affinity.le,
       le_refl := affinity.le_refl,
       le_trans := affinity.le_trans,
       le_antisymm := affinity.le_antisymm,
       le_total := affinity.le_total }
 
-  noncomputable instance : decidable_linear_order affinity :=
-    { decidable_eq := affinity.decidable_eq,
+  instance [decidable_linear_order ℍ] : decidable_linear_order (affinity ℍ) :=
+    { decidable_eq := affinity.decidable_eq ℍ,
       decidable_le := affinity.decidable_le,
       ..affinity.linear_order }
 

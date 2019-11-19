@@ -7,8 +7,8 @@ namespace cpi
 
     The context parameter represents the "global affinity network", in which
     all processes are evaluated. -/
-inductive process (ω : context) : context → Type
-| one      {Γ} : ℝ≥0 → species ω Γ → process Γ
+inductive process (ℍ : Type) (ω : context) : context → Type
+| one      {Γ} : ℍ → species ℍ ω Γ → process Γ
 | parallel {Γ} : process Γ → process Γ → process Γ
 
 infix ` ◯ `:60 := process.one

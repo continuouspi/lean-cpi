@@ -4,7 +4,7 @@ import data.list.sort
 namespace cpi
 namespace species
 
-variable {ω : context}
+variables {ℍ : Type} {ω : context}
 
 private def drop_var {Γ} {n}
     (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
@@ -21,11 +21,11 @@ private lemma drop_var_compose {Γ} {n}
     case name.extend { from rfl }
   end
 
-private def drop {Γ} {n} {A : species ω (context.extend n Γ)}
-  : level.zero ∉ A → species ω Γ
+private def drop {Γ} {n} {A : species ℍ ω (context.extend n Γ)}
+  : level.zero ∉ A → species ℍ ω Γ
 | free := rename_with A (drop_var (λ l, l ∈ A) free)
 
-private lemma drop_extend {Γ} {n} {A : species ω (context.extend n Γ)} (fr : level.zero ∉ A)
+private lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (fr : level.zero ∉ A)
   : rename name.extend (drop fr) = A
   := begin
     unfold drop,
@@ -37,11 +37,11 @@ private lemma drop_extend {Γ} {n} {A : species ω (context.extend n Γ)} (fr : 
 /-- Splits the parallel component of a restriction into two parts - those
     which can be lifted out of it, and those which cannot. -/
 private def partition_restriction : ∀ {Γ}
-    (M : affinity)
-    (As : list (species ω (context.extend (M.arity) Γ)))
-    (C : species ω (context.extend (M.arity) Γ))
-  , Σ' (As' : list (species ω (context.extend (M.arity) Γ)))
-       (Bs : list (species ω Γ))
+    (M : affinity ℍ)
+    (As : list (species ℍ ω (context.extend (M.arity) Γ)))
+    (C : species ℍ ω (context.extend (M.arity) Γ))
+  , Σ' (As' : list (species ℍ ω (context.extend (M.arity) Γ)))
+       (Bs : list (species ℍ ω Γ))
     , (ν(M) C |ₛ parallel.from_list As)
     ≈ ((ν(M) C |ₛ parallel.from_list As') |ₛ parallel.from_list Bs)
 | Γ M [] C :=
@@ -110,10 +110,10 @@ private def partition_restriction : ∀ {Γ}
 
 /-- Simplifies a restriction as much as possible. This lifts any parallel
     components out of it if possible, and removes the entire thing if possible. -/
-private noncomputable def normalise_restriction: ∀ {Γ}
-    (M : affinity)
-    (A : species ω (context.extend (M.arity) Γ))
-  , Σ' (B : species ω Γ), (ν(M) A) ≈ B
+private def normalise_restriction [decidable_linear_order ℍ] : ∀ {Γ}
+    (M : affinity ℍ)
+    (A : species ℍ ω (context.extend (M.arity) Γ))
+  , Σ' (B : species ℍ ω Γ), (ν(M) A) ≈ B
 | Γ M A :=
   if h : level.zero ∈ A then
     let ⟨ As, Bs, eq ⟩ := partition_restriction M (parallel.to_list A) nil in
@@ -145,12 +145,12 @@ private noncomputable def normalise_restriction: ∀ {Γ}
      end ⟩
 
 
-def equivalence_of : ∀ {k} {Γ}, whole ω k Γ → Type
-| kind.species Γ A := Σ' (B : species ω Γ), A ≈ B
-| kind.choices Γ A := Σ' (B : choices ω Γ), (Σ# A) ≈ (Σ# B)
+def equivalence_of : ∀ {k} {Γ}, whole ℍ ω k Γ → Type
+| kind.species Γ A := Σ' (B : species ℍ ω Γ), A ≈ B
+| kind.choices Γ A := Σ' (B : choices ℍ ω Γ), (Σ# A) ≈ (Σ# B)
 
 /-- Reduce a term to some equivalent normal form. -/
-noncomputable def normalise_to : ∀ {k} {Γ} (A : whole ω k Γ), equivalence_of A
+def normalise_to [decidable_linear_order ℍ] : ∀ {k} {Γ} (A : whole ℍ ω k Γ), equivalence_of A
 | ._ ._ nil := ⟨ nil, refl _ ⟩
 | ._ ._ (apply D as) := ⟨ apply D as, refl _ ⟩
 | ._ Γ (A |ₛ B) :=
@@ -186,14 +186,14 @@ noncomputable def normalise_to : ∀ {k} {Γ} (A : whole ω k Γ), equivalence_o
 
 using_well_founded {
   rel_tac := λ _ _,
-    `[exact ⟨_, measure_wf (λ x, whole.sizeof ω x.fst x.snd.fst x.snd.snd ) ⟩ ],
+    `[exact ⟨_, measure_wf (λ x, whole.sizeof ℍ ω x.fst x.snd.fst x.snd.snd ) ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
 def drop_nu : ∀ {Γ}
-    (M : affinity)
-    (A : species ω (context.extend (M.arity) Γ))
-  , Σ' (B : species ω Γ), (ν(M) A) ≈ B
+    (M : affinity ℍ)
+    (A : species ℍ ω (context.extend (M.arity) Γ))
+  , Σ' (B : species ℍ ω Γ), (ν(M) A) ≈ B
 | Γ M A :=
   let As := parallel.to_list A in
   if h : level.zero ∈ A then
@@ -206,13 +206,13 @@ def drop_nu : ∀ {Γ}
      end ⟩
 
 /-- Reduce a term to some equivalent normal form. -/
-noncomputable def normalise : ∀ {k} {Γ}, whole ω k Γ → whole ω k Γ
+def normalise [decidable_linear_order ℍ] : ∀ {k} {Γ}, whole ℍ ω k Γ → whole ℍ ω k Γ
 | kind.species Γ A := (normalise_to A).fst
 | kind.choices Γ A := (normalise_to A).fst
 
 /-- If two terms reduce to the same thing, then they are equivalent. -/
-lemma normalise_to_equiv :
-  ∀ {Γ} {A B : species ω Γ}
+lemma normalise_to_equiv [decidable_linear_order ℍ] :
+  ∀ {Γ} {A B : species ℍ ω Γ}
   , normalise A = normalise B → A ≈ B
 | Γ A B eq := begin
     unfold normalise at eq,
