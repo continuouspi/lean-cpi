@@ -5,6 +5,7 @@ namespace process
 
 variable {ω : context}
 
+/-- Structural congruence of processes. -/
 inductive equiv {Γ} : process ω Γ → process ω Γ → Prop
 | refl  {A : process ω Γ} : equiv A A
 | trans {A B C : process ω Γ} : equiv A B → equiv B C → equiv A C
@@ -17,7 +18,7 @@ inductive equiv {Γ} : process ω Γ → process ω Γ → Prop
 
 -- Monoidic properties
 | parallel_nil   {P : process ω Γ} {c : ℝ≥0} : equiv (P |ₚ c ◯ species.nil) P
-| parallel_sym   {P Q : process ω Γ} : equiv (P |ₚ Q) (Q |ₚ P)
+| parallel_symm  {P Q : process ω Γ} : equiv (P |ₚ Q) (Q |ₚ P)
 | parallel_assoc {P Q R : process ω Γ} : equiv ((P |ₚ Q) |ₚ R) (P |ₚ (Q |ₚ R))
 
 -- Join identical species together.

@@ -5,10 +5,6 @@ namespace transition
 
 variable {ω : context}
 
-noncomputable instance transition_from.decidable_eq {ω Γ} (ℓ : lookup ω Γ) (A : species ω Γ)
-  : decidable_eq (transition_from ℓ A)
-  := classical.dec_eq _ -- TODO: Make this decidable
-
 private lemma ξ_choice.embed
     {Γ f} (ℓ : lookup ω Γ)
     (π : prefix_expr Γ f) (A : species ω (f Γ)) (As : species.choices ω Γ)
@@ -41,7 +37,7 @@ constant enumerate_choices :
 
 /-- Show that the available transitions from a species is finite and thus
     enumerable.-/
-noncomputable constant enumerate :
+constant enumerate :
   ∀ {Γ} (ℓ : lookup ω Γ) (A : species ω Γ)
   , fintype (transition_from ℓ A)
 /-
@@ -53,6 +49,9 @@ noncomputable constant enumerate :
 | Γ ℓ (Σ# As) := enumerate_choices ℓ As
 | Γ ℓ (ν(M) A) := {!!}
 -/
+
+noncomputable instance {Γ} (ℓ : lookup ω Γ) (A : species ω Γ) : fintype (transition_from ℓ A)
+  := enumerate ℓ A
 
 end transition
 end cpi
