@@ -105,4 +105,4 @@ lemma multiset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
   → multiset.sum_map f xs.val = multiset.sum_map g ys.val
 | mem mem' := congr_arg _ (finset.map_iso f g iso feq xs ys mem mem')
 
-#lint
+#lint -

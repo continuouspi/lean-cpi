@@ -6,6 +6,7 @@ import tactic.lint
 
 variable {α : Type*}
 
+/-- Naive ordering for options -/
 protected def option.le [has_le α] : option α → option α → Prop
 | none _ := true
 | (some x) none := false
@@ -41,6 +42,7 @@ protected theorem option.le_total [linear_order α] :
 instance [linear_order α] : linear_order (option α)
   := { le_total := option.le_total, ..option.partial_order }
 
+/-- A decision proceduer for option ordering -/
 protected def option.decidable_le [has_le α] [dec : decidable_rel ((≤) : α → α → Prop)] :
   ∀ (a b : option α), decidable (option.le a b)
 | none _ := decidable.true
@@ -52,4 +54,4 @@ instance [decidable_linear_order α] : decidable_linear_order (option α)
        decidable_eq := option.decidable_eq,
        ..option.linear_order }
 
-#lint
+#lint -

@@ -110,6 +110,8 @@ namespace upair
     else if eqB : (f b' = b) then ⟨ b', eqB ⟩
     else false.elim (or.elim (quotient.exact eq) (λ x, eqB x.2) (λ x, eqA x.1))
 
+  /-- unpair₁ provides a mechanism to extract elements from a pair which is the
+      result of mapping over a pair of known values. -/
   protected def unpair₁
       {α β : Type u} [deq : decidable_eq β] {f : α → β} (inj : function.injective f)
     : ∀ {a : α} {b : β} {p : upair α}
@@ -154,4 +156,4 @@ namespace upair
       eq
 end upair
 
-#lint
+#lint -

@@ -6,4 +6,4 @@ structure pand {α : Prop} (β : α → Prop) : Prop :=
 
 notation `Σ∧` binders `, ` r:(scoped p, pand p) := r
 
-#lint
+#lint -

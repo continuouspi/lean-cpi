@@ -194,4 +194,4 @@ lemma bind₂_zero_left {α β γ η : Type} [decidable_eq η] [comm_ring β]
 
 end fin_fn
 
-#lint
+#lint -

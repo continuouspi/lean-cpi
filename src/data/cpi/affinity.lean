@@ -17,6 +17,8 @@ variables {ℍ : Type}
 
 /- Just show that affinity networks form a decidable linear order. -/
 section ordering
+  /-- Affinity networks take a lexiographic ordering, with the arity and mapping
+      function. -/
   def affinity.le [partial_order ℍ] : affinity ℍ → affinity ℍ → Prop
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
     a < b ∨ (Σ∧ (x : a = b), cast (congr_arg (λ x, fin x → fin x → option ℍ) x) f ≤ g)
@@ -69,6 +71,7 @@ section ordering
     }
   end
 
+  /-- A decision procedure for affinity network comparison. -/
   protected def affinity.decidable_le [decidable_linear_order ℍ] :
     ∀ (M N : affinity ℍ), decidable (affinity.le M N)
   | ⟨ a, f, sf ⟩ ⟨ b, g, sg ⟩ :=
@@ -101,4 +104,4 @@ end ordering
 
 end cpi
 
-#lint
+#lint -

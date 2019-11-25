@@ -13,6 +13,7 @@ private def le_worker [∀ a, has_le (β a)] [∀ a, has_lt (β a)] (f g : Π a,
   let g' := g ⟨ nat.succ a, p ⟩ in
   f' < g' ∨ (f' = g' ∧ le_worker a (nat.lt_of_succ_lt p) )
 
+/-- f ≤ g is effectively the same as list.map f [0..n] ≤ list.map g [0..n] -/
 protected def le [∀ a, has_le (β a)] [∀ a, has_lt (β a)] (f g : Π a, β a) : Prop :=
   match n, rfl : ∀ (n' : ℕ), n = n' → _ with
   | nat.zero, _ := true
@@ -96,6 +97,7 @@ private def le_decidable_worker
 | nat.zero _ := by { unfold le_worker, by apply_instance }
 | (nat.succ a) p := @or.decidable _ _ _ (@and.decidable _ _ _ (le_decidable_worker a _))
 
+/-- A decision procedure for f ≤ g -/
 protected def le_decidable
   [∀ a, has_le (β a)] [∀ a, has_lt (β a)] [∀ a, decidable_eq (β a)]
   [∀ a, @decidable_rel (β a) (<)] [∀ a, @decidable_rel (β a) (≤)]
@@ -158,4 +160,4 @@ instance [∀ a, decidable_linear_order (β a)] : decidable_linear_order (Π (a 
 end pi
 end fin
 
-#lint
+#lint -
