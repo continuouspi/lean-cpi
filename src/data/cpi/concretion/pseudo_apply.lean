@@ -609,6 +609,18 @@ def pseudo_apply.quotient {Γ a b}
   (λ F G, ⟦ pseudo_apply F G ⟧)
   (λ F G F' G' eqF eqG, quot.sound (pseudo_apply.equiv eqF eqG))
 
+lemma psuedo_apply.quotient.symm {Γ a b} :
+  ∀ (F : quotient (@concretion.setoid ℍ ω Γ a b))
+    (G : quotient (@concretion.setoid ℍ ω Γ b a))
+  , pseudo_apply.quotient F G = pseudo_apply.quotient G F
+| F G := begin
+  rcases quot.exists_rep F with ⟨ F, ⟨ _ ⟩ ⟩,
+  rcases quot.exists_rep G with ⟨ G, ⟨ _ ⟩ ⟩,
+
+  show ⟦pseudo_apply F G⟧ = ⟦pseudo_apply G F⟧,
+  from quot.sound (pseudo_apply.symm F G),
+end
+
 end concretion
 end cpi
 

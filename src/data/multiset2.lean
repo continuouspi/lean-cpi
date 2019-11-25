@@ -2,18 +2,18 @@ import data.finset
 
 /-- Map elements together and sum them. -/
 def multiset.sum_map {α β : Type} [add_comm_monoid β] (f : α → β) (xs : multiset α) : β
-  := multiset.foldr (λ x s, f x + s) (λ a b c, by simp only [add_comm, add_left_comm]) 0 xs
+  := multiset.fold (+) 0 (multiset.map (λ x, f x) xs)
 
-/-- Applying a sum_fold over two finite sets xs ys, where every element of xs
+/-- Applying a map over two finite sets xs ys, where every element of xs
     has a corresponding element in ys, which maps to the same value, results
     in the same sum. -/
-lemma multiset.sum_map.iso_equal {α₁ α₂ β: Type} [add_comm_monoid β]
+lemma finset.map_iso {α₁ α₂ β: Type}
     (f : α₁ → β) (g : α₂ → β) (iso : α₁ ≃ α₂)
     (feq : ∀ x, f x = g (iso.to_fun x))
   : ∀ (xs : finset α₁) (ys : finset α₂)
     , (∀ x, x ∈ xs → iso.to_fun x ∈ ys)
     → (∀ y, y ∈ ys → iso.inv_fun y ∈ xs)
-    → multiset.sum_map f xs.val = multiset.sum_map g ys.val
+    → multiset.map f xs.val = multiset.map g ys.val
 | ⟨ xs, nodupx ⟩ ⟨ ys, nodupy ⟩ efwd erev := begin
   induction xs,
   {
@@ -30,7 +30,7 @@ lemma multiset.sum_map.iso_equal {α₁ α₂ β: Type} [add_comm_monoid β]
 
     case list.cons : x xs ih {
       -- If we have some x∷xs, then we must have some y∷ys such that x ≃ y.
-      -- By induction we have that sum_map f xs = sum_map g ys.
+      -- By induction we have that map f xs = map g ys.
       -- However, constructing the inductive case is a little annoying, as we
       -- need to show ∀ x, x ∈ xs ↔ x⁻¹ ∈ ys
 
@@ -42,15 +42,14 @@ lemma multiset.sum_map.iso_equal {α₁ α₂ β: Type} [add_comm_monoid β]
       rcases multiset.exists_cons_of_mem ymem with ⟨ ys, ⟨ _ ⟩ ⟩,
 
       suffices
-        : multiset.foldr (λ x s, f x + s) _ 0 (x :: quot.mk setoid.r xs)
-        = multiset.foldr (λ x s, g x + s) _ 0 (iso.to_fun x :: ys),
+        : multiset.map (λ x, f x) (x :: quot.mk setoid.r xs)
+        = multiset.map (λ x, g x) (iso.to_fun x :: ys),
         from this,
-      rw [multiset.foldr_cons, multiset.foldr_cons],
-      simp only [add_zero],
+      simp only [add_zero, multiset.map_cons],
 
-      suffices : multiset.sum_map f (quot.mk setoid.r xs)
-               = multiset.sum_map g ys,
-        refine congr_arg2 has_add.add (feq x) this,
+      suffices : multiset.map f (quot.mk setoid.r xs)
+               = multiset.map g ys,
+        refine congr_arg2 _ (feq x) this,
 
       have nodupx' : multiset.nodup (quot.mk setoid.r xs),
         have eq := multiset.cons_coe x xs,
@@ -95,5 +94,15 @@ lemma multiset.sum_map.iso_equal {α₁ α₂ β: Type} [add_comm_monoid β]
   },
   { from rfl }
 end
+
+/-- finset.map_iso but for sum_map. -/
+lemma multiset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
+    (f : α₁ → β) (g : α₂ → β) (iso : α₁ ≃ α₂)
+    (feq : ∀ x, f x = g (iso.to_fun x))
+    (xs : finset α₁) (ys : finset α₂)
+  : (∀ x, x ∈ xs → iso.to_fun x ∈ ys)
+  → (∀ y, y ∈ ys → iso.inv_fun y ∈ xs)
+  → multiset.sum_map f xs.val = multiset.sum_map g ys.val
+| mem mem' := congr_arg _ (finset.map_iso f g iso feq xs ys mem mem')
 
 #lint

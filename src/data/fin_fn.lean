@@ -10,6 +10,9 @@ structure fin_fn (α : Type*) (β : Type*) [add_monoid β] :=
   (defined : finset α)
   (defined_if : ∀ x, space x ≠ 0 → x ∈ defined)
 
+local attribute [pp_using_anonymous_constructor] fin_fn
+local attribute [pp_using_anonymous_constructor] finset
+
 namespace fin_fn
 section group_instances
   variables (α : Type*) (β : Type*)
@@ -125,8 +128,9 @@ end group_instances
 
 variables {α : Type*} {β : Type*}
 
-/-- semimodule.add_smul, but without the module instance.-/
-lemma smul_add [decidable_eq α] [sr : semiring β] (r s : β) (x : fin_fn α β)
+/-- semimodule.add_smul, but without the semimodule instance.-/
+@[simp]
+lemma add_smul [decidable_eq α] [sr : semiring β] (r s : β) (x : fin_fn α β)
   : (r + s) • x = r • x + s • x := begin
   unfold_projs, simp only [],
   have
@@ -134,6 +138,11 @@ lemma smul_add [decidable_eq α] [sr : semiring β] (r s : β) (x : fin_fn α β
     := funext (λ y, left_distrib (x.space y) r s),
   from ⟨ this, symm (finset.union_self x.defined) ⟩,
 end
+
+/-- add_group.sub_eq_add_neg but without the group instance. -/
+@[simp]
+lemma sub_eq_add_neg [add_group β] [decidable_eq α] (a b : fin_fn α β) : a - b = a + -b :=
+  rfl
 
 /-- Construct a fin_fn from a single value A. This returns a unit vector in the
     basis of 'A'. -/
@@ -152,26 +161,36 @@ def mk_basis' [add_monoid β] [has_one β] (eq : decidable_eq α) (A : α) : fin
   mk_basis A
 
 /-- Map every basis in the fin_fn to another fin_fn, accumulating them together. -/
-def bind {γ : Type} [decidable_eq γ] [add_comm_monoid β] : fin_fn α β → (α → fin_fn γ β) → fin_fn γ β
-| x f := quot.lift_on x.defined.val
-  (list.foldr (λ x xs, f x + xs) 0)
-  (λ a b perm, begin
-    induction perm,
-    case list.perm.nil { from rfl },
-    case list.perm.skip : x l1 l2 perm' ih { simp only [list.foldr, ih] },
-    case list.perm.trans : l1 l2 l3 ab bc ihab ihbc { from (trans ihab ihbc) },
-    case list.perm.swap : a b l {
-      from calc  f b + (f a + list.foldr _ 0 l)
-              = (f b + f a) + list.foldr _ 0 l : symm (add_assoc (f b) (f a) _)
-          ... = (f a + f b) + list.foldr _ 0 l : by rw (add_comm (f b) (f a))
-          ... = f a + (f b + list.foldr _ 0 l) : add_assoc (f a) (f b) _
-    }
-  end)
+def bind {γ : Type} [decidable_eq γ] [semiring β] : fin_fn α β → (α → fin_fn γ β) → fin_fn γ β
+| X f := finset.fold (+) 0 (λ x, X.space x • (f x)) X.defined
+
+lemma bind_zero {γ : Type} [decidable_eq γ] [semiring β] (f : α → fin_fn γ β) :
+  bind 0 f = 0 := rfl
+
+axiom bind_distrib {γ : Type} [decidable_eq α] [decidable_eq γ] [semiring β] :
+  ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
+  , bind (x + y) f = bind x f + bind y f
 
 /-- `bind`, lifted to two `fin_fn`s. -/
-def bind₂ {γ η : Type} [decidable_eq η] [add_comm_monoid β]
+def bind₂ {γ η : Type} [decidable_eq η] [semiring β]
   : fin_fn α β → fin_fn γ β → (α → γ → fin_fn η β) → fin_fn η β
 | x y f := bind x (λ a, bind y (f a))
+
+/-- It doesn't matter which order we do our bind in! -/
+axiom bind₂_swap {α β γ η : Type} [decidable_eq η] [comm_ring β] :
+  ∀ (x : fin_fn α β) (y : fin_fn γ β) (f : (α → γ → fin_fn η β))
+  , bind₂ x y f = bind₂ y x (λ x y, f y x)
+
+lemma bind₂_zero {γ η : Type} [decidable_eq η] [semiring β] (f : α → γ → fin_fn η β) :
+  bind₂ 0 0 f = 0 := rfl
+
+lemma bind₂_zero_right {γ η : Type} [decidable_eq η] [semiring β]
+  (x : fin_fn γ β) (f : α → γ → fin_fn η β) :
+  bind₂ 0 x f = 0 := rfl
+
+lemma bind₂_zero_left {α β γ η : Type} [decidable_eq η] [comm_ring β]
+  (x : fin_fn α β) (f : α → γ → fin_fn η β) :
+  bind₂ x 0 f = 0 := by { rw (bind₂_swap x 0 f), from rfl }
 
 end fin_fn
 
