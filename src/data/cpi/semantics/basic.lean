@@ -1,177 +1,10 @@
-import data.cpi.process data.cpi.transition
-import data.fin_fn data.multiset2 tactic.abel
+import data.cpi.semantics.interaction_tensor data.cpi.transition
+import tactic.abel
 
 namespace cpi
 
-/-- A quotient of all structurally congruent species. -/
-def species' (ℍ : Type) (ω Γ : context) := quotient (@species.setoid ℍ ω Γ)
-
-/-- A quotient of all structurally congruent species which are prime. -/
-def prime_species' (ℍ : Type) (ω Γ : context) := quotient (@prime_species.setoid ℍ ω Γ)
-
-
-def process_space (ℍ : Type) (ω Γ : context) [add_monoid ℍ] := fin_fn (prime_species' ℍ ω Γ) ℍ
-
 variables {ℍ : Type} {ω : context} [linear_ordered_field ℍ] [decidable_eq ℍ]
-
--- Oh no. We make use of lots of non-computable things at this point, so I'm
--- afraid I gave up.
---
--- Right now, I just want to show things work (for some definition of the word),
--- and then fill in the many gaps.
-
-private noncomputable def prime_equal {Γ} :
-  decidable_eq (prime_species' ℍ ω Γ) := classical.dec_eq _
-
-private noncomputable def concretion_equal {Γ} :
-  decidable_eq ( quotient (@species.setoid ℍ ω Γ)
-               × (Σ' (b y : ℕ), quotient (@concretion.setoid ℍ ω Γ b y)) × name Γ)
-  := classical.dec_eq _
-
 local attribute [instance] prime_equal concretion_equal
-
--- instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
---   := by { unfold process_space, apply_instance }
-noncomputable instance process_space.add_comm_monoid {ω Γ} : add_comm_monoid (process_space ℍ ω Γ)
-  := fin_fn.add_comm_monoid _ ℍ
-
-instance process_space.has_neg {ω Γ} : has_neg (process_space ℍ ω Γ)
-  := fin_fn.has_neg _ ℍ
-
-noncomputable instance process_space.has_sub {ω Γ} : has_sub (process_space ℍ ω Γ)
-  := fin_fn.has_sub _ ℍ
-
-noncomputable instance process_space.distrib_mul_action {ω Γ} : distrib_mul_action ℍ (process_space ℍ ω Γ)
-  := fin_fn.distrib_mul_action _ ℍ
-
-/-- Convert a single prime species into a process space. This returns one when
-    the process is present, and 0 otherwise. -/
-private noncomputable def to_process_space_of {Γ} (A : prime_species' ℍ ω Γ) : process_space ℍ ω Γ
-  := fin_fn.mk_basis A
-
-/-- Convert a species into a process space. This computes the prime
-    decomposition, and then converts it to a process space. -/
-noncomputable def to_process_space {Γ} (A : multiset (prime_species' ℍ ω Γ)) : process_space ℍ ω Γ
-  := multiset.sum_map to_process_space_of A
-
--- TODO: Show that this satisfies the required function.
-
-def interaction_space (ℍ : Type) (ω Γ : context) [add_monoid ℍ] : Type
-  := fin_fn
-      ( quotient (@species.setoid ℍ ω Γ)
-      × (Σ' (b y), quotient (@concretion.setoid ℍ ω Γ b y))
-      × name Γ)
-      ℍ
-
-noncomputable instance interaction_space.add_comm_monoid {Γ}
-  : add_comm_monoid (interaction_space ℍ ω Γ)
-  := fin_fn.add_comm_monoid _ ℍ
-
-noncomputable instance interaction_space.has_sub {ω Γ} : has_sub (interaction_space ℍ ω Γ)
-  := fin_fn.has_sub _ ℍ
-
-noncomputable instance interaction_space.distrib_mul_action {ω Γ} : distrib_mul_action ℍ (interaction_space ℍ ω Γ)
-  := fin_fn.distrib_mul_action _ ℍ
-
-constant do_prime_decompose :
-  ∀ {Γ}, species' ℍ ω Γ → multiset (quotient (@prime_species.setoid ℍ ω Γ))
-
-noncomputable def to_process_space' {Γ} (A : species' ℍ ω Γ)
-  : process_space ℍ ω Γ
-  := to_process_space (do_prime_decompose A)
-
-/-- The main body of the interaction tensor. Split out into a separate function
-    to make unfolding possible. -/
-private noncomputable def interaction_tensor_worker (M: affinity ℍ)
-  : ( quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
-    × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
-    × name (context.extend M.arity context.nil))
-  → ( quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
-    × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
-    × name (context.extend M.arity context.nil))
-  → process_space ℍ ω (context.extend M.arity context.nil)
-| ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ :=
-  option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
-    if h : bF = yG ∧ yF = bG then
-      let to_space := λ x,
-        @to_process_space' ℍ ω _ _ (context.extend M.arity context.nil) x in
-      begin
-        rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-        have fg := to_space (concretion.pseudo_apply.quotient F G),
-        from aff • (fg - to_space A - to_space B),
-      end
-    else 0)
-
-/-- Show that the interaction tensor worker is commutitive. -/
-private lemma interaction_tensor_worker.comm {M : affinity ℍ}
-  : ∀ (A B : quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
-           × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
-           × name (context.extend M.arity context.nil))
-  , interaction_tensor_worker M A B = interaction_tensor_worker M B A
-| ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ := begin
-  simp only [interaction_tensor_worker],
-  have : M.f (name.to_idx a) (name.to_idx b) = M.f (name.to_idx b) (name.to_idx a)
-       := M.symm _ _,
-  rw this,
-
-  cases M.f (name.to_idx b) (name.to_idx a),
-  case option.none { from rfl },
-  case option.some {
-    simp only [],
-    by_cases this : (bF = yG ∧ yF = bG),
-    {
-      rcases this with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-      let h : bF = bF ∧ yF = yF := ⟨ rfl, rfl ⟩,
-      let g : yF = yF ∧ bF = bF := ⟨ rfl, rfl ⟩,
-      simp only [dif_pos h, dif_pos g, concretion.psuedo_apply.quotient.symm],
-      simp only [fin_fn.sub_eq_add_neg, add_comm, add_left_comm],
-    },
-    {
-      have h : ¬ (bG = yF ∧ yG = bF),
-      { rintros ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩, from this ⟨ rfl, rfl ⟩ },
-      simp only [dif_neg this, dif_neg h],
-    }
-  }
-end
-
-/-- Compute the interaction tensor between two elements in the interaction
-    space. -/
-noncomputable def interaction_tensor {M : affinity ℍ}
-  : interaction_space ℍ ω (context.extend M.arity context.nil)
-  → interaction_space ℍ ω (context.extend M.arity context.nil)
-  → process_space ℍ ω (context.extend M.arity context.nil)
-| x y := fin_fn.bind₂ x y (interaction_tensor_worker M)
-
-infix ` ⊘ `:73 := interaction_tensor
-
-lemma interaction_tensor.zero_left {M : affinity ℍ}
-  : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
-  , A ⊘ 0 = 0
-| A := fin_fn.bind₂_zero_left A _
-
-lemma interaction_tensor.zero_right {M : affinity ℍ}
-  : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
-  , 0 ⊘ A = 0
-| A := fin_fn.bind₂_zero_right A _
-
-lemma interaction_tensor.comm {M : affinity ℍ}
-    (A B : interaction_space ℍ ω (context.extend M.arity context.nil))
-  : A ⊘ B = B ⊘ A := begin
-  suffices : (λ x y, interaction_tensor_worker M x y)
-           = (λ x y, interaction_tensor_worker M y x),
-  { show fin_fn.bind₂ A B (interaction_tensor_worker M)
-       = fin_fn.bind₂ B A (λ x y, interaction_tensor_worker M x y),
-    -- Sneaky use of η-expanding one function to make sure the rewrite applies.
-    rw this,
-    from fin_fn.bind₂_swap A B (interaction_tensor_worker M) },
-
-  from funext (λ x, funext (interaction_tensor_worker.comm x)),
-end
-
-lemma interaction_tensor.distrib {M : affinity ℍ}
-    (A B C : interaction_space ℍ ω (context.extend M.arity context.nil))
-  : (A + B) ⊘ C = A ⊘ C + B ⊘ C
-  := by simp only [interaction_tensor, fin_fn.bind₂, fin_fn.bind_distrib]
 
 /-- Maps a potential transition to the interaction space. -/
 private noncomputable def potential_interaction_space {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
@@ -197,14 +30,17 @@ end
 | _ (τ@'_) E E' t t' _ _ := rfl
 | _ (τ⟨_⟩) E E' t t' _ _ := rfl
 
-/-- Maps a spontanious/immediate transition to a process space. -/
+/-- Maps a spontanious/immediate transition to a process space.
+
+    This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
+    components of the definition of d(c ◯ A)/dt. -/
 private noncomputable def immediate_process_space
     {M : affinity ℍ} {ℓ : lookup ℍ ω (context.extend M.arity context.nil)} {A : species ℍ ω (context.extend M.arity context.nil)}
   : transition.transition_from ℓ A
   → process_space ℍ ω (context.extend M.arity context.nil)
 | ⟨ _, # a , _, tr ⟩ := 0
 | ⟨ _, τ@'k, production.species B, tr ⟩ :=
-  k • (to_process_space' ⟦ B ⟧ - to_process_space' ⟦ A ⟧)
+  k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧)
 | ⟨ _, τ⟨ n ⟩, production.species B, tr ⟩ :=
   let arity := quot.lift_on n
     (λ ⟨ a, b ⟩, M.f (name.to_idx a) (name.to_idx b))
@@ -213,7 +49,7 @@ private noncomputable def immediate_process_space
       from rfl,
       from M.symm (name.to_idx a₁) (name.to_idx b₁),
     end) in
-  option.cases_on arity 0 (λ k, k • (to_process_space' ⟦ B ⟧ - to_process_space' ⟦ A ⟧))
+  option.cases_on arity 0 (λ k, k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧))
 
 private lemma immediate_process_space.equiv
     {M : affinity ℍ} {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
@@ -238,7 +74,7 @@ end
   rw [‹⟦ A ⟧ = ⟦ B ⟧›, ‹⟦ E ⟧ = ⟦ E' ⟧›],
 end
 
-/-- The vector space of potential interactions of a process. -/
+/-- The vector space of potential interactions of a process (∂P). -/
 noncomputable def process_potential
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : process ℍ ω (context.extend M.arity context.nil)
@@ -263,6 +99,7 @@ lemma process_potential.nil_zero
              smul_zero],
 end
 
+/-- The vector space of immediate actions of a process (dP/dt)-/
 noncomputable def process_immediate
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : process ℍ ω (context.extend M.arity context.nil)
@@ -355,14 +192,12 @@ private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
     (Ps : process_space ℍ ω (context.extend (M.arity) context.nil))
   : (c • Ds) ⊘ (d • Ds) + (((1 : ℍ) / 2) • (c • Ds) ⊘ (c • Ds) + ((1 : ℍ) / 2) • (d • Ds) ⊘ (d • Ds))
   = ((1 : ℍ) / 2) • (c • Ds + d • Ds) ⊘ (c • Ds + d • Ds) := begin
-  rw [interaction_tensor.distrib (c • Ds) (d • Ds),
-      interaction_tensor.comm _ (c • Ds + d • Ds),
-      interaction_tensor.comm _ (c • Ds + d • Ds),
-      interaction_tensor.distrib (c • Ds) (d • Ds),
-      interaction_tensor.distrib (c • Ds) (d • Ds)],
-
-  simp only [smul_add],
   generalize ehalf : (1 : ℍ) / 2 = half,
+
+  rw [interaction_tensor.left_distrib (c • Ds) (d • Ds),
+      interaction_tensor.right_distrib (c • Ds),
+      interaction_tensor.right_distrib (d • Ds),
+      interaction_tensor.comm (d • Ds) (c • Ds)],
 
   from calc  (c • Ds) ⊘ (d • Ds)
            + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
@@ -383,11 +218,11 @@ private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
              generalize : half • (c • Ds) ⊘ (c • Ds) = cc,
              generalize : half • (d • Ds) ⊘ (d • Ds) = dd,
              abel,
-           end
+            end
 
-       ... = half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (c • Ds)
-           + (half • (c • Ds) ⊘ (d • Ds) + half • (d • Ds) ⊘ (d • Ds))
-           : by simp only [interaction_tensor.comm],
+       ... = half • ((c • Ds) ⊘ (c • Ds) + (c • Ds) ⊘ (d • Ds)
+                    + ((c • Ds) ⊘ (d • Ds) + (d • Ds) ⊘ (d • Ds)))
+           : by simp only [smul_add]
 end
 
 lemma process_immediate.equiv
@@ -457,10 +292,9 @@ lemma process_immediate.equiv
     generalize : process_potential M ℓ R = r,
 
     from calc  p ⊘ q + (p + q) ⊘ r
-             = p ⊘ q + p ⊘ r + q ⊘ r : by rw [interaction_tensor.distrib, add_assoc]
-         ... = q ⊘ r + q ⊘ p + r ⊘ p : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
-         ... = q ⊘ r + (q + r) ⊘ p : by rw [add_assoc, ← interaction_tensor.distrib]
-         ... = q ⊘ r + p ⊘ (q + r) : by rw [interaction_tensor.comm _ p]
+             = p ⊘ q + p ⊘ r + q ⊘ r : by rw [interaction_tensor.left_distrib, add_assoc]
+         ... = q ⊘ r + p ⊘ q + p ⊘ r : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
+         ... = q ⊘ r + p ⊘ (q + r) : by rw [add_assoc, ← interaction_tensor.right_distrib]
   },
   case process.equiv.join : A c d {
     simp only [process_immediate, process_potential],
@@ -477,6 +311,118 @@ lemma process_immediate.equiv
 
   }
 end
+
+axiom process_potential.equiv2
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
+    (ξ : interaction_space ℍ ω (context.extend M.arity context.nil))
+  , P ≡⁺ Q
+  → process_potential M ℓ P ⊘ ξ = process_potential M ℓ Q ⊘ ξ
+/-
+| P Q ξ eq := begin
+  induction eq,
+  case process.equiv2.refl { from rfl, },
+  case process.equiv2.symm : P Q _ ih { from symm ih },
+  case process.equiv2.trans : P Q R _ _ pq qr { from trans pq qr },
+  case process.equiv2.ξ_species : c A B eq {
+    rw process_potential.equiv M ℓ (process.equiv.ξ_species eq),
+  },
+  case process.equiv2.ξ_parallel₁ : P P' Q eq ih {
+    simp only [process_potential, interaction_tensor.left_distrib, ih],
+  },
+  case process.equiv2.ξ_parallel₂ : P Q Q' eq ih {
+    simp only [process_potential, interaction_tensor.left_distrib, ih],
+  },
+
+  case process.equiv2.parallel_nil {
+    rw process_potential.equiv M ℓ process.equiv.parallel_nil,
+  },
+  case process.equiv2.parallel_symm {
+    rw process_potential.equiv M ℓ process.equiv.parallel_symm,
+  },
+  case process.equiv2.parallel_assoc {
+    rw process_potential.equiv M ℓ process.equiv.parallel_assoc,
+  },
+  case process.equiv2.join {
+    rw process_potential.equiv M ℓ process.equiv.join,
+  },
+
+  case process.equiv2.split : A B c {
+    simp only [process_potential, interaction_tensor.left_distrib],
+
+    generalize eqab
+      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val)
+      = ab,
+    generalize eqa
+      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
+      = a,
+    generalize eqb
+      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val)
+      = b,
+    sorry,
+  },
+end
+-/
+
+axiom process_immediate.equiv2
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
+  , P ≡⁺ Q → process_immediate M ℓ P = process_immediate M ℓ Q
+/-
+| P Q eq := begin
+  induction eq,
+  case process.equiv2.refl { from rfl, },
+  case process.equiv2.symm : P Q _ ih { from symm ih },
+  case process.equiv2.trans : P Q R _ _ pq qr { from trans pq qr },
+  case process.equiv2.ξ_species : c A B eq {
+    from process_immediate.equiv M ℓ (process.equiv.ξ_species eq),
+  },
+  case process.equiv2.ξ_parallel₁ : P P' Q eq ih {
+    unfold process_immediate,
+    rw [process_potential.equiv2 M ℓ _ eq, ih],
+  },
+  case process.equiv2.ξ_parallel₂ : P Q Q' eq ih {
+    unfold process_immediate,
+    rw [interaction_tensor.comm _ _,
+        process_potential.equiv2 M ℓ _ eq,
+        interaction_tensor.comm _ _,
+        ih],
+  },
+
+  case process.equiv2.parallel_nil {
+    from process_immediate.equiv M ℓ process.equiv.parallel_nil,
+  },
+  case process.equiv2.parallel_symm {
+    from process_immediate.equiv M ℓ process.equiv.parallel_symm,
+  },
+  case process.equiv2.parallel_assoc {
+    from process_immediate.equiv M ℓ process.equiv.parallel_assoc,
+  },
+  case process.equiv2.join {
+    from process_immediate.equiv M ℓ process.equiv.join,
+  },
+
+  case process.equiv2.split : A B c {
+    simp only [process_immediate],
+
+    generalize eqPab : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val) = Pab,
+    generalize eqPa : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ A)).val) = Pa,
+    generalize eqPb : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ B)).val) = Pb,
+
+    rw [process_potential.equiv2 M ℓ _ process.equiv2.split,
+        interaction_tensor.comm (process_potential M ℓ (c ◯ A |ₚ c ◯ B)) _,
+        process_potential.equiv2 M ℓ _ process.equiv2.split],
+    simp only [process_potential],
+
+    generalize eqDab : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val) = Dab,
+    generalize eqDa : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val) = Da,
+    generalize eqDb : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val) = Db,
+
+    simp only [interaction_tensor.left_distrib, interaction_tensor.right_distrib, smul_add],
+    simp only [add_comm, add_left_comm],
+  }
+end
+-/
 
 end cpi
 
