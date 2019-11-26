@@ -104,6 +104,12 @@ end)
 def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
 | Ps := process.from_prime_multiset Ps.space Ps.defined.val
 
+/-- Convert a class of equivalent processes into a process space. -/
+constant process.to_space' {Γ} : process' ℍ ω Γ → process_space ℍ ω Γ
+
+axiom process.through_space {Γ} :
+  ∀ (P : process_space ℍ ω Γ), P = process.to_space' (process.from_space P)
+
 end cpi
 
 #lint

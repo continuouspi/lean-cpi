@@ -92,7 +92,7 @@ instance equiv2.is_refl {Γ} : is_refl (process ℍ ω Γ) equiv2 := ⟨ λ _, e
 def equiv2.setoid {Γ} : setoid (process ℍ ω Γ) :=
   ⟨ equiv2, ⟨ @equiv2.refl _ _ _ Γ, @equiv2.symm _ _ _ Γ, @equiv2.trans _ _ _ Γ ⟩ ⟩
 
-lemma extend_equiv {Γ} : ∀ {P Q : process ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
+lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
 | P Q eq := begin
   induction eq,
   case equiv.refl { from equiv2.refl },
@@ -106,6 +106,10 @@ lemma extend_equiv {Γ} : ∀ {P Q : process ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
   case equiv.parallel_assoc { from equiv2.parallel_assoc },
   case equiv.join { from equiv2.join },
 end
+
+/-- Convert a process' to a process'2. -/
+def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℍ ω _ Γ) → quotient (@equiv2.setoid ℍ ω _ Γ)
+| P := quot.lift_on P (quot.mk (≡⁺)) (λ P Q r, quot.sound (equiv2.of_equiv r))
 
 end process
 
