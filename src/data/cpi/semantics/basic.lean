@@ -312,6 +312,20 @@ lemma process_immediate.equiv
   }
 end
 
+/-- dP/dt lifted to quotients. -/
+noncomputable def process_immediate.quot
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+  : process' ℍ ω (context.extend M.arity context.nil)
+  → process_space ℍ ω (context.extend M.arity context.nil)
+| P := quot.lift_on P (process_immediate M ℓ) (λ P Q, process_immediate.equiv M ℓ)
+
+/-- dP/dt lifted to process spaces. -/
+noncomputable def process_immediate.space
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+  : process_space ℍ ω (context.extend M.arity context.nil)
+  → process_space ℍ ω (context.extend M.arity context.nil)
+| P := process_immediate.quot M ℓ (process.from_space P)
+
 axiom process_potential.equiv2
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
@@ -426,4 +440,4 @@ end
 
 end cpi
 
-#lint
+#lint-

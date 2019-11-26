@@ -76,16 +76,17 @@ noncomputable def process.to_space {Γ} : process ℍ ω Γ → process_space �
 | (c ◯ A) := c • to_process_space ⟦ A ⟧
 | (P |ₚ Q) := process.to_space P + process.to_space Q
 
-private def process.from_primes {Γ} (P : process_space ℍ ω Γ) : list (prime_species' ℍ ω Γ) → process' ℍ ω Γ
+/-- Convert a list of prime species into a process-/
+def process.from_primes {Γ} (f : prime_species' ℍ ω Γ → ℍ) : list (prime_species' ℍ ω Γ) → process' ℍ ω Γ
 | [] := ⟦ 0 ◯ nil ⟧
 | (A :: As) :=
-  let A' := quot.lift_on A (λ B, ⟦ P.space A ◯ B.val ⟧)
+  let A' := quot.lift_on A (λ B, ⟦ f A ◯ B.val ⟧)
               (λ A B r, quot.sound (process.equiv.ξ_species r))
   in process.parallel.quot.mk A' (process.from_primes As)
 
-/-- Convert a process into a process space. -/
-def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
-| Ps := quot.lift_on Ps.defined.val (process.from_primes Ps) (λ P Q r, begin
+/-- Convert a multiset of prime species into a process. -/
+def process.from_prime_multiset {Γ} (f : prime_species' ℍ ω Γ → ℍ) : multiset (prime_species' ℍ ω Γ) → process' ℍ ω Γ
+| Ps := quot.lift_on Ps (process.from_primes f) (λ P Q r, begin
   induction r,
   case list.perm.nil { from rfl },
   case list.perm.trans : A B C _ _ ab bc { from trans ab bc },
@@ -94,10 +95,14 @@ def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
     simp only [process.from_primes],
     rcases quot.exists_rep A with ⟨ A, eq ⟩, subst eq,
     rcases quot.exists_rep B with ⟨ B, eq ⟩, subst eq,
-    rcases quot.exists_rep (process.from_primes Ps As) with ⟨ As, eq ⟩, rw ← eq, clear eq,
+    rcases quot.exists_rep (process.from_primes f As) with ⟨ As, eq ⟩, rw ← eq, clear eq,
     from quot.sound process.equiv.parallel_symm₁,
   },
 end)
+
+/-- Convert a process space into a process. -/
+def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
+| Ps := process.from_prime_multiset Ps.space Ps.defined.val
 
 end cpi
 

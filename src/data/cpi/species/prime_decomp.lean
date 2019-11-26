@@ -137,7 +137,7 @@ using_well_founded {
 /-- Decompose a species into its multiset of prime species. -/
 constant do_prime_decompose {Γ} :
   ∀ (A : species' ℍ ω Γ)
-  , Σ' (As : multiset (quotient (@prime_species.setoid ℍ ω Γ)))
+  , Σ' (As : multiset (prime_species' ℍ ω Γ))
     , parallel.from_prime_decompose As = A
 
 end species
