@@ -28,7 +28,10 @@ instance prime_species.setoid {ω Γ} : setoid (prime_species ℍ ω Γ)
 def prime_species.unwrap {ω Γ} : quotient (@prime_species.setoid ℍ ω Γ) → quotient (@species.setoid ℍ ω Γ)
 | A := quot.lift_on A (λ B, ⟦ B.val ⟧) (λ _ _ eq, quot.sound eq)
 
+/-- A quotient of all structurally congruent species which are prime. -/
+def prime_species' (ℍ : Type) (ω Γ : context) := quotient (@prime_species.setoid ℍ ω Γ)
+
 end species
 end cpi
 
-#lint
+#lint-

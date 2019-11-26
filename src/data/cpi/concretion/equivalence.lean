@@ -94,4 +94,4 @@ protected lemma equiv.parallel_assoc₃
 end concretion
 end cpi
 
-#lint
+#lint-

@@ -96,7 +96,8 @@ namespace equivalent
     case ν_swap₂ : Γ M N { from ν_swap₁ M N },
   end
 
-  protected def symm_symm :
+  /-- Flipping an equivalence relation twice gives the original. -/
+  protected lemma symm_symm :
     ∀ {Γ} {A B : species ℍ ω Γ} (eq : equivalent A B)
     , eq = equivalent.symm (equivalent.symm eq)
   | Γ A B eq := begin
@@ -506,6 +507,10 @@ section examples
 end examples
 
 end species
+
+/-- A quotient of all structurally congruent species. -/
+def species' (ℍ : Type) (ω Γ : context) := quotient (@species.setoid ℍ ω Γ)
+
 end cpi
 
-#lint
+#lint-

@@ -134,7 +134,13 @@ using_well_founded {
   dec_tac := tactic.fst_dec_tac,
 }
 
+/-- Decompose a species into its multiset of prime species. -/
+constant do_prime_decompose {Γ} :
+  ∀ (A : species' ℍ ω Γ)
+  , Σ' (As : multiset (quotient (@prime_species.setoid ℍ ω Γ)))
+    , parallel.from_prime_decompose As = A
+
 end species
 end cpi
 
-#lint
+#lint-

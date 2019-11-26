@@ -108,4 +108,4 @@ lemma interaction_tensor.right_distrib {M : affinity ℍ}
 
 end cpi
 
-#lint
+#lint-

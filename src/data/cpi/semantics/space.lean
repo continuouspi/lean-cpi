@@ -3,12 +3,6 @@ import data.fin_fn data.multiset2
 
 namespace cpi
 
-/-- A quotient of all structurally congruent species. -/
-def species' (ℍ : Type) (ω Γ : context) := quotient (@species.setoid ℍ ω Γ)
-
-/-- A quotient of all structurally congruent species which are prime. -/
-def prime_species' (ℍ : Type) (ω Γ : context) := quotient (@prime_species.setoid ℍ ω Γ)
-
 /-- A vector-space representation of processes, mapping prime species into their
     concentrations. -/
 def process_space (ℍ : Type) (ω Γ : context) [add_monoid ℍ] := fin_fn (prime_species' ℍ ω Γ) ℍ
@@ -45,17 +39,13 @@ noncomputable instance process_space.has_sub {ω Γ} : has_sub (process_space �
 noncomputable instance process_space.distrib_mul_action {ω Γ} : distrib_mul_action ℍ (process_space ℍ ω Γ)
   := fin_fn.distrib_mul_action _ ℍ
 
-/-- Decompose a species into its multiset of prime species. -/
-constant do_prime_decompose :
-  ∀ {Γ}, species' ℍ ω Γ → multiset (quotient (@prime_species.setoid ℍ ω Γ))
-
 /-- Convert a species into a process space with a unit vector for each element
     of the prime decomposition.
 
     This is defined as ⟨A⟩ within the paper. -/
 noncomputable def to_process_space {Γ} (A : species' ℍ ω Γ)
   : process_space ℍ ω Γ
-  := multiset.sum_map fin_fn.mk_basis  (do_prime_decompose A)
+  := multiset.sum_map fin_fn.mk_basis (do_prime_decompose A).1
 
 -- TODO: Show that this satisfies the required definitions:
 -- ⟨A⟩ = 0
@@ -80,6 +70,34 @@ noncomputable instance interaction_space.has_sub {ω Γ} : has_sub (interaction_
 
 noncomputable instance interaction_space.distrib_mul_action {ω Γ} : distrib_mul_action ℍ (interaction_space ℍ ω Γ)
   := fin_fn.distrib_mul_action _ ℍ
+
+/-- Convert a process into a process space. -/
+noncomputable def process.to_space {Γ} : process ℍ ω Γ → process_space ℍ ω Γ
+| (c ◯ A) := c • to_process_space ⟦ A ⟧
+| (P |ₚ Q) := process.to_space P + process.to_space Q
+
+private def process.from_primes {Γ} (P : process_space ℍ ω Γ) : list (prime_species' ℍ ω Γ) → process' ℍ ω Γ
+| [] := ⟦ 0 ◯ nil ⟧
+| (A :: As) :=
+  let A' := quot.lift_on A (λ B, ⟦ P.space A ◯ B.val ⟧)
+              (λ A B r, quot.sound (process.equiv.ξ_species r))
+  in process.parallel.quot.mk A' (process.from_primes As)
+
+/-- Convert a process into a process space. -/
+def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
+| Ps := quot.lift_on Ps.defined.val (process.from_primes Ps) (λ P Q r, begin
+  induction r,
+  case list.perm.nil { from rfl },
+  case list.perm.trans : A B C _ _ ab bc { from trans ab bc },
+  case list.perm.skip : A As Bs _ ih { simp only [process.from_primes, ih] },
+  case list.perm.swap : A B As {
+    simp only [process.from_primes],
+    rcases quot.exists_rep A with ⟨ A, eq ⟩, subst eq,
+    rcases quot.exists_rep B with ⟨ B, eq ⟩, subst eq,
+    rcases quot.exists_rep (process.from_primes Ps As) with ⟨ As, eq ⟩, rw ← eq, clear eq,
+    from quot.sound process.equiv.parallel_symm₁,
+  },
+end)
 
 end cpi
 

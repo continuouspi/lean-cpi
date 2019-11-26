@@ -16,4 +16,4 @@ infixr ` |ₚ `:50 := process.parallel
 
 end cpi
 
-#lint
+#lint-
