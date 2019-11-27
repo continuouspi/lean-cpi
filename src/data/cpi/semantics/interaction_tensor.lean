@@ -2,7 +2,7 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℍ : Type} {ω : context} [linear_ordered_field ℍ] [decidable_eq ℍ]
+variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ]
 local attribute [instance] prime_equal concretion_equal
 
 /-- The main body of the interaction tensor. Split out into a separate function

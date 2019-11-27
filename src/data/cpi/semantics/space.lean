@@ -1,5 +1,5 @@
 import data.cpi.process data.cpi.concretion
-import data.fin_fn data.multiset2
+import data.fin_fn data.multiset2 algebra.half_ring
 
 namespace cpi
 
@@ -25,7 +25,7 @@ noncomputable def concretion_equal {ℍ} {ω} {Γ} :
                × (Σ' (b y : ℕ), quotient (@concretion.setoid ℍ ω Γ b y)) × name Γ)
   := classical.dec_eq _
 
-variables {ℍ : Type} {ω : context} [linear_ordered_field ℍ] [decidable_eq ℍ]
+variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ]
 local attribute [instance] prime_equal concretion_equal
 
 -- instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
@@ -107,8 +107,12 @@ def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
 /-- Convert a class of equivalent processes into a process space. -/
 constant process.to_space' {Γ} : process' ℍ ω Γ → process_space ℍ ω Γ
 
-axiom process.through_space {Γ} :
-  ∀ (P : process_space ℍ ω Γ), P = process.to_space' (process.from_space P)
+axiom process.from_inverse {Γ} : function.left_inverse process.to_space' (@process.from_space ℍ ω _ _ Γ)
+
+/-- Show that process spaces can be embeeded into equivalence classes of processes. -/
+def process.space_embed {Γ} : process_space ℍ ω Γ ↪ process' ℍ ω Γ :=
+  { to_fun := process.from_space,
+    inj := function.injective_of_left_inverse process.from_inverse }
 
 end cpi
 

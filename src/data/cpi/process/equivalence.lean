@@ -109,7 +109,7 @@ end
 
 /-- Convert a process' to a process'2. -/
 def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℍ ω _ Γ) → quotient (@equiv2.setoid ℍ ω _ Γ)
-| P := quot.lift_on P (quot.mk (≡⁺)) (λ P Q r, quot.sound (equiv2.of_equiv r))
+| P := quot.lift_on P (@quotient.mk _ equiv2.setoid) (λ P Q r, quot.sound (equiv2.of_equiv r))
 
 end process
 

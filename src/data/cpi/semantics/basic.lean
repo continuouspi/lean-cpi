@@ -3,7 +3,7 @@ import tactic.abel
 
 namespace cpi
 
-variables {ℍ : Type} {ω : context} [linear_ordered_field ℍ] [decidable_eq ℍ]
+variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ]
 local attribute [instance] prime_equal concretion_equal
 
 /-- Maps a potential transition to the interaction space. -/
@@ -107,7 +107,7 @@ noncomputable def process_immediate
 | (c ◯ A) :=
   let transitions := transition.enumerate ℓ A in
   c • multiset.sum_map immediate_process_space transitions.elems.val
-  + ((1 : ℍ) / 2) • (process_potential M ℓ (c ◯ A) ⊘ process_potential M ℓ (c ◯ A))
+  + (½ : ℍ) • (process_potential M ℓ (c ◯ A) ⊘ process_potential M ℓ (c ◯ A))
 | (P |ₚ Q)
   := process_immediate P + process_immediate Q
    + (process_potential M ℓ P ⊘ process_potential M ℓ Q)
@@ -190,9 +190,9 @@ end
 private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
     (Ds : interaction_space ℍ ω (context.extend (M.arity) context.nil))
     (Ps : process_space ℍ ω (context.extend (M.arity) context.nil))
-  : (c • Ds) ⊘ (d • Ds) + (((1 : ℍ) / 2) • (c • Ds) ⊘ (c • Ds) + ((1 : ℍ) / 2) • (d • Ds) ⊘ (d • Ds))
-  = ((1 : ℍ) / 2) • (c • Ds + d • Ds) ⊘ (c • Ds + d • Ds) := begin
-  generalize ehalf : (1 : ℍ) / 2 = half,
+  : (c • Ds) ⊘ (d • Ds) + ((½ : ℍ) • (c • Ds) ⊘ (c • Ds) + (½ : ℍ) • (d • Ds) ⊘ (d • Ds))
+  = (½ : ℍ) • (c • Ds + d • Ds) ⊘ (c • Ds + d • Ds) := begin
+  generalize ehalf : (½ : ℍ) = half,
 
   rw [interaction_tensor.left_distrib (c • Ds) (d • Ds),
       interaction_tensor.right_distrib (c • Ds),
@@ -208,7 +208,7 @@ private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
 
        ... = (half + half) • (c • Ds) ⊘ (d • Ds)
            + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
-           : by rw [← add_halves (1 : ℍ), ← ehalf]
+           : by rw [half_ring.one_is_two_halves, ← ehalf]
 
        ... = half • (c • Ds) ⊘ (c • Ds) + half • (c • Ds) ⊘ (d • Ds)
            + (half • (c • Ds) ⊘ (d • Ds) + half • (d • Ds) ⊘ (d • Ds))
@@ -303,8 +303,8 @@ lemma process_immediate.equiv
     generalize : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ A)).val) = Ps,
 
     suffices
-      : (c • Ds) ⊘ (d • Ds) + (((1 : ℍ) / 2) • ((c • Ds) ⊘ (c • Ds)) + ((1 : ℍ) / 2) • (d • Ds) ⊘ (d • Ds))
-      = ((1 : ℍ) / 2) • ((c • Ds + d • Ds) ⊘ (c • Ds + d • Ds)),
+      : (c • Ds) ⊘ (d • Ds) + ((½ : ℍ) • ((c • Ds) ⊘ (c • Ds)) + (½ : ℍ) • (d • Ds) ⊘ (d • Ds))
+      = (½ : ℍ) • ((c • Ds + d • Ds) ⊘ (c • Ds + d • Ds)),
       { simp only [add_assoc, add_comm, fin_fn.add_smul, add_left_comm, this] },
 
     from process_immediate.join c d Ds Ps,
