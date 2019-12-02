@@ -1,4 +1,4 @@
-import data.cpi.semantics.basic
+import data.cpi.semantics.basic data.mv_polynomial
 
 namespace cpi
 
@@ -21,7 +21,7 @@ inductive all_species
 
 | complete :
   ∀ (As : finset (prime_species' ℍ ω (context.extend M.arity context.nil)))
-  , As = (process_immediate.quot M ℓ (process.from_prime_multiset (λ _, 1) As.val)).defined
+  , (process_immediate.quot M ℓ (process.from_prime_multiset (λ _, 1) As.val)).defined ⊆ As
   → all_species
 
 /-- Get all species in the transition graph for a finset of prime species. -/
@@ -30,7 +30,7 @@ noncomputable def all_species.finset (M : affinity ℍ) (ℓ : lookup ℍ ω (co
 | 0 As := all_species.incomplete As
 | (nat.succ n) As :=
   let As' := (process_immediate.quot M ℓ (process.from_prime_multiset (λ _, 1) As.val)).defined in
-  if eq : As = As' then all_species.complete As eq else all_species.finset n As'
+  if eq : As' ⊆ As then all_species.complete As eq else all_species.finset n (As ∪ As')
 
 /--  Get all species in the transition graph for a process. -/
 noncomputable def all_species.process (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))

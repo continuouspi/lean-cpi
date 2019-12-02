@@ -57,4 +57,4 @@ noncomputable instance {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
 end transition
 end cpi
 
-#lint
+#lint-

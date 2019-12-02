@@ -144,7 +144,7 @@ private def normalise_restriction [decidable_linear_order ℍ] : ∀ {Γ}
       from equiv.ν_drop₁ M
      end ⟩
 
-
+/-- Wraps species.equiv to work on both species and lists of choices. -/
 def equivalence_of : ∀ {k} {Γ}, whole ℍ ω k Γ → Type
 | kind.species Γ A := Σ' (B : species ℍ ω Γ), A ≈ B
 | kind.choices Γ A := Σ' (B : choices ℍ ω Γ), (Σ# A) ≈ (Σ# B)
@@ -190,7 +190,7 @@ using_well_founded {
   dec_tac := tactic.fst_dec_tac,
 }
 
-def drop_nu : ∀ {Γ}
+private def drop_nu : ∀ {Γ}
     (M : affinity ℍ)
     (A : species ℍ ω (context.extend (M.arity) Γ))
   , Σ' (B : species ℍ ω Γ), (ν(M) A) ≈ B
@@ -223,4 +223,4 @@ end
 end species
 end cpi
 
-#lint
+#lint-
