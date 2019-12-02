@@ -263,9 +263,45 @@ def bind₂ {γ η : Type} [decidable_eq η] [semiring β]
 | x y f := bind x (λ a, bind y (f a))
 
 /-- It doesn't matter which order we do our bind in! -/
-axiom bind₂_swap {α β γ η : Type} [decidable_eq η] [comm_ring β] :
+lemma bind₂_swap {α β γ η : Type} [decidable_eq α] [decidable_eq γ] [decidable_eq η] [comm_ring β] :
   ∀ (x : fin_fn α β) (y : fin_fn γ β) (f : (α → γ → fin_fn η β))
   , bind₂ x y f = bind₂ y x (λ x y, f y x)
+| ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
+  show finset.fold has_add.add 0 (λ x, fx x • finset.fold has_add.add 0 (λ y, fy y • f x y) ys) xs
+     = finset.fold has_add.add 0 (λ y, fy y • finset.fold has_add.add 0 (λ x, fx x • f x y) xs) ys,
+  clear xif yif,
+
+  induction xs using finset.induction_on with x xs xnmem ih,
+  {
+    simp only [finset.fold_empty, smul_zero],
+    show (0 : fin_fn η β) = finset.fold has_add.add 0 (λ y, 0) ys,
+    induction ys using finset.induction_on with y ys ynmem ih,
+    { simp only [finset.fold_empty] },
+    { simp only [finset.fold_insert ynmem, symm ih, zero_add] },
+  },
+  {
+    simp only [finset.fold_insert xnmem],
+    rw ih, clear ih,
+
+    induction ys using finset.induction_on with y ys ynmem ih,
+    { simp only [finset.fold_empty, smul_zero, zero_add] },
+    {
+      simp only [finset.fold_insert ynmem],
+      rw ← ih, clear ih,
+
+      generalize : finset.fold (+) 0 (λ x, fx x • f x y) xs = XS,
+      generalize ey : finset.fold (+) 0 (λ y, fy y • f x y) ys = YS,
+      suffices
+        : fx x • (fy y • f x y + YS) + fy y • XS
+        = fy y • (fx x • f x y + XS) + fx x • YS,
+      { rw [← add_assoc, ← add_assoc, this] },
+
+      simp only [smul_add],
+      rw [← mul_smul (fx x), mul_comm (fx x), mul_smul (fy y)],
+      simp only [add_comm, add_left_comm],
+    }
+  }
+end
 
 lemma bind₂_zero {γ η : Type} [decidable_eq η] [semiring β] (f : α → γ → fin_fn η β) :
   bind₂ 0 0 f = 0 := rfl
@@ -274,7 +310,7 @@ lemma bind₂_zero_right {γ η : Type} [decidable_eq η] [semiring β]
   (x : fin_fn γ β) (f : α → γ → fin_fn η β) :
   bind₂ 0 x f = 0 := rfl
 
-lemma bind₂_zero_left {α β γ η : Type} [decidable_eq η] [comm_ring β]
+lemma bind₂_zero_left {α β γ η : Type} [decidable_eq α] [decidable_eq γ] [decidable_eq η] [comm_ring β]
   (x : fin_fn α β) (f : α → γ → fin_fn η β) :
   bind₂ x 0 f = 0 := by { rw (bind₂_swap x 0 f), from rfl }
 
