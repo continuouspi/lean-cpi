@@ -28,7 +28,7 @@ variables {ℍ : Type}
 -- Define some additional notation, and sugar
 notation a `#(` b ` ; ` y `)` := prefix_expr.communicate a b y
 notation a `#(` y `)` := prefix_expr.communicate a [] y
-notation a `#<` b `>` := prefix_expr.communicate a b 0
+notation a `#⟨` b `⟩` := prefix_expr.communicate a b 0
 notation a `#` := prefix_expr.communicate a [] 0
 
 notation `τ@`:max k:max := prefix_expr.spontanious k

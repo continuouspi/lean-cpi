@@ -17,15 +17,11 @@ private noncomputable def interaction_tensor_worker (M: affinity ℍ)
   → process_space ℍ ω (context.extend M.arity context.nil)
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ :=
   option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
-    if h : bF = yG ∧ yF = bG then
-      let to_space := λ x,
-        @to_process_space ℍ ω _ _ (context.extend M.arity context.nil) x in
-      begin
-        rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-        have fg := to_space (concretion.pseudo_apply.quotient F G),
-        from aff • (fg - to_space A - to_space B),
-      end
-    else 0)
+    if h : bF = yG ∧ yF = bG then begin
+      rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+      have fg := to_process_space (concretion.pseudo_apply.quotient F G),
+      from aff • (fg - to_process_space A - to_process_space B),
+    end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
 private lemma interaction_tensor_worker.comm {M : affinity ℍ}

@@ -67,6 +67,9 @@ notation `ν(` M `) ` A := restriction M A
 reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
+def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) := Σ# (whole.cons π A whole.empty)
+infixr ` ⬝ ` := choices.mk_one
+
 section free
   def free_in {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : Prop := begin
     induction A,
