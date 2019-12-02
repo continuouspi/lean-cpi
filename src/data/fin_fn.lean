@@ -167,9 +167,95 @@ def bind {γ : Type} [decidable_eq γ] [semiring β] : fin_fn α β → (α → 
 lemma bind_zero {γ : Type} [decidable_eq γ] [semiring β] (f : α → fin_fn γ β) :
   bind 0 f = 0 := rfl
 
-axiom bind_distrib {γ : Type} [decidable_eq α] [decidable_eq γ] [semiring β] :
+private lemma finset.exists_insert_of_mem {α : Type*} [decidable_eq α] :
+  ∀ {s : finset α} {a : α}
+  , a ∈ s → ∃ t, s = insert a t ∧ a ∉ t
+| ⟨ s, nodup ⟩ a mem := begin
+  rcases multiset.exists_cons_of_mem mem with ⟨ t, ⟨ _ ⟩ ⟩, clear h,
+  refine ⟨ ⟨ t, (multiset.nodup_cons.mp nodup).2 ⟩, _, (multiset.nodup_cons.mp nodup).1 ⟩,
+
+  simp only [insert, has_insert.insert, multiset.ndinsert],
+  from symm (multiset.ndinsert_of_not_mem (multiset.nodup_cons.mp nodup).1),
+end
+
+private lemma finset.not_mem_insert [add_monoid β] [decidable_eq α]
+    {x : α} {xs ys ys' : finset α} {f : α → β}
+    (ymem : x ∉ ys)
+    (yimp : ∀ z, z ∈ ys → z ∈ ys')
+    (xif : ∀ (z : α), z ∉ insert x xs → z ∈ ys' → f z = 0) :
+  ∀ (z : α), z ∉ xs → z ∈ ys → f z = 0
+| z xnmem ymem := begin
+  have : z ∉ insert x xs,
+    assume mem,
+    cases finset.mem_insert.mp mem,
+    case or.inr { contradiction },
+    case or.inl { subst h, contradiction },
+  from xif z this (yimp z ymem),
+end
+
+lemma bind_distrib {γ : Type} [decidable_eq α] [decidable_eq γ] [semiring β] :
   ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
   , bind (x + y) f = bind x f + bind y f
+| ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
+  show finset.fold (+) 0 (λ z, (fx z + fy z) • f z) (xs ∪ ys)
+     = finset.fold (+) 0 (λ z, fx z • f z) xs
+     + finset.fold (+) 0 (λ z, fy z • f z) ys,
+
+  have xif' : ∀ z, z ∉ xs → z ∈ ys → fx z = 0
+    := λ z notMem _, classical.by_contradiction (notMem ∘ xif z),
+  have yif' : ∀ z, z ∉ ys → z ∈ xs → fy z = 0
+    := λ z notMem _, classical.by_contradiction (notMem ∘ yif z),
+  clear xif yif,
+
+  induction xs using finset.induction_on with x xs xnmem ih generalizing ys,
+  {
+    -- If x is empty, we effectively show that ∀ y ∈ ys, fx y = 0. We have to
+    -- manually unroll ys though, due to show xif'/yif' are implemented.
+    simp only [finset.empty_union, finset.fold_empty, zero_add],
+    clear yif',
+
+    show finset.fold has_add.add 0 (λ z, (fx z + fy z) • f z) ys
+       = finset.fold has_add.add 0 (λ z, fy z • f z) ys,
+    induction ys using finset.induction_on with y ys ynmem ih,
+    { simp only [finset.fold_empty] },
+    {
+      have : fx y = 0
+        := xif' y (finset.not_mem_empty y) (finset.mem_insert_self y ys),
+      simp only [finset.fold_insert ynmem, ‹fx y = 0›, zero_add],
+
+      have : ∀ z, z ∉ ∅ → z ∈ ys → fx z = 0
+        := λ z xnmem ymem, xif' z xnmem (finset.mem_insert_of_mem ymem),
+      rw ih this,
+    }
+  },
+  {
+    by_cases ymem : (x ∈ ys),
+    {
+      -- If x ∈ ys, then we remove it from ys and recurse using ys - {x}.
+      rcases finset.exists_insert_of_mem ymem with ⟨ ys, eq, ynmem ⟩, subst eq, clear ymem,
+      rw ← finset.insert_union_distrib,
+      have : x ∉ xs ∪ ys, simp only [xnmem, ynmem, not_false_iff, finset.mem_union, or_self],
+      simp only [finset.fold_insert xnmem, finset.fold_insert ynmem, finset.fold_insert this],
+
+      rw ih ys
+        (finset.not_mem_insert ynmem (λ _, finset.mem_insert_of_mem) xif')
+        (finset.not_mem_insert xnmem (λ _, finset.mem_insert_of_mem) yif'),
+      simp only [add_assoc, add_smul, add_comm, add_left_comm],
+    },
+    {
+      -- If it's not, then we just recurse using ys.
+      have : x ∉ (xs ∪ ys), simp only [xnmem, ymem, not_false_iff, finset.mem_union, or_self],
+      simp only [finset.insert_union, finset.fold_insert this, finset.fold_insert xnmem],
+
+      rw ih ys
+        (finset.not_mem_insert ymem (λ _ mem, mem) xif')
+        (λ z ynmem' xmem, yif' z ynmem' (finset.mem_insert_of_mem xmem)),
+
+      have : fy x = 0 := yif' x ymem (finset.mem_insert_self x xs),
+      simp only [‹fy x = 0›, add_zero, add_comm, add_left_comm],
+    }
+  }
+end
 
 /-- `bind`, lifted to two `fin_fn`s. -/
 def bind₂ {γ η : Type} [decidable_eq η] [semiring β]
