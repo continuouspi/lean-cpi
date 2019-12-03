@@ -73,7 +73,7 @@ section depth
 end depth
 
 /-- Construct a species from a prime decomposition of species. -/
-def parallel.from_prime_decompose {Γ} : multiset (quotient (@prime_species.setoid ℍ ω Γ)) → quotient (@species.setoid ℍ ω Γ)
+def parallel.from_prime_decompose {Γ} : multiset (prime_species' ℍ ω Γ) → species' ℍ ω Γ
 | ms := quot.lift_on ms
   (λ xs, parallel.quot.from_list (list.map prime_species.unwrap xs))
   (λ _ _ eq, parallel.quot.permute (list.perm_map prime_species.unwrap eq))
@@ -81,7 +81,7 @@ def parallel.from_prime_decompose {Γ} : multiset (quotient (@prime_species.seto
 /-- A proof that a prime decomposition exists. -/
 lemma has_prime_decompose :
   ∀ {Γ} (A : species ℍ ω Γ)
-  , ∃ (As : multiset (quotient (@prime_species.setoid ℍ ω Γ)))
+  , ∃ (As : multiset (prime_species' ℍ ω Γ))
   , ⟦ A ⟧ = parallel.from_prime_decompose As
 | Γ A :=
   match classical.dec (A ≈ nil) with
@@ -139,6 +139,13 @@ constant do_prime_decompose {Γ} :
   ∀ (A : species' ℍ ω Γ)
   , Σ' (As : multiset (prime_species' ℍ ω Γ))
     , parallel.from_prime_decompose As = A
+
+-- This boils down to ¬ (nil ≈ (B | C)) when B and C are prime. Which, as we
+-- know, is very hard to show.
+axiom parallel.from_prime_decompose.nil {Γ} :
+  ∀ {As : multiset (prime_species' ℍ ω Γ)}
+  , ⟦ nil ⟧ = parallel.from_prime_decompose As
+  → As = 0
 
 end species
 end cpi

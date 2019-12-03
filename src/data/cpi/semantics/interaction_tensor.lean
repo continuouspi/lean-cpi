@@ -65,16 +65,19 @@ noncomputable def interaction_tensor {M : affinity ℍ}
 
 infix ` ⊘ `:73 := interaction_tensor
 
+@[simp]
 lemma interaction_tensor.zero_left {M : affinity ℍ}
   : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
   , A ⊘ 0 = 0
 | A := fin_fn.bind₂_zero_left A _
 
+@[simp]
 lemma interaction_tensor.zero_right {M : affinity ℍ}
   : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
   , 0 ⊘ A = 0
 | A := fin_fn.bind₂_zero_right A _
 
+@[simp]
 lemma interaction_tensor.comm {M : affinity ℍ}
     (A B : interaction_space ℍ ω (context.extend M.arity context.nil))
   : A ⊘ B = B ⊘ A := begin
@@ -89,11 +92,13 @@ lemma interaction_tensor.comm {M : affinity ℍ}
   from funext (λ x, funext (interaction_tensor_worker.comm x)),
 end
 
+@[simp]
 lemma interaction_tensor.left_distrib {M : affinity ℍ}
     (A B C : interaction_space ℍ ω (context.extend M.arity context.nil))
   : (A + B) ⊘ C = A ⊘ C + B ⊘ C
   := by simp only [interaction_tensor, fin_fn.bind₂, fin_fn.bind_distrib]
 
+@[simp]
 lemma interaction_tensor.right_distrib {M : affinity ℍ}
     (A B C : interaction_space ℍ ω (context.extend M.arity context.nil))
   : A ⊘ (B + C) = A ⊘ B + A ⊘ C

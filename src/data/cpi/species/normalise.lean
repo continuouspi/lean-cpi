@@ -190,21 +190,6 @@ using_well_founded {
   dec_tac := tactic.fst_dec_tac,
 }
 
-private def drop_nu : ∀ {Γ}
-    (M : affinity ℍ)
-    (A : species ℍ ω (context.extend (M.arity) Γ))
-  , Σ' (B : species ℍ ω Γ), (ν(M) A) ≈ B
-| Γ M A :=
-  let As := parallel.to_list A in
-  if h : level.zero ∈ A then
-    ⟨ ν(M) A, refl _ ⟩
-  else
-    ⟨ drop h, begin
-      suffices : (ν(M) rename name.extend (drop h)) ≈ drop h,
-        rw drop_extend h at this, from this,
-      from equiv.ν_drop₁ M
-     end ⟩
-
 /-- Reduce a term to some equivalent normal form. -/
 def normalise [decidable_linear_order ℍ] : ∀ {k} {Γ}, whole ℍ ω k Γ → whole ℍ ω k Γ
 | kind.species Γ A := (normalise_to A).fst

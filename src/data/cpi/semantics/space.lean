@@ -52,6 +52,15 @@ noncomputable def to_process_space {Γ} (A : species' ℍ ω Γ)
 -- ⟨A⟩ = A          when A prime
 -- ⟨A|B⟩ = ⟨A⟩ + ⟨B⟩ when A ≠ 0 ≠ B
 
+@[simp]
+lemma to_process_space.nil {Γ} : to_process_space ⟦@nil ℍ ω Γ⟧ = 0 := begin
+  have : (do_prime_decompose ⟦@nil ℍ ω Γ⟧).1 = 0,
+    from parallel.from_prime_decompose.nil (symm (do_prime_decompose ⟦@nil ℍ ω Γ⟧).snd),
+  unfold to_process_space multiset.sum_map,
+  rw this,
+  simp only [multiset.map_zero, multiset.fold_zero],
+end
+
 /-- The vector space (A, E, a)→ℍ relating transitions from A to E with label #a.
   -/
 def interaction_space (ℍ : Type) (ω Γ : context) [add_monoid ℍ] : Type
@@ -105,9 +114,31 @@ def process.from_space {Γ} : process_space ℍ ω Γ → process' ℍ ω Γ
 | Ps := process.from_prime_multiset Ps.space Ps.defined.val
 
 /-- Convert a class of equivalent processes into a process space. -/
-constant process.to_space' {Γ} : process' ℍ ω Γ → process_space ℍ ω Γ
+noncomputable def process.to_space' {Γ} : process' ℍ ω Γ → process_space ℍ ω Γ
+| P := begin
+  refine quot.lift_on P process.to_space _,
+  assume P Q eq,
+  induction eq,
+  case process.equiv.refl { from rfl },
+  case process.equiv.trans : P Q R _ _ pq qr { from trans pq qr },
+  case process.equiv.symm : P Q _ ih { from symm ih },
 
-axiom process.from_inverse {Γ} : function.left_inverse process.to_space' (@process.from_space ℍ ω _ _ Γ)
+  case process.equiv.ξ_species : c A A' eq {
+    simp only [process.to_space, quotient.sound eq],
+  },
+  case process.equiv.ξ_parallel₁ : P P' Q _ ih { simp only [process.to_space, ih] },
+  case process.equiv.ξ_parallel₂ : P Q Q' _ ih { simp only [process.to_space, ih] },
+
+  case process.equiv.parallel_nil : P c {
+    simp only [process.to_space, cpi.to_process_space.nil, smul_zero, add_zero],
+  },
+  case process.equiv.parallel_symm { simp only [process.to_space, add_comm] },
+  case process.equiv.parallel_assoc { simp only [process.to_space, add_assoc] },
+  case cpi.process.equiv.join : A c d { simp only [process.to_space, fin_fn.add_smul] },
+end
+
+axiom process.from_inverse {Γ} :
+  function.left_inverse process.to_space' (@process.from_space ℍ ω _ _ Γ)
 
 /-- Show that process spaces can be embeeded into equivalence classes of processes. -/
 def process.space_embed {Γ} : process_space ℍ ω Γ ↪ process' ℍ ω Γ :=
@@ -116,4 +147,5 @@ def process.space_embed {Γ} : process_space ℍ ω Γ ↪ process' ℍ ω Γ :=
 
 end cpi
 
-#lint
+-- We have unavoidable unused arguments
+#lint- only def_lemma dup_namespace instance_priority illegal_constants doc_blame

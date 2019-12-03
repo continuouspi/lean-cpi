@@ -364,16 +364,26 @@ axiom process_potential.equiv2
   case process.equiv2.split : A B c {
     simp only [process_potential, interaction_tensor.left_distrib],
 
-    generalize eqab
+    suffices
       : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val)
-      = ab,
-    generalize eqa
-      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
-      = a,
-    generalize eqb
-      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val)
-      = b,
-    sorry,
+      = multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
+      + multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val),
+      rw [← interaction_tensor.left_distrib, ← smul_add, ← this],
+
+    have : ∀ (x : transition.transition_from ℓ (A |ₛ B)),
+      psum (potential_interaction_space x = 0)
+      (sum (transition.transition_from ℓ A)
+            (transition.transition_from ℓ B)),
+    {
+      assume x,
+      rcases x with ⟨ k, α, E, t ⟩,
+      cases t,
+      case transition.com₁ : x y a b F G tf tg { from psum.inl rfl },
+      case transition.parₗ : E t' { from psum.inr (sum.inl ⟨ k, α, E, t' ⟩) },
+      case transition.parᵣ : E t' { from psum.inr (sum.inr ⟨ k, α, E, t' ⟩) },
+    },
+
+    -- TODO: Show isomorphism between the two, then use multiset.map_ido
   },
 end
 -/

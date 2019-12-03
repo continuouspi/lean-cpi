@@ -43,7 +43,7 @@ inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 /- Elements in the sum -/
 | empty {} {Γ} : whole kind.choices Γ
 | cons {Γ} {f} (π : prefix_expr ℍ Γ f) :
-    whole kind.species (f Γ) → whole kind.choices Γ → whole kind.choices Γ
+    whole kind.species (f.apply Γ) → whole kind.choices Γ → whole kind.choices Γ
 
 
 /-- An alias for species within the `whole' datatype. -/
@@ -67,10 +67,14 @@ notation `ν(` M `) ` A := restriction M A
 reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
-def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) := Σ# (whole.cons π A whole.empty)
+/-- Construct a singleton choice from a prefix and species. -/
+def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ))
+  := Σ# (whole.cons π A whole.empty)
+
 infixr ` ⬝ ` := choices.mk_one
 
 section free
+  /-- Determine if any variable with a given level occurs within this species. -/
   def free_in {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : Prop := begin
     induction A,
     case nil { from false },
@@ -287,7 +291,7 @@ section rename_equations
   lemma rename.empty : rename ρ (@whole.empty ℍ ω Γ) = empty := by unfold rename rename_with
 
   @[simp]
-  lemma rename.cons {f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) (As : choices ℍ ω Γ)
+  lemma rename.cons {f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ)) (As : choices ℍ ω Γ)
     : rename ρ (cons π A As)
     = cons (prefix_expr.rename ρ π) (rename (prefix_expr.ext π ρ) A) (rename ρ As)
     := begin
@@ -372,11 +376,13 @@ end rename_equations
 
 /- Show parallel can be converted to/from a list (though not isomorphic). -/
 namespace parallel
+  /-- Unfold a parallel composition, turning it into a list of non-nil species. -/
   def to_list {Γ} : species ℍ ω Γ → list (species ℍ ω Γ)
   | nil := []
   | (A |ₛ B) := to_list A ++ to_list B
   | A := [A]
 
+  /-- Re-fold a list of species, turning it back into a parallel composition. -/
   def from_list {Γ} : list (species ℍ ω Γ) → species ℍ ω Γ
   | [] := nil
   | [A] := A
@@ -423,17 +429,19 @@ end parallel
 
 /- Show choice can be converted to/from a list and is isomorphic. -/
 namespace choice
-  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ))
+  /-- Unfold a sequence of choices, turning it into a list of dependent pairs. -/
+  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
   | empty := []
   | (cons π A As) := ⟨ _, π, A ⟩ :: to_list As
 
-  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)) → choices ℍ ω Γ
+  /-- The inverse of `to_list` -/
+  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)) → choices ℍ ω Γ
   | [] := empty
   | (⟨ _, π, A ⟩ :: As) := cons π A (from_list As)
 
-  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)))
+  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
     := ⟨ to_list ⟩
-  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ))) (choices ℍ ω Γ)
+  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))) (choices ℍ ω Γ)
     := ⟨ from_list ⟩
 
   lemma from_to {Γ} : ∀ (A : choices ℍ ω Γ), from_list (to_list A) = A
@@ -441,10 +449,14 @@ namespace choice
   | (cons π A As) := by { simp [to_list, from_list], from from_to As }
 
   lemma to_from {Γ} :
-    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)))
+    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
     , to_list (from_list As) = As
   | [] := by unfold to_list from_list
   | (⟨ _, π,  A⟩ :: As) := by { simp [to_list, from_list], from to_from As }
+
+  /-- An isomorphism between choices and lists of prefixes and species.-/
+  def list_iso {Γ} : choices ℍ ω Γ ≃ list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
+    := { to_fun := to_list, inv_fun := from_list, left_inv := from_to, right_inv := to_from }
 end choice
 
 end species
@@ -473,4 +485,5 @@ export cpi.species (renaming
   species → cpi.species
 )
 
-#lint
+-- No "dup_namespace"
+#lint- only unused_arguments def_lemma illegal_constants instance_priority doc_blame

@@ -1,5 +1,4 @@
 import data.cpi.species.basic
-import tactic.known_induct
 
 namespace cpi
 namespace species
@@ -23,18 +22,18 @@ inductive equivalent : ∀ {Γ} (A B : species ℍ ω Γ), Type
       {Γ} (M : affinity ℍ) {A A' : species ℍ ω (context.extend (M.arity) Γ)}
     : equivalent A A' → equivalent (ν(M) A) (ν(M) A')
 | ξ_choice_here
-      {Γ} {f} (π : prefix_expr ℍ Γ f) {A A' : species ℍ ω (f Γ)} {As : choices ℍ ω Γ}
+      {Γ} {f} (π : prefix_expr ℍ Γ f) {A A' : species ℍ ω (f.apply Γ)} {As : choices ℍ ω Γ}
     : equivalent A A'
     → equivalent (Σ# (whole.cons π A As)) (Σ# (whole.cons π A' As))
 | ξ_choice_there
-      {Γ} {f} (π : prefix_expr ℍ Γ f) {A : species ℍ ω (f Γ)} {As As' : choices ℍ ω Γ}
+      {Γ} {f} (π : prefix_expr ℍ Γ f) {A : species ℍ ω (f.apply Γ)} {As As' : choices ℍ ω Γ}
     : equivalent (Σ# As) (Σ# As')
     → equivalent (Σ# (whole.cons π A As)) (Σ# (whole.cons π A As'))
 
 -- | An element in the choice array can be swapped.
 | choice_swap
     {Γ} {f g} (π₁ : prefix_expr ℍ Γ f) (π₂ : prefix_expr ℍ Γ g)
-    {A : species ℍ ω (f Γ)} {B : species ℍ ω (g Γ)} {As : choices ℍ ω Γ}
+    {A : species ℍ ω (f.apply Γ)} {B : species ℍ ω (g.apply Γ)} {As : choices ℍ ω Γ}
   : equivalent (Σ# (whole.cons π₁ A (whole.cons π₂ B As)))
           (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
 
@@ -220,13 +219,13 @@ namespace equiv
 
   @[pattern]
   lemma ξ_choice_here
-      {Γ} {f} (π : prefix_expr ℍ Γ f) {A A' : species ℍ ω (f Γ)} {As : choices ℍ ω Γ}
+      {Γ} {f} (π : prefix_expr ℍ Γ f) {A A' : species ℍ ω (f.apply Γ)} {As : choices ℍ ω Γ}
     : A ~ A' → (Σ# (whole.cons π A As)) ~ (Σ# (whole.cons π A' As))
   | ⟨ eq ⟩ := ⟨ equivalent.ξ_choice_here π eq ⟩
 
   @[pattern]
   lemma ξ_choice_there
-      {Γ} {f} (π : prefix_expr ℍ Γ f) {A : species ℍ ω (f Γ)} {As As' : choices ℍ ω Γ}
+      {Γ} {f} (π : prefix_expr ℍ Γ f) {A : species ℍ ω (f.apply Γ)} {As As' : choices ℍ ω Γ}
     : (Σ# As) ~ (Σ# As')
     → (Σ# (whole.cons π A As)) ~ (Σ# (whole.cons π A As'))
   | ⟨ eq ⟩ := ⟨ equivalent.ξ_choice_there π eq ⟩
@@ -234,7 +233,7 @@ namespace equiv
   @[pattern]
   lemma choice_swap
       {Γ} {f g} (π₁ : prefix_expr ℍ Γ f) (π₂ : prefix_expr ℍ Γ g)
-      {A : species ℍ ω (f Γ)} {B : species ℍ ω (g Γ)} {As : choices ℍ ω Γ}
+      {A : species ℍ ω (f.apply Γ)} {B : species ℍ ω (g.apply Γ)} {As : choices ℍ ω Γ}
     : (Σ# (whole.cons π₁ A (whole.cons π₂ B As))) ~ (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
     := ⟨ equivalent.choice_swap π₁ π₂ ⟩
 
@@ -474,7 +473,7 @@ end parallel
 
 namespace choice
   lemma permute {Γ} :
-    ∀ {As Bs : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ))}
+    ∀ {As Bs : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))}
     , As ≈ Bs → (Σ# from_list As) ≈ (Σ# from_list Bs) := λ _ _ perm, begin
     induction perm,
 

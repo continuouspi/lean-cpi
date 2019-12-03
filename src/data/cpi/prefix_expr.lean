@@ -3,7 +3,18 @@ import data.list.witness order.lexicographic
 
 namespace cpi
 
--- 𝔸𝔹ℂ𝔻𝔼𝔽𝔾ℍ𝕀𝕁𝕂𝕃𝕄ℕ𝕆ℙℚℝ𝕊𝕋𝕌𝕍𝕎𝕏𝕐ℤ
+/-- A telescope may extend a context by 0 or 1 levels. This is effectively a
+    function on contexts, but having it be inductive allows us to case split on
+    it, simplifying some proofs. -/
+inductive telescope : Type
+| extend : ℕ → telescope
+| preserve : telescope
+
+/-- Apply a telescope to a context. -/
+def telescope.apply : telescope → context → context
+| (telescope.extend n) Γ := context.extend n Γ
+| telescope.preserve Γ := Γ
+
 /-- A prefix expression. This can either be one of:
 
   - A communication prefix (send a series of variables on a channel, and then
@@ -19,9 +30,9 @@ namespace cpi
   complexities to the proof when renaming, as you need to
   `augment (rename π) = augment π', while preserving type safety.
 -/
-inductive prefix_expr (ℍ : Type) : context → (context → context) → Type
-| communicate {} {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (context.extend y)
-| spontanious {} {Γ} (k : ℍ) : prefix_expr Γ id
+inductive prefix_expr (ℍ : Type) : context → telescope → Type
+| communicate {} {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (telescope.extend y)
+| spontanious {} {Γ} (k : ℍ) : prefix_expr Γ telescope.preserve
 
 variables {ℍ : Type}
 
@@ -42,6 +53,8 @@ namespace prefix_expr
     inductive wrap (ℍ : Type) : context → Type
     | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
 
+    /-- Basic comparison of two (wrapped) prefixes. Simply a lexicographic
+        ordering where communication ≤ spontanious. -/
     protected def le {Γ} [has_le ℍ] : wrap ℍ Γ → wrap ℍ Γ → Prop
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
       let order := (@lex_has_le (name Γ) (lex (list (name Γ)) ℕ) _ lex_preorder) in
@@ -50,11 +63,11 @@ namespace prefix_expr
     | ⟨ τ@_ ⟩ ⟨ _#(_; _) ⟩ := false
     | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := k ≤ k'
 
-    protected theorem le_refl {Γ} [preorder ℍ] : ∀ (a : wrap ℍ Γ), prefix_expr.le a a
+    private theorem le_refl {Γ} [preorder ℍ] : ∀ (a : wrap ℍ Γ), prefix_expr.le a a
     | ⟨ a#(b; y) ⟩ := by simp only [prefix_expr.le]
     | ⟨ τ@k ⟩ := by unfold prefix_expr.le
 
-    protected theorem le_trans {Γ} [preorder ℍ]:
+    private theorem le_trans {Γ} [preorder ℍ]:
       ∀ (a b c : wrap ℍ Γ)
       , prefix_expr.le a b → prefix_expr.le b c → prefix_expr.le a c
     | ⟨ a1#(b1; y1) ⟩ ⟨ a2#(b2; y2) ⟩ ⟨ a3#(b3; y3) ⟩ h12 h23 := begin
@@ -69,14 +82,14 @@ namespace prefix_expr
     | ⟨ a#(b; y) ⟩ ⟨ τ@_ ⟩ ⟨ τ@k ⟩ h12 h23 := by unfold prefix_expr.le
     | ⟨ τ@k ⟩ ⟨ a#(b;y) ⟩ _ h12 h23 := by { unfold prefix_expr.le at h12, contradiction }
 
-    protected theorem le_total {Γ} [linear_order ℍ] :
+    private theorem le_total {Γ} [linear_order ℍ] :
       ∀ (a b : wrap ℍ Γ), prefix_expr.le a b ∨ (prefix_expr.le b a)
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { simp only [prefix_expr.le], from linear_order.le_total _ _ }
     | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := by { unfold prefix_expr.le, simp only [true_or] }
     | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := by { unfold prefix_expr.le, simp only [or_true] }
     | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := by { unfold prefix_expr.le, from linear_order.le_total k k' }
 
-    protected theorem le_antisymm {Γ} [linear_order ℍ]:
+    private theorem le_antisymm {Γ} [linear_order ℍ]:
       ∀ (a b : wrap ℍ Γ), prefix_expr.le a b → prefix_expr.le b a → a = b
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ ab ba := begin
         simp only [prefix_expr.le] at ab ba,
@@ -95,7 +108,7 @@ namespace prefix_expr
         have eq : k = k', from linear_order.le_antisymm _ _ ab ba, subst eq
       end
 
-    protected def decidable_le {Γ} [has_le ℍ] [@decidable_rel ℍ (≤)] :
+    private def decidable_le {Γ} [has_le ℍ] [@decidable_rel ℍ (≤)] :
       ∀ (a b : wrap ℍ Γ), decidable (prefix_expr.le a b)
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { unfold prefix_expr.le, apply_instance }
     | ⟨ _#(_; _) ⟩ ⟨ τ@_ ⟩ := is_true true.intro
@@ -114,7 +127,7 @@ namespace prefix_expr
         from no_extend this
       end
 
-    protected def decidable_eq {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ)
+    private def decidable_eq' {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ)
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
         if hy : y = y'
         then if ha : a = a'
@@ -122,36 +135,26 @@ namespace prefix_expr
                   then is_true (by rw [hy, ha, hb])
                   else is_false (begin rw [hy], simp [hb] end)
             else is_false (begin rw [hy], simp [ha] end)
-        else is_false (λ x, begin
-          simp only [] at x,
-          -- We only have (context.extend y = context.extend y') - thus we need
-          -- to saturate the call with congr_fun, and then derive y = y'.
-          have : y = y' := and.left (context.extend.inj (congr_fun (and.left x) Γ)),
-          contradiction
-        end)
+        else is_false (λ x, by { simp only [] at x, from hy x.1 })
     | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := is_false (λ x, begin
-        simp only [] at x,
-        have h := congr_fun (and.left x) Γ, simp at h,
-        from no_extend h
+        simp only [] at x, from x.1,
       end)
-    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := is_false (λ x, begin
-        simp only [] at x,
-        have h := congr_fun (and.left x) Γ,
-        from no_extend (symm h)
-      end)
+    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := is_false (λ x, by { simp only [] at x, from x.1 })
     | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ :=
       if h : k = k'
       then is_true (by rw [h])
       else is_false (λ x, begin simp at x, contradiction end)
 
+    instance {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ) := decidable_eq'
+
     instance {Γ} [decidable_linear_order ℍ] : decidable_linear_order (wrap ℍ Γ) :=
       { le := prefix_expr.le,
-        le_refl := prefix_expr.le_refl,
-        le_trans := prefix_expr.le_trans,
-        le_total := prefix_expr.le_total,
-        le_antisymm := prefix_expr.le_antisymm,
-        decidable_eq := prefix_expr.decidable_eq,
-        decidable_le := prefix_expr.decidable_le,
+        le_refl := le_refl,
+        le_trans := le_trans,
+        le_total := le_total,
+        le_antisymm := le_antisymm,
+        decidable_eq := decidable_eq',
+        decidable_le := decidable_le,
       }
   end ordering
 
@@ -182,7 +185,7 @@ namespace prefix_expr
     /-- Raise a level according to this prefix's context extension function. -/
     def raise :
       ∀ {Γ η} {f} (π : prefix_expr ℍ η f)
-      , level Γ → level (f Γ)
+      , level Γ → level (f.apply Γ)
     | Γ ._ ._ (a#(b; y)) l := level.extend l
     | Γ ._ ._ τ@_ l := l
 
@@ -233,34 +236,34 @@ namespace prefix_expr
     /-- Wrap a renaming function, making it suitable for a nested context. -/
     def ext_with {Γ Δ η} :
       ∀ {f} (π : prefix_expr ℍ η f)
-        (P : level (f Γ) → Prop)
+        (P : level (f.apply Γ) → Prop)
         (ρ : Π (x : name Γ), P (prefix_expr.raise π (name.to_level x)) → name Δ)
-      , Π (x : name (f Γ)), P (name.to_level x) → name (f Δ)
+      , Π (x : name (f.apply Γ)), P (name.to_level x) → name (f.apply Δ)
     | f (_#(_; y)) P ρ a p := name.ext_with P ρ a p
     | f τ@_ P ρ a p := ρ a p
 
     /-- Extending with the identity does nothing. -/
     lemma ext_with_identity :
       ∀ {Γ η} {f} (π : prefix_expr ℍ η f)
-        (P : level (f Γ) → Prop)
-        (a : name (f Γ)) (p : P (name.to_level a))
+        (P : level (f.apply Γ) → Prop)
+        (a : name (f.apply Γ)) (p : P (name.to_level a))
       , ext_with π P (λ x _, x) a p = a
     | Γ η ._ (_#(_; _)) P a p := name.ext_with_identity P a p
     | Γ η ._ τ@k P a p := rfl
 
     /-- Extending with the identity does nothing. -/
     lemma ext_with_id {Γ η} {f}
-        (π : prefix_expr ℍ η f) (P : level (f Γ) → Prop)
+        (π : prefix_expr ℍ η f) (P : level (f.apply Γ) → Prop)
       : ext_with π P (λ x _, x) = λ x _, x
       := funext $ λ a, funext (ext_with_identity π P a)
 
     /-- Wrap a simple renaming function, making it suitable for a nested context. -/
     def ext {Γ Δ η} {f} (π : prefix_expr ℍ η f) (ρ : name Γ → name Δ)
-          : name (f Γ) → name (f Δ)
+          : name (f.apply Γ) → name (f.apply Δ)
     | a := ext_with π (λ _, true) (λ x _, ρ x) a true.intro
 
     /-- Extending with the identity does nothing. -/
-    lemma ext_identity {Γ η} {f} (π : prefix_expr ℍ η f) (a : name (f Γ))
+    lemma ext_identity {Γ η} {f} (π : prefix_expr ℍ η f) (a : name (f.apply Γ))
       : ext π id a = a := ext_with_identity π _ a _
 
     /-- Extending with the identity yields the identity function. -/
@@ -270,17 +273,17 @@ namespace prefix_expr
     /-- Composing extensions is equivalent extending a composition. -/
     lemma ext_with_compose :
       ∀ {Γ Δ η φ} {f} (π : prefix_expr ℍ φ f)
-        (P : level (f Γ) → Prop)
+        (P : level (f.apply Γ) → Prop)
         (ρ : Π (x : name Γ), P (raise π (name.to_level x)) → name Δ)
         (σ : name Δ → name η)
-        (a : name (f Γ)) (p : P (name.to_level a))
+        (a : name (f.apply Γ)) (p : P (name.to_level a))
       , ext π σ (ext_with π P ρ a p) = ext_with π P (λ a p, σ (ρ a p)) a p
     | Γ Δ η φ f (_#(_;_)) P ρ σ a p := name.ext_with_compose P ρ σ a p
     | Γ Δ η φ f τ@_ P ρ σ _ _ := rfl
 
     /-- Composing extensions is equivalent extending a composition. -/
     lemma ext_with_comp {Γ Δ η φ} {f} (π : prefix_expr ℍ φ f)
-        (P : level (f Γ) → Prop)
+        (P : level (f.apply Γ) → Prop)
         (ρ : Π (x : name Γ), P (raise π (name.to_level x)) → name Δ)
         (σ : name Δ → name η)
       : (λ a p, ext π σ (ext_with π P ρ a p)) = ext_with π P (λ a p, σ (ρ a p))
@@ -289,7 +292,7 @@ namespace prefix_expr
     /-- Composing extensions is equivalent extending a composition. -/
     lemma ext_compose :
       ∀ {Γ Δ η φ} {f} (ρ : name Γ → name Δ) (σ : name Δ → name η)
-        (π : prefix_expr ℍ φ f) (α : name (f Γ))
+        (π : prefix_expr ℍ φ f) (α : name (f.apply Γ))
       , ext π σ (ext π ρ α) = ext π (σ ∘ ρ) α
     | Γ Δ η φ f ρ σ (a#(b; y)) α := name.ext_compose ρ σ α
     | Γ Δ η φ f ρ σ τ@k α := rfl
@@ -304,7 +307,7 @@ namespace prefix_expr
     /-- Rewrite one ext_with to another -/
     lemma ext_with_discard :
       ∀ {Γ Δ η} {f} (π : prefix_expr ℍ η f)
-        (P : level (f Γ) → Prop)
+        (P : level (f.apply Γ) → Prop)
         (ρ : name Γ → name Δ)
       , (ext_with π P (λ a _, ρ a))
       = (λ a _, ext_with π (λ _x, true) (λ x _, ρ x) a true.intro)
@@ -314,6 +317,7 @@ namespace prefix_expr
              := rfl,
         unfold ext_with,
         rw [this, name.ext_with_discard P],
+        from rfl,
       end
     | Γ Δ η f τ@_ P ρ := funext $ λ a, funext $ λ free, rfl
 
@@ -328,7 +332,7 @@ namespace prefix_expr
     /-- Extending with a renamed prefix has the same effect as the original one. -/
     lemma rename_with_ext_with
         {Γ Δ η φ} {f} (π : prefix_expr ℍ η f)
-        (P : level (f Γ) → Prop)
+        (P : level (f.apply Γ) → Prop)
         (ρ : name Γ → name Δ)
         (σ : Π (x : name η), name.to_level x ∈ π → name φ)
       : ext_with (rename_with π σ) P (λ a _, ρ a) = ext_with π P (λ a _, ρ a)
@@ -358,7 +362,7 @@ namespace prefix_expr
     @[simp]
     lemma ext_communicate {η} (a :  name η) (b : list (name η)) (y : ℕ)
       : ext (a#(b; y) : prefix_expr ℍ _ _) ρ = name.ext ρ
-      := funext $ λ x, by unfold ext ext_with
+      := funext $ λ x, by { unfold ext ext_with, from rfl }
 
     @[simp]
     lemma ext_spontanious {η} (k : ℍ)
@@ -371,22 +375,17 @@ namespace prefix_expr
       → π₁ == π₂
     | _ _ (a#(b; y)) (a'#(b'; y')) eq := begin
         simp only [rename_communicate] at eq,
-        rcases eq with ⟨ eqC, eqπ ⟩,
-
-        have : y = y' := (context.extend.inj (congr_fun eqC Γ)).left, cases this,
+        rcases eq with ⟨ ⟨ _ ⟩, eqπ ⟩,
         simp only [heq_iff_eq] at eqπ ⊢,
-
         from ⟨ inj eqπ.left, list.injective_map_iff.mpr inj eqπ.right ⟩,
       end
     | _ _ (a#(b; y)) τ@k eq := begin
       simp only [rename_communicate, rename_spontanious] at eq,
-        rcases eq with ⟨ eqC, eqπ ⟩,
-        from absurd (congr_fun eqC Γ) no_extend,
+      exfalso, from eq.1,
     end
     | _ _ τ@k (a#(b; y)) eq := begin
         simp only [rename_communicate, rename_spontanious] at eq,
-        rcases eq with ⟨ eqC, eqπ ⟩,
-        from absurd (congr_fun (symm eqC) Γ) no_extend,
+        exfalso, from eq.1,
       end
     | _ _ τ@k τ@k' eq := begin
         simp only [rename_spontanious] at eq,
@@ -411,4 +410,4 @@ end prefix_expr
 
 end cpi
 
-#lint
+#lint-

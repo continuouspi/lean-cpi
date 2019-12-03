@@ -5,9 +5,9 @@ namespace transition
 
 variables {ℍ : Type} {ω : context}
 
-private lemma ξ_choice.embed
+private def ξ_choice.embed
     {Γ f} (ℓ : lookup ℍ ω Γ)
-    (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f Γ)) (As : species.choices ℍ ω Γ)
+    (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ)) (As : species.choices ℍ ω Γ)
   : transition_from ℓ (Σ# As) ↪ transition_from ℓ (Σ# (whole.cons π A As))
   := { to_fun := λ t, ⟨ _, _, _, ξ_choice t.2.2.2 ⟩,
        inj := λ ⟨ k, α, E, t ⟩ ⟨ k', α', E', t' ⟩ eq, begin
@@ -15,29 +15,49 @@ private lemma ξ_choice.embed
         cases eq, from rfl,
        end }
 
+local attribute [instance] classical.dec_eq
+
 /-- Show that the available transitions from a choices species is finite and
     thus enumerable.-/
-constant enumerate_choices :
-  ∀ {Γ} (ℓ : lookup ℍ ω Γ) (As : species.choices ℍ ω Γ), fintype (transition_from ℓ (Σ# As))
-/-
-| Γ ℓ species.whole.empty :=
+noncomputable def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
+  ∀ (As : species.choices ℍ ω Γ), fintype (transition_from ℓ (Σ# As))
+| species.whole.empty :=
   { elems := finset.empty,
     complete := λ ⟨ k, α, E, t ⟩, by cases t }
-| Γ ℓ (species.whole.cons (a#(b; y)) A As) :=
+| (species.whole.cons (a#(b; y)) A As) :=
   { elems :=
-      insert (⟨ _, _, _, choice₁ a b y A As ⟩ : transition_from ℓ _)
-             (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate.choices ℓ As).elems)),
+      insert (transition_from.mk (choice₁ a b y A As))
+             (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate_choices As).elems)),
     complete := λ x, begin
       rcases x with ⟨ k, α, E, t ⟩,
-      -- cases k,
-      -- cases α,
       cases t,
+      case ξ_choice {
+        have : transition_from.mk t_a ∈ (enumerate_choices As).elems
+          := @fintype.complete _ (enumerate_choices As) _,
+        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ _ A As) this,
+        from finset.mem_insert_of_mem this,
+      },
+      case choice₁ { from finset.mem_insert_self _ _ },
     end }
--/
+| (species.whole.cons (τ@k) A As) :=
+  { elems :=
+      insert (transition_from.mk (choice₂ k A As))
+             (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate_choices As).elems)),
+    complete := λ x, begin
+      rcases x with ⟨ k, α, E, t ⟩,
+      cases t,
+      case ξ_choice {
+        have : transition_from.mk t_a ∈ (enumerate_choices As).elems
+          := @fintype.complete _ (enumerate_choices As) _,
+        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ _ A As) this,
+        from finset.mem_insert_of_mem this,
+      },
+      case choice₂ { from finset.mem_insert_self _ _ },
+    end }
 
 /-- Show that the available transitions from a species is finite and thus
     enumerable.-/
-constant enumerate :
+noncomputable constant enumerate :
   ∀ {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
   , fintype (transition_from ℓ A)
 /-

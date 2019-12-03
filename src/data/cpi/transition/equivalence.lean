@@ -176,9 +176,9 @@ private def on_parallel_assoc₂ :
   end
 
 private def on_choice_swap  :
-  ∀ {Γ ℓ k} {α : label ℍ Γ k} {f g : context → context}
+  ∀ {Γ ℓ k f g} {α : label ℍ Γ k}
     {π₁ : prefix_expr ℍ Γ f} {π₂ : prefix_expr ℍ Γ g}
-    {A : species ℍ ω (f Γ)} {B : species ℍ ω (g Γ)}
+    {A : species ℍ ω (f.apply Γ)} {B : species ℍ ω (g.apply Γ)}
     {As : choices ℍ ω Γ}
     {E : production ℍ ω Γ k}
   , (Σ# whole.cons π₁ A (whole.cons π₂ B As)) [ℓ, α]⟶ E

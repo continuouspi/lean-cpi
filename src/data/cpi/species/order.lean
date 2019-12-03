@@ -58,7 +58,7 @@ private def species.eq_decidable [decidable_eq ℍ] {Γ} {k} (A B : whole ℍ ω
     cases B; simp only []; try { apply_instance },
     case whole.cons : f' π' A' As' {
       have h : decidable (prefix_expr.wrap.intro π = prefix_expr.wrap.intro π'),
-        from prefix_expr.decidable_eq _ _,
+        apply_instance,
 
       cases h,
       case is_false : p {
@@ -553,9 +553,10 @@ instance species.whole.decidable_linear_order [decidable_linear_order ℍ] {Γ} 
     decidable_eq := species.eq_decidable }
 
 namespace choice
-  @[reducible]
-  def pair (ℍ : Type) (ω Γ : context) : Type := Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f Γ)
+  /-- An element in a list of choices. Effectively a dependent pair a prefix and species. -/
+  def pair (ℍ : Type) (ω Γ : context) : Type := Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)
 
+  /-- Wraps species.le for pairs. -/
   def le [decidable_linear_order ℍ] {Γ} : pair ℍ ω Γ → pair ℍ ω Γ → Prop
   | ⟨ f, π₁, A ⟩ ⟨ g, π₂, B ⟩ :=
       (Σ# whole.cons π₁ A whole.empty) ≤ (Σ# whole.cons π₂ B whole.empty)
@@ -566,4 +567,4 @@ end choice
 
 end cpi
 
-#lint
+#lint-

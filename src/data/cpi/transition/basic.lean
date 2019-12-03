@@ -237,7 +237,7 @@ inductive transition :
 
 /- Additional transition to project project into where our choiceₙ rules apply. -/
 | ξ_choice
-    {Γ ℓ f} {π : prefix_expr ℍ Γ f} {A : species ℍ ω (f Γ)} {As : species.choices ℍ ω Γ}
+    {Γ ℓ f} {π : prefix_expr ℍ Γ f} {A : species ℍ ω (f.apply Γ)} {As : species.choices ℍ ω Γ}
     {k} {l : label ℍ Γ k} {E : production ℍ ω Γ k}
 
   : transition (Σ# As) ℓ l E

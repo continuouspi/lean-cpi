@@ -24,12 +24,21 @@ def prime_species : Type → context → context → Type
 instance prime_species.setoid {ω Γ} : setoid (prime_species ℍ ω Γ)
   := ⟨ λ A B, A.val ≈ B.val, ⟨ λ _, equiv.rfl, λ _ _, equiv.symm, λ _ _ _, equiv.trans ⟩ ⟩
 
-/-- Unwrap a quotient of prime species, yielding a quotient of species. -/
-def prime_species.unwrap {ω Γ} : quotient (@prime_species.setoid ℍ ω Γ) → quotient (@species.setoid ℍ ω Γ)
-| A := quot.lift_on A (λ B, ⟦ B.val ⟧) (λ _ _ eq, quot.sound eq)
-
 /-- A quotient of all structurally congruent species which are prime. -/
 def prime_species' (ℍ : Type) (ω Γ : context) := quotient (@prime_species.setoid ℍ ω Γ)
+
+/-- Unwrap a quotient of prime species, yielding a quotient of species. -/
+def prime_species.unwrap {ω Γ} : prime_species' ℍ ω Γ → species' ℍ ω Γ
+| A := quot.lift_on A (λ B, ⟦ B.val ⟧) (λ _ _ eq, quot.sound eq)
+
+lemma prime_species.unwrap.inj {ω Γ} :
+  ∀ (A B : prime_species' ℍ ω Γ), prime_species.unwrap A = prime_species.unwrap B
+  → A = B
+| A B eq := begin
+  rcases quotient.exists_rep A with ⟨ A, eq ⟩, subst eq,
+  rcases quotient.exists_rep B with ⟨ B, eq ⟩, subst eq,
+  from quot.sound (quotient.exact eq),
+end
 
 end species
 end cpi
