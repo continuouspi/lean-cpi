@@ -14,6 +14,7 @@ def ξ_choice.embed
   := { to_fun := λ t, transition_from.mk (ξ_choice t.2.2.2),
        inj := λ ⟨ k, α, E, t ⟩ ⟨ k', α', E', t' ⟩ eq, by { cases eq, from rfl} }
 
+/-- Temporary proof of equality of transitions. We'll show this one day. -/
 noncomputable def transition_eq {ℍ} {ω} {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) :
   decidable_eq (transition_from ℓ A) := classical.dec_eq _
 
@@ -81,7 +82,7 @@ private def com₂.wrap {Γ} {ℓ : lookup ℍ ω Γ}
 | (name.extend a) (name.zero b) t := none
 | (name.extend a) (name.extend b) t := none
 
-/-- com₂ lifted to transition_from. -/
+/- com₂ lifted to transition_from. -/
 /-
 def com₂.from {Γ ℓ} (M : affinity ℍ) :
   ∀ {A : species ℍ ω (context.extend M.arity Γ)}
