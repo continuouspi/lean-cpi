@@ -2,33 +2,33 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] {M : affinity ℍ} {conc : ℍ ↪ ℂ}
 local attribute [instance] prime_equal concretion_equal
 
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
-private noncomputable def interaction_tensor_worker (M: affinity ℍ)
-  : ( quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
+private noncomputable def interaction_tensor_worker (conc : ℍ ↪ ℂ)
+  : ( species' ℍ ω (context.extend M.arity context.nil)
     × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
     × name (context.extend M.arity context.nil))
-  → ( quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
+  → ( species' ℍ ω (context.extend M.arity context.nil)
     × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
     × name (context.extend M.arity context.nil))
-  → process_space ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ :=
   option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
     if h : bF = yG ∧ yF = bG then begin
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       have fg := to_process_space (concretion.pseudo_apply.quotient F G),
-      from aff • (fg - to_process_space A - to_process_space B),
+      from conc aff • (fg - to_process_space A - to_process_space B),
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
-private lemma interaction_tensor_worker.comm {M : affinity ℍ}
-  : ∀ (A B : quotient (@species.setoid ℍ ω (context.extend M.arity context.nil))
+private lemma interaction_tensor_worker.comm
+  : ∀ (A B : species' ℍ ω (context.extend M.arity context.nil)
            × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
            × name (context.extend M.arity context.nil))
-  , interaction_tensor_worker M A B = interaction_tensor_worker M B A
+  , interaction_tensor_worker conc A B = interaction_tensor_worker conc B A
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ := begin
   simp only [interaction_tensor_worker],
   have : M.f (name.to_idx a) (name.to_idx b) = M.f (name.to_idx b) (name.to_idx a)
@@ -57,51 +57,52 @@ end
 
 /-- Compute the interaction tensor between two elements in the interaction
     space. -/
-noncomputable def interaction_tensor {M : affinity ℍ}
-  : interaction_space ℍ ω (context.extend M.arity context.nil)
-  → interaction_space ℍ ω (context.extend M.arity context.nil)
-  → process_space ℍ ω (context.extend M.arity context.nil)
-| x y := fin_fn.bind₂ x y (interaction_tensor_worker M)
+noncomputable def interaction_tensor (conc: ℍ ↪ ℂ)
+  : interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
+  → interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
+| x y := fin_fn.bind₂ x y (interaction_tensor_worker conc)
 
-infix ` ⊘ `:73 := interaction_tensor
+infix ` ⊘ `:73 := interaction_tensor _
+notation x ` ⊘[`:73 conc `] ` y:73 := interaction_tensor conc x y
 
 @[simp]
-lemma interaction_tensor.zero_left {M : affinity ℍ}
-  : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
-  , A ⊘ 0 = 0
+lemma interaction_tensor.zero_left
+  : ∀ (A : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  , A ⊘[conc] 0 = 0
 | A := fin_fn.bind₂_zero_left A _
 
 @[simp]
-lemma interaction_tensor.zero_right {M : affinity ℍ}
-  : ∀ (A : interaction_space ℍ ω (context.extend M.arity context.nil))
-  , 0 ⊘ A = 0
+lemma interaction_tensor.zero_right
+  : ∀ (A : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  , 0 ⊘[conc] A = 0
 | A := fin_fn.bind₂_zero_right A _
 
 @[simp]
-lemma interaction_tensor.comm {M : affinity ℍ}
-    (A B : interaction_space ℍ ω (context.extend M.arity context.nil))
-  : A ⊘ B = B ⊘ A := begin
-  suffices : (λ x y, interaction_tensor_worker M x y)
-           = (λ x y, interaction_tensor_worker M y x),
-  { show fin_fn.bind₂ A B (interaction_tensor_worker M)
-       = fin_fn.bind₂ B A (λ x y, interaction_tensor_worker M x y),
+lemma interaction_tensor.comm
+    (A B : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  : A ⊘[conc] B = B ⊘[conc] A := begin
+  suffices : (λ x y, interaction_tensor_worker conc x y)
+           = (λ x y, interaction_tensor_worker conc y x),
+  { show fin_fn.bind₂ A B (interaction_tensor_worker conc)
+       = fin_fn.bind₂ B A (λ x y, interaction_tensor_worker conc x y),
     -- Sneaky use of η-expanding one function to make sure the rewrite applies.
     rw this,
-    from fin_fn.bind₂_swap A B (interaction_tensor_worker M) },
+    from fin_fn.bind₂_swap A B (interaction_tensor_worker conc) },
 
   from funext (λ x, funext (interaction_tensor_worker.comm x)),
 end
 
 @[simp]
 lemma interaction_tensor.left_distrib {M : affinity ℍ}
-    (A B C : interaction_space ℍ ω (context.extend M.arity context.nil))
-  : (A + B) ⊘ C = A ⊘ C + B ⊘ C
+    (A B C : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  : (A + B) ⊘[conc] C = A ⊘[conc] C + B ⊘[conc] C
   := by simp only [interaction_tensor, fin_fn.bind₂, fin_fn.bind_distrib]
 
 @[simp]
 lemma interaction_tensor.right_distrib {M : affinity ℍ}
-    (A B C : interaction_space ℍ ω (context.extend M.arity context.nil))
-  : A ⊘ (B + C) = A ⊘ B + A ⊘ C
+    (A B C : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  : A ⊘[conc] (B + C) = A ⊘[conc] B + A ⊘[conc] C
   := calc  A ⊘ (B + C)
          = (B + C) ⊘ A : interaction_tensor.comm A _
      ... = B ⊘ A + C ⊘ A : interaction_tensor.left_distrib B C A

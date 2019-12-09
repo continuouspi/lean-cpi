@@ -3,43 +3,43 @@ import data.cpi.species data.cpi.process.basic
 namespace cpi
 namespace process
 
-variables {ℍ : Type} {ω : context} [has_add ℍ]
+variables {ℂ ℍ : Type} {ω : context} [has_add ℂ]
 
 /-- Structural congruence of processes. -/
-inductive equiv {Γ} : process ℍ ω Γ → process ℍ ω Γ → Prop
-| refl  {A : process ℍ ω Γ} : equiv A A
-| trans {A B C : process ℍ ω Γ} : equiv A B → equiv B C → equiv A C
-| symm  {A B : process ℍ ω Γ} : equiv A B → equiv B A
+inductive equiv {Γ} : process ℂ ℍ ω Γ → process ℂ ℍ ω Γ → Prop
+| refl  {A : process ℂ ℍ ω Γ} : equiv A A
+| trans {A B C : process ℂ ℍ ω Γ} : equiv A B → equiv B C → equiv A C
+| symm  {A B : process ℂ ℍ ω Γ} : equiv A B → equiv B A
 
 -- Projection
-| ξ_species   {c : ℍ} {A B : species ℍ ω Γ} : A ≈ B → equiv (c ◯ A) (c ◯ B)
-| ξ_parallel₁ {P P' Q : process ℍ ω Γ} : equiv P P' → equiv (P |ₚ Q) (P' |ₚ Q)
-| ξ_parallel₂ {P Q Q' : process ℍ ω Γ} : equiv Q Q' → equiv (P |ₚ Q) (P |ₚ Q')
+| ξ_species   {c : ℂ} {A B : species ℍ ω Γ} : A ≈ B → equiv (c ◯ A) (c ◯ B)
+| ξ_parallel₁ {P P' Q : process ℂ ℍ ω Γ} : equiv P P' → equiv (P |ₚ Q) (P' |ₚ Q)
+| ξ_parallel₂ {P Q Q' : process ℂ ℍ ω Γ} : equiv Q Q' → equiv (P |ₚ Q) (P |ₚ Q')
 
 -- Monoidic properties
-| parallel_nil   {P : process ℍ ω Γ} {c : ℍ} : equiv (P |ₚ c ◯ species.nil) P
-| parallel_symm  {P Q : process ℍ ω Γ} : equiv (P |ₚ Q) (Q |ₚ P)
-| parallel_assoc {P Q R : process ℍ ω Γ} : equiv ((P |ₚ Q) |ₚ R) (P |ₚ (Q |ₚ R))
+| parallel_nil   {P : process ℂ ℍ ω Γ} {c : ℂ} : equiv (P |ₚ c ◯ species.nil) P
+| parallel_symm  {P Q : process ℂ ℍ ω Γ} : equiv (P |ₚ Q) (Q |ₚ P)
+| parallel_assoc {P Q R : process ℂ ℍ ω Γ} : equiv ((P |ₚ Q) |ₚ R) (P |ₚ (Q |ₚ R))
 
 -- Join identical species together.
-| join  {A : species ℍ ω Γ} {c d : ℍ} : equiv (c ◯ A |ₚ d ◯ A) ((c + d) ◯ A)
+| join  {A : species ℍ ω Γ} {c d : ℂ} : equiv (c ◯ A |ₚ d ◯ A) ((c + d) ◯ A)
 
-instance {Γ} : is_equiv (process ℍ ω Γ) equiv :=
-  { refl := @equiv.refl _ _ _ Γ, symm := @equiv.symm _ _ _ Γ, trans := @equiv.trans _ _ _ Γ }
-instance {Γ} : is_refl (process ℍ ω Γ) equiv := ⟨ λ _, equiv.refl ⟩
-instance {Γ} : setoid (process ℍ ω Γ) :=
-  ⟨ equiv, ⟨ @equiv.refl _ _ _ Γ, @equiv.symm _ _ _ Γ, @equiv.trans _ _ _ Γ ⟩ ⟩
-instance setoid.is_equiv {Γ} : is_equiv (process ℍ ω Γ) has_equiv.equiv :=
+instance {Γ} : is_equiv (process ℂ ℍ ω Γ) equiv :=
+  { refl := @equiv.refl _ _ _ _ Γ, symm := @equiv.symm _ _ _ _ Γ, trans := @equiv.trans _ _ _ _ Γ }
+instance {Γ} : is_refl (process ℂ ℍ ω Γ) equiv := ⟨ λ _, equiv.refl ⟩
+instance {Γ} : setoid (process ℂ ℍ ω Γ) :=
+  ⟨ equiv, ⟨ @equiv.refl _ _ _ _ Γ, @equiv.symm _ _ _ _ Γ, @equiv.trans _ _ _ _ Γ ⟩ ⟩
+instance setoid.is_equiv {Γ} : is_equiv (process ℂ ℍ ω Γ) has_equiv.equiv :=
   process.is_equiv
 
 namespace equiv
-  lemma parallel_symm₁ {Γ} {P Q R : process ℍ ω Γ} : (P |ₚ Q |ₚ R) ≈ (Q |ₚ P |ₚ R) :=
+  lemma parallel_symm₁ {Γ} {P Q R : process ℂ ℍ ω Γ} : (P |ₚ Q |ₚ R) ≈ (Q |ₚ P |ₚ R) :=
     calc  (P |ₚ (Q |ₚ R))
         ≈ ((P |ₚ Q) |ₚ R) : symm parallel_assoc
     ... ≈ ((Q |ₚ P) |ₚ R) : ξ_parallel₁ parallel_symm
     ... ≈ (Q |ₚ (P |ₚ R)) : parallel_assoc
 
-  lemma parallel_symm₂ {Γ} {P Q R : process ℍ ω Γ} : ((P |ₚ Q) |ₚ R) ≈ ((P |ₚ R) |ₚ Q) :=
+  lemma parallel_symm₂ {Γ} {P Q R : process ℂ ℍ ω Γ} : ((P |ₚ Q) |ₚ R) ≈ ((P |ₚ R) |ₚ Q) :=
     calc  ((P |ₚ Q) |ₚ R)
         ≈ (P |ₚ (Q |ₚ R)) : parallel_assoc
     ... ≈ (P |ₚ (R |ₚ Q)) : ξ_parallel₂ parallel_symm
@@ -48,11 +48,11 @@ end equiv
 
 namespace parallel.quot
   /-- Make a parallel process from a quotient of two process. -/
-  def mk {Γ} : quotient (@process.setoid ℍ ω _ Γ) → quotient (@process.setoid ℍ ω _ Γ) → quotient (@process.setoid ℍ ω _ Γ)
+  def mk {Γ} : quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@process.setoid ℂ ℍ ω _ Γ)
   | A B := quotient.lift_on₂ A B (λ A B, ⟦ A |ₚ B ⟧)
       (λ A B A' B' eqA eqB, quot.sound (trans (equiv.ξ_parallel₁ eqA) ((equiv.ξ_parallel₂ eqB))))
 
-  lemma assoc {Γ} (A B C : quotient (@process.setoid ℍ ω _ Γ))
+  lemma assoc {Γ} (A B C : quotient (@process.setoid ℂ ℍ ω _ Γ))
     : mk A (mk B C) = mk (mk A B) C
     := begin
       rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
@@ -63,36 +63,36 @@ namespace parallel.quot
 end parallel.quot
 
 /-- Structural congruence of processes, with the extension of c∘(A|B) ≡⁺ c∘A || c∘B  -/
-inductive equiv2 {Γ} : process ℍ ω Γ → process ℍ ω Γ → Prop
-| refl  {A : process ℍ ω Γ} : equiv2 A A
-| trans {A B C : process ℍ ω Γ} : equiv2 A B → equiv2 B C → equiv2 A C
-| symm  {A B : process ℍ ω Γ} : equiv2 A B → equiv2 B A
+inductive equiv2 {Γ} : process ℂ ℍ ω Γ → process ℂ ℍ ω Γ → Prop
+| refl  {A : process ℂ ℍ ω Γ} : equiv2 A A
+| trans {A B C : process ℂ ℍ ω Γ} : equiv2 A B → equiv2 B C → equiv2 A C
+| symm  {A B : process ℂ ℍ ω Γ} : equiv2 A B → equiv2 B A
 
 -- Projection
-| ξ_species   {c : ℍ} {A B : species ℍ ω Γ} : A ≈ B → equiv2 (c ◯ A) (c ◯ B)
-| ξ_parallel₁ {P P' Q : process ℍ ω Γ} : equiv2 P P' → equiv2 (P |ₚ Q) (P' |ₚ Q)
-| ξ_parallel₂ {P Q Q' : process ℍ ω Γ} : equiv2 Q Q' → equiv2 (P |ₚ Q) (P |ₚ Q')
+| ξ_species   {c : ℂ} {A B : species ℍ ω Γ} : A ≈ B → equiv2 (c ◯ A) (c ◯ B)
+| ξ_parallel₁ {P P' Q : process ℂ ℍ ω Γ} : equiv2 P P' → equiv2 (P |ₚ Q) (P' |ₚ Q)
+| ξ_parallel₂ {P Q Q' : process ℂ ℍ ω Γ} : equiv2 Q Q' → equiv2 (P |ₚ Q) (P |ₚ Q')
 
 -- Monoidic properties
-| parallel_nil   {P : process ℍ ω Γ} {c : ℍ} : equiv2 (P |ₚ c ◯ species.nil) P
-| parallel_symm  {P Q : process ℍ ω Γ} : equiv2 (P |ₚ Q) (Q |ₚ P)
-| parallel_assoc {P Q R : process ℍ ω Γ} : equiv2 ((P |ₚ Q) |ₚ R) (P |ₚ (Q |ₚ R))
+| parallel_nil   {P : process ℂ ℍ ω Γ} {c : ℂ} : equiv2 (P |ₚ c ◯ species.nil) P
+| parallel_symm  {P Q : process ℂ ℍ ω Γ} : equiv2 (P |ₚ Q) (Q |ₚ P)
+| parallel_assoc {P Q R : process ℂ ℍ ω Γ} : equiv2 ((P |ₚ Q) |ₚ R) (P |ₚ (Q |ₚ R))
 
 -- Join/split processes.
-| join  {A : species ℍ ω Γ} {c d : ℍ} : equiv2 (c ◯ A |ₚ d ◯ A) ((c + d) ◯ A)
-| split {A B : species ℍ ω Γ} {c : ℍ} : equiv2 (c ◯ (A |ₛ B)) (c ◯ A |ₚ c ◯ B)
+| join  {A : species ℍ ω Γ} {c d : ℂ} : equiv2 (c ◯ A |ₚ d ◯ A) ((c + d) ◯ A)
+| split {A B : species ℍ ω Γ} {c : ℂ} : equiv2 (c ◯ (A |ₛ B)) (c ◯ A |ₚ c ◯ B)
 
 infix ` ≡⁺ `:50 := equiv2
 
-instance equiv2.is_equiv {Γ} : is_equiv (process ℍ ω Γ) equiv2 :=
-  { refl := @equiv2.refl _ _ _ Γ, symm := @equiv2.symm _ _ _ Γ, trans := @equiv2.trans _ _ _ Γ }
-instance equiv2.is_refl {Γ} : is_refl (process ℍ ω Γ) equiv2 := ⟨ λ _, equiv2.refl ⟩
+instance equiv2.is_equiv {Γ} : is_equiv (process ℂ ℍ ω Γ) equiv2 :=
+  { refl := @equiv2.refl _ _ _ _ Γ, symm := @equiv2.symm _ _ _ _ Γ, trans := @equiv2.trans _ _ _ _ Γ }
+instance equiv2.is_refl {Γ} : is_refl (process ℂ ℍ ω Γ) equiv2 := ⟨ λ _, equiv2.refl ⟩
 
 /-- Wraps ≡⁺ in a setoid. -/
-def equiv2.setoid {Γ} : setoid (process ℍ ω Γ) :=
-  ⟨ equiv2, ⟨ @equiv2.refl _ _ _ Γ, @equiv2.symm _ _ _ Γ, @equiv2.trans _ _ _ Γ ⟩ ⟩
+def equiv2.setoid {Γ} : setoid (process ℂ ℍ ω Γ) :=
+  ⟨ equiv2, ⟨ @equiv2.refl _ _ _ _ Γ, @equiv2.symm _ _ _ _ Γ, @equiv2.trans _ _ _ _ Γ ⟩ ⟩
 
-lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
+lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℂ ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
 | P Q eq := begin
   induction eq,
   case equiv.refl { from equiv2.refl },
@@ -108,16 +108,16 @@ lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℍ ω Γ}, P ≈ Q → P ≡⁺
 end
 
 /-- Convert a process' to a process'2. -/
-def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℍ ω _ Γ) → quotient (@equiv2.setoid ℍ ω _ Γ)
+def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@equiv2.setoid ℂ ℍ ω _ Γ)
 | P := quot.lift_on P (@quotient.mk _ equiv2.setoid) (λ P Q r, quot.sound (equiv2.of_equiv r))
 
 end process
 
 /-- A quotient of all structurally congruent processes. -/
-def process' (ℍ : Type) (ω Γ : context) [has_add ℍ] := quotient (@process.setoid ℍ ω _ Γ)
+def process' (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] := quotient (@process.setoid ℂ ℍ ω _ Γ)
 
 /-- A quotient of all structurally congruent processes, using ≡⁺ -/
-def process'2 (ℍ : Type) (ω Γ : context) [has_add ℍ] := quotient (@process.equiv2.setoid ℍ ω _ Γ)
+def process'2 (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] := quotient (@process.equiv2.setoid ℂ ℍ ω _ Γ)
 
 end cpi
 

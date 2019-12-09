@@ -1,15 +1,17 @@
 import data.cpi.semantics.interaction_tensor data.cpi.transition
-import tactic.abel
+import tactic.abel algebra.distrib_embedding
 
 namespace cpi
 
-variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ]
+  {M : affinity ℍ}
+  {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
 local attribute [instance] prime_equal concretion_equal
 
 /-- Maps a potential transition to the interaction space. -/
 private noncomputable def potential_interaction_space {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
   : transition.transition_from ℓ A
-  → interaction_space ℍ ω Γ
+  → interaction_space ℂ ℍ ω Γ
 | ⟨ _, # a , @production.concretion _ _ _ b y G, tr ⟩ := fin_fn.mk_basis ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩
 | ⟨ _, τ@'_, E, tr ⟩ := 0
 | ⟨ _, τ⟨_⟩, E, tr ⟩ := 0
@@ -19,7 +21,7 @@ private lemma potential_interaction_space.equiv
   ∀ {k} {α : label ℍ Γ k} {E E' : production ℍ ω Γ k}
     {t : A [ℓ, α]⟶ E} {t' : B [ℓ, α]⟶ E'}
   , A ≈ B → E ≈ E'
-  → potential_interaction_space (transition.transition_from.mk t)
+  → @potential_interaction_space ℂ ℍ ω _ Γ ℓ _ (transition.transition_from.mk t)
   = potential_interaction_space (transition.transition_from.mk t')
 | _ (# a) (@production.concretion _ _ _ b y E) (production.concretion E') t t' eqA (production.equiv.concretion eqE) := begin
   unfold transition.transition_from.mk potential_interaction_space,
@@ -35,12 +37,13 @@ end
     This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
     components of the definition of d(c ◯ A)/dt. -/
 private noncomputable def immediate_process_space
-    {M : affinity ℍ} {ℓ : lookup ℍ ω (context.extend M.arity context.nil)} {A : species ℍ ω (context.extend M.arity context.nil)}
+    {A : species ℍ ω (context.extend M.arity context.nil)}
+    (conc : ℍ ↪ ℂ)
   : transition.transition_from ℓ A
-  → process_space ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | ⟨ _, # a , _, tr ⟩ := 0
 | ⟨ _, τ@'k, production.species B, tr ⟩ :=
-  k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧)
+  conc k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧)
 | ⟨ _, τ⟨ n ⟩, production.species B, tr ⟩ :=
   let arity := quot.lift_on n
     (λ ⟨ a, b ⟩, M.f (name.to_idx a) (name.to_idx b))
@@ -49,17 +52,16 @@ private noncomputable def immediate_process_space
       from rfl,
       from M.symm (name.to_idx a₁) (name.to_idx b₁),
     end) in
-  option.cases_on arity 0 (λ k, k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧))
+  option.cases_on arity 0 (λ k, conc k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧))
 
 private lemma immediate_process_space.equiv
-    {M : affinity ℍ} {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
-    {A B : species ℍ ω (context.extend M.arity context.nil)}
+    {A B : species ℍ ω (context.extend M.arity context.nil)} {conc : ℍ ↪ ℂ}
   : ∀ {k} {α : label ℍ (context.extend M.arity context.nil) k}
       {E E' : production ℍ ω (context.extend M.arity context.nil) k}
       {t : A [ℓ, α]⟶ E} {t' : B [ℓ, α]⟶ E'}
     , A ≈ B → E ≈ E'
-    → immediate_process_space (transition.transition_from.mk t)
-    = immediate_process_space (transition.transition_from.mk t')
+    → immediate_process_space conc (transition.transition_from.mk t)
+    = immediate_process_space conc (transition.transition_from.mk t')
 | _ (# a ) E E' t t' eqA eqE := rfl
 | _ (τ@'k) (production.species E) (production.species E') t t' eqA (production.equiv.species eqE) := begin
   unfold transition.transition_from.mk immediate_process_space,
@@ -77,8 +79,8 @@ end
 /-- The vector space of potential interactions of a process (∂P). -/
 noncomputable def process_potential
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : process ℍ ω (context.extend M.arity context.nil)
-  → interaction_space ℍ ω (context.extend M.arity context.nil)
+  : process ℂ ℍ ω (context.extend M.arity context.nil)
+  → interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
 | (c ◯ A) :=
   let transitions := transition.enumerate ℓ A in
   c • multiset.sum_map potential_interaction_space transitions.elems.val
@@ -86,8 +88,7 @@ noncomputable def process_potential
 
 
 lemma process_potential.nil_zero
-    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (c : ℍ)
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil)) (c : ℂ)
   : process_potential M ℓ (c ◯ nil) = 0 := begin
   simp only [process_potential],
   generalize : transition.enumerate ℓ nil = As,
@@ -101,21 +102,21 @@ end
 
 /-- The vector space of immediate actions of a process (dP/dt)-/
 noncomputable def process_immediate
-    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : process ℍ ω (context.extend M.arity context.nil)
-  → process_space ℍ ω (context.extend M.arity context.nil)
+    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil)) (conc : ℍ ↪ ℂ)
+  : process ℂ ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | (c ◯ A) :=
   let transitions := transition.enumerate ℓ A in
-  c • multiset.sum_map immediate_process_space transitions.elems.val
-  + (½ : ℍ) • (process_potential M ℓ (c ◯ A) ⊘ process_potential M ℓ (c ◯ A))
+  c • multiset.sum_map (immediate_process_space conc) transitions.elems.val
+  + (½ : ℂ) • (process_potential M ℓ (c ◯ A) ⊘[conc] process_potential M ℓ (c ◯ A))
 | (P |ₚ Q)
   := process_immediate P + process_immediate Q
-   + (process_potential M ℓ P ⊘ process_potential M ℓ Q)
+   + (process_potential M ℓ P ⊘[conc] process_potential M ℓ Q)
 
-lemma process_immediate.nil_zero
+lemma process_immediate.nil_zero {conc : ℍ ↪ ℂ}
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (c : ℍ)
-  : process_immediate M ℓ (c ◯ nil) = 0 := begin
+    (c : ℂ)
+  : process_immediate M ℓ conc (c ◯ nil) = 0 := begin
   simp only [process_immediate],
 
   have : process_potential M ℓ (c ◯ nil) = 0 := process_potential.nil_zero M ℓ c,
@@ -132,7 +133,7 @@ end
 
 lemma process_potential.equiv
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
+  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
   , P ≈ Q → process_potential M ℓ P = process_potential M ℓ Q
 | P Q eq := begin
   induction eq,
@@ -149,7 +150,7 @@ lemma process_potential.equiv
     suffices
       : multiset.sum_map potential_interaction_space As.elems.val
       = multiset.sum_map potential_interaction_space Bs.elems.val,
-      from congr_arg (has_scalar.smul c) this,
+      from congr_arg (has_scalar.smul _) this,
 
     suffices : ∀ x
       , potential_interaction_space x
@@ -174,25 +175,23 @@ lemma process_potential.equiv
   },
   case process.equiv.parallel_nil : P C {
     unfold1 process_potential,
-    show process_potential M ℓ P + process_potential M ℓ (C ◯ nil) = process_potential M ℓ P,
+    show process_potential M ℓ P + process_potential M ℓ (C ◯ nil)
+       = process_potential M ℓ P,
 
     have : process_potential M ℓ (C ◯ nil) = 0 := process_potential.nil_zero M ℓ C,
     simp only [this, add_zero],
   },
   case cpi.process.equiv.parallel_symm { simp only [process_potential, add_comm] },
   case process.equiv.parallel_assoc { simp only [process_potential, add_assoc] },
-  case process.equiv.join : A c d {
-    simp only [process_potential],
-    from eq.symm (fin_fn.add_smul c d _),
-  }
+  case process.equiv.join : A c d { simp only [process_potential, fin_fn.add_smul] },
 end
 
-private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
-    (Ds : interaction_space ℍ ω (context.extend (M.arity) context.nil))
-    (Ps : process_space ℍ ω (context.extend (M.arity) context.nil))
-  : (c • Ds) ⊘ (d • Ds) + ((½ : ℍ) • (c • Ds) ⊘ (c • Ds) + (½ : ℍ) • (d • Ds) ⊘ (d • Ds))
-  = (½ : ℍ) • (c • Ds + d • Ds) ⊘ (c • Ds + d • Ds) := begin
-  generalize ehalf : (½ : ℍ) = half,
+private lemma process_immediate.join {conc : ℍ ↪ ℂ} (c d : ℂ)
+    (Ds : interaction_space ℂ ℍ ω (context.extend (M.arity) context.nil))
+    (Ps : process_space ℂ ℍ ω (context.extend (M.arity) context.nil))
+  : (c • Ds) ⊘[conc] (d • Ds) + ((½ : ℂ) • (c • Ds) ⊘[conc] (c • Ds) + (½ : ℂ) • (d • Ds) ⊘[conc] (d • Ds))
+  = (½ : ℂ) • (c • Ds + d • Ds) ⊘[conc] (c • Ds + d • Ds) := begin
+  generalize ehalf : (½ : ℂ) = half,
 
   rw [interaction_tensor.left_distrib (c • Ds) (d • Ds),
       interaction_tensor.right_distrib (c • Ds),
@@ -202,21 +201,21 @@ private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
   from calc  (c • Ds) ⊘ (d • Ds)
            + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
 
-           = (1 : ℍ) • (c • Ds) ⊘ (d • Ds)
-           + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
+           = (1 : ℂ) • (c • Ds) ⊘[conc] (d • Ds)
+           + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
            : by simp only [one_smul]
 
-       ... = (half + half) • (c • Ds) ⊘ (d • Ds)
-           + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
+       ... = (half + half) • (c • Ds) ⊘[conc] (d • Ds)
+           + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
            : by rw [half_ring.one_is_two_halves, ← ehalf]
 
-       ... = half • (c • Ds) ⊘ (c • Ds) + half • (c • Ds) ⊘ (d • Ds)
-           + (half • (c • Ds) ⊘ (d • Ds) + half • (d • Ds) ⊘ (d • Ds))
+       ... = half • (c • Ds) ⊘[conc] (c • Ds) + half • (c • Ds) ⊘[conc] (d • Ds)
+           + (half • (c • Ds) ⊘[conc] (d • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
            : begin
              simp only [fin_fn.add_smul],
-             generalize : half • (c • Ds) ⊘ (d • Ds) = cd,
-             generalize : half • (c • Ds) ⊘ (c • Ds) = cc,
-             generalize : half • (d • Ds) ⊘ (d • Ds) = dd,
+             generalize : half • (c • Ds) ⊘[conc] (d • Ds) = cd,
+             generalize : half • (c • Ds) ⊘[conc] (c • Ds) = cc,
+             generalize : half • (d • Ds) ⊘[conc] (d • Ds) = dd,
              abel,
             end
 
@@ -225,10 +224,13 @@ private lemma process_immediate.join {M : affinity ℍ} (c d : ℍ)
            : by simp only [smul_add]
 end
 
-lemma process_immediate.equiv
+lemma process_immediate.equiv [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
-  , P ≈ Q → process_immediate M ℓ P = process_immediate M ℓ Q
+    (conc : distrib_embedding ℍ ℂ (+) (+))
+  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
+  , P ≈ Q
+  → process_immediate M ℓ conc.to_embed P
+  = process_immediate M ℓ conc.to_embed Q
 | P Q eq := begin
   induction eq,
   case process.equiv.refl { from rfl },
@@ -241,19 +243,19 @@ lemma process_immediate.equiv
     generalize : transition.enumerate ℓ A = As,
     generalize : transition.enumerate ℓ B = Bs,
 
-    suffices : multiset.sum_map immediate_process_space As.elems.val
-             = multiset.sum_map immediate_process_space Bs.elems.val,
+    suffices : multiset.sum_map (immediate_process_space conc.to_embed) As.elems.val
+             = multiset.sum_map (immediate_process_space conc.to_embed) Bs.elems.val,
     { have eql : process_potential M ℓ (c ◯ A) = process_potential M ℓ (c ◯ B)
         := process_potential.equiv M ℓ (process.equiv.ξ_species eq),
       rw [this, eql] },
 
     cases eq,
     suffices : ∀ x
-      , immediate_process_space x
-      = immediate_process_space ((transition.equivalent_of.is_equiv eq).to_fun x),
+      , immediate_process_space conc.to_embed x
+      = immediate_process_space conc.to_embed ((transition.equivalent_of.is_equiv eq).to_fun x),
       let iso := transition.equivalent_of.is_equiv eq,
       from multiset.sum_map_iso
-        immediate_process_space immediate_process_space iso this
+        (immediate_process_space _) (immediate_process_space _) iso this
         As.elems Bs.elems
         (λ x _, @fintype.complete _ Bs (iso.to_fun x))
         (λ x _, @fintype.complete _ As (iso.inv_fun x)),
@@ -292,46 +294,49 @@ lemma process_immediate.equiv
     generalize : process_potential M ℓ R = r,
 
     from calc  p ⊘ q + (p + q) ⊘ r
-             = p ⊘ q + p ⊘ r + q ⊘ r : by rw [interaction_tensor.left_distrib, add_assoc]
-         ... = q ⊘ r + p ⊘ q + p ⊘ r : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
-         ... = q ⊘ r + p ⊘ (q + r) : by rw [add_assoc, ← interaction_tensor.right_distrib]
+             = p ⊘[conc] q + p ⊘[conc] r + q ⊘ r : by rw [interaction_tensor.left_distrib, add_assoc]
+         ... = q ⊘[conc] r + p ⊘[conc] q + p ⊘[conc] r : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
+         ... = q ⊘[conc] r + p ⊘[conc] (q + r) : by rw [add_assoc, ← interaction_tensor.right_distrib]
   },
   case process.equiv.join : A c d {
     simp only [process_immediate, process_potential],
 
     generalize : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val) = Ds,
-    generalize : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ A)).val) = Ps,
+    generalize : multiset.sum_map (immediate_process_space conc.to_embed) ((fintype.elems (transition.transition_from ℓ A)).val) = Ps,
 
     suffices
-      : (c • Ds) ⊘ (d • Ds) + ((½ : ℍ) • ((c • Ds) ⊘ (c • Ds)) + (½ : ℍ) • (d • Ds) ⊘ (d • Ds))
-      = (½ : ℍ) • ((c • Ds + d • Ds) ⊘ (c • Ds + d • Ds)),
+      : (c • Ds) ⊘[conc.to_embed] (d • Ds) + ((½ : ℂ) • ((c • Ds) ⊘[conc.to_embed] (c • Ds)) + (½ : ℂ) • (d • Ds) ⊘[conc.to_embed] (d • Ds))
+      = (½ : ℂ) • ((c • Ds + d • Ds) ⊘[conc.to_embed] (c • Ds + d • Ds)),
       { simp only [add_assoc, add_comm, fin_fn.add_smul, add_left_comm, this] },
 
     from process_immediate.join c d Ds Ps,
-
   }
 end
 
 /-- dP/dt lifted to quotients. -/
-noncomputable def process_immediate.quot
+noncomputable def process_immediate.quot [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : process' ℍ ω (context.extend M.arity context.nil)
-  → process_space ℍ ω (context.extend M.arity context.nil)
-| P := quot.lift_on P (process_immediate M ℓ) (λ P Q, process_immediate.equiv M ℓ)
+    (conc : distrib_embedding ℍ ℂ (+) (+))
+  : process' ℂ ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
+| P := quot.lift_on P (process_immediate M ℓ conc.to_embed)
+    (λ P Q, process_immediate.equiv M ℓ conc)
 
 /-- dP/dt lifted to process spaces. -/
-noncomputable def process_immediate.space
+noncomputable def process_immediate.space [half_ring ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : process_space ℍ ω (context.extend M.arity context.nil)
-  → process_space ℍ ω (context.extend M.arity context.nil)
-| P := process_immediate.quot M ℓ (process.from_space P)
+    (conc : distrib_embedding ℍ ℂ (+) (+))
+  : process_space ℂ ℍ ω (context.extend M.arity context.nil)
+  → process_space ℂ ℍ ω (context.extend M.arity context.nil)
+| P := process_immediate.quot M ℓ conc (process.from_space P)
 
-axiom process_potential.equiv2
+axiom process_potential.equiv2 [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
-    (ξ : interaction_space ℍ ω (context.extend M.arity context.nil))
+    (conc : distrib_embedding ℍ ℂ (+) (+))
+  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
+    (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   , P ≡⁺ Q
-  → process_potential M ℓ P ⊘ ξ = process_potential M ℓ Q ⊘ ξ
+  → process_potential M ℓ P ⊘[conc.to_embed] ξ = process_potential M ℓ Q ⊘[conc] ξ
 /-
 | P Q ξ eq := begin
   induction eq,
@@ -388,10 +393,11 @@ axiom process_potential.equiv2
 end
 -/
 
-axiom process_immediate.equiv2
+axiom process_immediate.equiv2 [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-  : ∀ {P Q : process ℍ ω (context.extend M.arity context.nil)}
-  , P ≡⁺ Q → process_immediate M ℓ P = process_immediate M ℓ Q
+    (conc : distrib_embedding ℍ ℂ (+) (+))
+  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
+  , P ≡⁺ Q → process_immediate M ℓ conc.to_embed P = process_immediate M ℓ conc.to_embed Q
 /-
 | P Q eq := begin
   induction eq,
