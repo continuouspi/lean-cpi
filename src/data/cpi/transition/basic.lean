@@ -39,10 +39,17 @@ def production.rename
 | ._ (production.species A) := production.species (species.rename ρ A)
 | ._ (production.concretion A) := production.concretion (concretion.rename ρ A)
 
+lemma production.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ → name η)
+  : ∀ {k} (E : production ℍ ω Γ k)
+  , production.rename σ (production.rename ρ E)
+  = production.rename (σ ∘ ρ) E
+| ._ (production.species A) := congr_arg _ (species.rename_compose ρ σ A)
+| ._ (production.concretion F) := congr_arg _ (concretion.rename_compose ρ σ F)
+
 lemma production.rename_id
   {Γ} : ∀ {k} (E : production ℍ ω Γ k), production.rename id E = E
-  | ._ (production.species A) := by { unfold production.rename, rw species.rename_id A }
-  | ._ (production.concretion F) := by { unfold production.rename, rw concretion.rename_id F }
+| ._ (production.species A) := congr_arg _ (species.rename_id A)
+| ._ (production.concretion F) := congr_arg _ (concretion.rename_id F)
 
 /-- Equivalence of productions. This just wraps equivalence of species and
     concretions. -/
@@ -196,7 +203,7 @@ lemma label.rename_compose {Γ Δ η} (ρ : name Γ → name Δ) (σ : name Δ �
 lemma label.rename_id {Γ} : ∀ {k} (l : label ℍ Γ k), label.rename id l = l
 | ._ #a := rfl
 | ._ τ@'k := rfl
-| ._ τ⟨ p ⟩ := by { unfold label.rename, rw upair.map_identity }
+| ._ τ⟨ p ⟩ := congr_arg _ (upair.map_identity p)
 
 /-- A function to look up names within the environment. -/
 def lookup (ℍ : Type) (ω Γ : context) := ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ)
@@ -295,19 +302,18 @@ inductive transition :
 
 
 | defn
-    {Γ} {n} {l : label ℍ (context.extend n Γ) kind.species}
+    {Γ k n} {α : label ℍ (context.extend n Γ) k}
     (ℓ : ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ))
-
-    (E : species ℍ ω (context.extend n Γ))
+    {E}
     (D : reference n ω) (as : vector (name Γ) n)
-  : transition (Σ# (ℓ n D)) (lookup.rename name.extend ℓ) l E
+  : transition (Σ# (ℓ n D)) (lookup.rename name.extend ℓ) α E
   → transition
       (species.apply D as)
       ℓ
-      (label.rename (name.mk_apply as) l)
-      (species.rename (name.mk_apply as) E)
+      (label.rename (name.mk_apply as) α)
+      (production.rename (name.mk_apply as) E)
 
-notation A ` [`:max ℓ `, ` l `]⟶ ` E:max := transition A ℓ l E
+notation A ` [`:max ℓ `, ` α `]⟶ ` E:max := transition A ℓ α E
 
 namespace transition
   private lemma congr_arg_heq₂
@@ -420,16 +426,15 @@ namespace transition
       }
     },
 
-    case defn : Γ n l f E D as t ih {
+    case defn : Γ n k l f E D as t ih {
       rcases ih _ (name.ext ρ) with ⟨ _, _, t', ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       simp only [species.rename.invoke],
       simp only [species.rename.choice] at t',
       rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
-      refine ⟨ _, _, defn (lookup.rename ρ f) _ D _ t', _, _ ⟩,
+      refine ⟨ _, _, defn (lookup.rename ρ f) D _ t', _, _ ⟩,
 
       rw [label.rename_compose, label.rename_compose, name.mk_apply_rename],
-      refine congr_arg production.species _,
-      rw [species.rename_compose, species.rename_compose, name.mk_apply_rename],
+      rw [production.rename_compose, production.rename_compose, name.mk_apply_rename],
     }
   end
 

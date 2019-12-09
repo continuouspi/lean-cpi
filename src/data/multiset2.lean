@@ -105,4 +105,16 @@ lemma multiset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
   → multiset.sum_map f xs.val = multiset.sum_map g ys.val
 | mem mem' := congr_arg _ (finset.map_iso f g iso feq xs ys mem mem')
 
+/-- A composition of filter and image on finsets. -/
+def finset.filter_image {α β : Type} [decidable_eq β] (f : α → option β) : finset α → finset β
+| ⟨ xs, nodup ⟩ := (multiset.filter_map f xs).to_finset
+
+/-- A composition of filter and map on finsets. This is less elegant a interface
+    than finset.map, as f need only be injective over the values it is returns
+    'some' for. -/
+def finset.filter_map {α β : Type}
+  (f : α → option β) (H : ∀ (a a' : α) (b : β), b ∈ f a → b ∈ f a' → a = a') :
+  finset α → finset β
+| ⟨ xs, nodup ⟩ := ⟨ multiset.filter_map f xs, multiset.nodup_filter_map f H nodup ⟩
+
 #lint -
