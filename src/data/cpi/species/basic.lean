@@ -43,7 +43,7 @@ inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 /- Elements in the sum -/
 | empty {} {Γ} : whole kind.choices Γ
 | cons {Γ} {f} (π : prefix_expr ℍ Γ f) :
-    whole kind.species (f.apply Γ) → whole kind.choices Γ → whole kind.choices Γ
+    whole kind.species (context.extend f Γ) → whole kind.choices Γ → whole kind.choices Γ
 
 
 /-- An alias for species within the `whole' datatype. -/
@@ -68,42 +68,34 @@ reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
 /-- Construct a singleton choice from a prefix and species. -/
-def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ))
+def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (context.extend f Γ))
   := Σ# (whole.cons π A whole.empty)
 
 infixr ` ⬝ ` := choices.mk_one
 
 section free
   /-- Determine if any variable with a given level occurs within this species. -/
-  def free_in {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : Prop := begin
-    induction A,
-    case nil { from false },
-    case apply : Γ n D as { from ∃ a ∈ as.val, l ∈ a },
-    case choice : Γ As ih { from ih l },
-    case parallel : Γ A B ih_a ih_b { from ih_a l ∨ ih_b l },
-    case restriction : Γ M A ih { from ih (level.extend l) },
-    case whole.empty : Γ { from false },
-    case whole.cons : Γ f π A As ih_a ih_as {
-      from l ∈ π ∨ ih_a (prefix_expr.raise π l) ∨ ih_as l
-    }
-  end
+  def free_in : ∀ {k Γ}, level Γ → whole ℍ ω k Γ → Prop
+  | ._ Γ l nil := false
+  | ._ Γ l (apply D as) := ∃ a ∈ as.val, l ∈ a
+  | ._ Γ l (Σ# As) := free_in l As
+  | ._ Γ l (A |ₛ B) := free_in l A ∨ free_in l B
+  | ._ Γ l (ν(M) A) := free_in (level.extend l) A
+  | ._ Γ l whole.empty := false
+  | ._ Γ l (whole.cons π A As) := l ∈ π ∨ free_in (level.extend l) A ∨ free_in l As
 
   instance {Γ} {k} : has_mem (level Γ) (whole ℍ ω k Γ) := ⟨ free_in ⟩
 
-  private def free_in_decide {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : decidable (free_in l A) := begin
-    induction A,
-
-    case nil { from decidable.false },
-    case apply : { unfold free_in, apply_instance },
-    case choice : Γ As ih { from ih l },
-    case parallel : Γ A B ih_a ih_b { from @or.decidable _ _ (ih_a l) (ih_b l) },
-    case restriction : Γ M A ih { from ih (level.extend l) },
-    case whole.empty { from decidable.false },
-    case whole.cons : Γ f π A As ih_a ih_as {
-      from @or.decidable (l ∈ π) _ _
-        (@or.decidable _ _ (ih_a (prefix_expr.raise π l)) (ih_as l))
-    }
-  end
+  private def free_in_decide : ∀ {k Γ} (l : level Γ) (A : whole ℍ ω k Γ), decidable (free_in l A)
+  | ._ Γ l nil := decidable.false
+  | ._ Γ l (apply D as) := by { unfold free_in, apply_instance }
+  | ._ Γ l (Σ# As) := free_in_decide l As
+  | ._ Γ l (A |ₛ B) := @or.decidable _ _ (free_in_decide l A) (free_in_decide l B)
+  | ._ Γ l (ν(M) A) := free_in_decide _ A
+  | ._ Γ l whole.empty := decidable.false
+  | ._ Γ l (whole.cons π A As) :=
+    @or.decidable (l ∈ π) _ _
+      (@or.decidable _ _ (free_in_decide (level.extend l) A) (free_in_decide l As))
 
   instance free_in.decidable {Γ} {k} {l} {A: whole ℍ ω k Γ} : decidable (free_in l A)
     := free_in_decide l A
@@ -132,7 +124,7 @@ section rename
     cons
       (prefix_expr.rename_with π (λ a free, ρ a (or.inl free)))
       (rename_with A
-        (prefix_expr.ext_with π (λ l, l ∈ A) (λ a free, ρ a (or.inr (or.inl free)))))
+        (name.ext_with (λ l, l ∈ A) (λ a free, ρ a (or.inr (or.inl free)))))
       (rename_with As (λ a free, ρ a (or.inr (or.inr free))))
   using_well_founded {
     rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ s, sizeof s.snd.snd.snd.fst)⟩],
@@ -171,7 +163,7 @@ section rename
     let as : rename_with As _ = As := rename_with_id As in
     begin
       simp [rename_with],
-      rw prefix_expr.ext_with_id,
+      rw name.ext_with_id,
       simp [π', a, as]
     end
 
@@ -213,23 +205,21 @@ section rename
     end
   | Γ Δ η ._ empty ρ σ := by unfold rename rename_with
   | Γ Δ η ._ (cons π A As) ρ σ := begin
-      simp [rename, rename_with, prefix_expr.ext_with],
+      simp [rename, rename_with, name.ext_with],
 
       have π' := prefix_expr.rename_with_compose π (λ a f, ρ a (or.inl f)) σ,
       have A' := rename_with_compose A
-        (prefix_expr.ext_with π (λ l, l ∈ A) (λ a f, ρ a (or.inr (or.inl f))))
-        (prefix_expr.ext π σ),
+        (name.ext_with (λ l, l ∈ A) (λ a f, ρ a (or.inr (or.inl f))))
+        (name.ext σ),
       have As' := rename_with_compose As (λ a f, ρ a (or.inr (or.inr f))) σ,
 
       -- Massage A and ⊢ into shape
-      rw prefix_expr.ext_with_comp π (λ l, l ∈ A) at A',
-      unfold rename prefix_expr.ext at A',
+      rw name.ext_with_comp (λ l, l ∈ A) at A',
+      unfold rename name.ext at A',
 
-      rw prefix_expr.ext_with_discard
-        (prefix_expr.rename_with π (λ a free, ρ a _))
-        (λ l, l ∈ rename_with A (prefix_expr.ext_with π (λ l, l ∈ A) (λ a free, ρ a _)))
+      rw name.ext_with_discard
+        (λ l, l ∈ rename_with A (name.ext_with (λ l, l ∈ A) (λ a free, ρ a _)))
         σ,
-      rw prefix_expr.rename_with_ext_with π,
 
       from ⟨ π', A', As' ⟩,
     end
@@ -291,12 +281,12 @@ section rename_equations
   lemma rename.empty : rename ρ (@whole.empty ℍ ω Γ) = empty := by unfold rename rename_with
 
   @[simp]
-  lemma rename.cons {f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ)) (As : choices ℍ ω Γ)
+  lemma rename.cons {f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (context.extend f Γ)) (As : choices ℍ ω Γ)
     : rename ρ (cons π A As)
-    = cons (prefix_expr.rename ρ π) (rename (prefix_expr.ext π ρ) A) (rename ρ As)
+    = cons (prefix_expr.rename ρ π) (rename (name.ext ρ) A) (rename ρ As)
     := begin
-      unfold rename rename_with prefix_expr.rename prefix_expr.ext,
-      rw prefix_expr.ext_with_discard π (λ l, _) ρ
+      unfold rename rename_with prefix_expr.rename name.ext,
+      rw name.ext_with_discard (λ l, _) ρ
     end
 
   lemma rename.inj :
@@ -366,7 +356,7 @@ section rename_equations
         rcases eq with ⟨ ⟨ _ ⟩, eqπ, eqA, eqAs ⟩,
         cases prefix_expr.rename.inj inj (eq_of_heq eqπ),
         cases rename.inj inj eqAs,
-        cases (rename.inj (prefix_expr.ext.inj π inj) (eq_of_heq eqA)),
+        cases (rename.inj (name.ext.inj inj) (eq_of_heq eqA)),
         from rfl,
       }
     end
@@ -430,18 +420,18 @@ end parallel
 /- Show choice can be converted to/from a list and is isomorphic. -/
 namespace choice
   /-- Unfold a sequence of choices, turning it into a list of dependent pairs. -/
-  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
+  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ))
   | empty := []
   | (cons π A As) := ⟨ _, π, A ⟩ :: to_list As
 
   /-- The inverse of `to_list` -/
-  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)) → choices ℍ ω Γ
+  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ)) → choices ℍ ω Γ
   | [] := empty
   | (⟨ _, π, A ⟩ :: As) := cons π A (from_list As)
 
-  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
+  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ)))
     := ⟨ to_list ⟩
-  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))) (choices ℍ ω Γ)
+  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ))) (choices ℍ ω Γ)
     := ⟨ from_list ⟩
 
   lemma from_to {Γ} : ∀ (A : choices ℍ ω Γ), from_list (to_list A) = A
@@ -449,13 +439,13 @@ namespace choice
   | (cons π A As) := by { simp [to_list, from_list], from from_to As }
 
   lemma to_from {Γ} :
-    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
+    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ)))
     , to_list (from_list As) = As
   | [] := by unfold to_list from_list
   | (⟨ _, π,  A⟩ :: As) := by { simp [to_list, from_list], from to_from As }
 
   /-- An isomorphism between choices and lists of prefixes and species.-/
-  def list_iso {Γ} : choices ℍ ω Γ ≃ list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
+  def list_iso {Γ} : choices ℍ ω Γ ≃ list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ))
     := { to_fun := to_list, inv_fun := from_list, left_inv := from_to, right_inv := to_from }
 end choice
 

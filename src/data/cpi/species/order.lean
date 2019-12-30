@@ -554,7 +554,7 @@ instance species.whole.decidable_linear_order [decidable_linear_order ℍ] {Γ} 
 
 namespace choice
   /-- An element in a list of choices. Effectively a dependent pair a prefix and species. -/
-  def pair (ℍ : Type) (ω Γ : context) : Type := Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)
+  def pair (ℍ : Type) (ω Γ : context) : Type := Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (context.extend f Γ)
 
   /-- Wraps species.le for pairs. -/
   def le [decidable_linear_order ℍ] {Γ} : pair ℍ ω Γ → pair ℍ ω Γ → Prop

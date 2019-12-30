@@ -175,27 +175,34 @@ private def on_parallel_assoc₂ :
       (λ _, parallel_assoc₂) (λ b y F, symm concretion.equiv.parallel_assoc₃) E,
   end
 
-private def on_choice_swap  :
-  ∀ {Γ ℓ k f g} {α : label ℍ Γ k}
+private def on_choice_swap {Γ ℓ} {As : choices ℍ ω Γ} :
+  ∀ {k f g} {α : label ℍ Γ k}
     {π₁ : prefix_expr ℍ Γ f} {π₂ : prefix_expr ℍ Γ g}
-    {A : species ℍ ω (f.apply Γ)} {B : species ℍ ω (g.apply Γ)}
-    {As : choices ℍ ω Γ}
+    {A : species ℍ ω (context.extend f Γ)} {B : species ℍ ω (context.extend g Γ)}
     {E : production ℍ ω Γ k}
   , (Σ# whole.cons π₁ A (whole.cons π₂ B As)) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E')
     , (Σ# whole.cons π₂ B (whole.cons π₁ A As)) [ℓ, α]⟶ E'
-| Γ ℓ k α f g π₁ π₂ A B As E t:= begin
-  cases t,
-
-  case choice₁ : a b y A As { from ⟨ _, refl _, ξ_choice (choice₁ a b y A As) ⟩ },
-  case choice₂ : k A As { from ⟨ _, refl _, ξ_choice (choice₂ k A As) ⟩ },
-  case ξ_choice : t {
-    cases t,
-    case choice₁ : a b y A As { from ⟨ _, refl _, choice₁ a b y A _ ⟩ },
-    case choice₂ : k A As { from ⟨ _, refl _, choice₂ k A _ ⟩ },
-    case ξ_choice : t { from ⟨ _, refl _, ξ_choice (ξ_choice t) ⟩ },
-  },
+| k α f g π₁ π₂ A B E t := begin
+  sorry,
 end
+--   cases t,
+
+--   -- case ξ_choice : t {
+--   --   sorry,
+--   -- }
+--   --   -- cases t,
+--   --   -- case choice₁ : a b y A As { from ⟨ _, refl _, choice₁ a b y A _ ⟩ },
+--   --   -- case choice₂ : k A As { from ⟨ _, refl _, choice₂ k A _ ⟩ },
+--   --   -- case ξ_choice : t { from ⟨ _, refl _, ξ_choice (ξ_choice t) ⟩ },
+--   -- },
+--   -- case choice₁ : a b y A As {
+--   --   -- from ⟨ _, refl _, ξ_choice (choice₁ a b y A As) ⟩
+--   -- },
+--   -- case choice₂ : k A As {
+--   --   -- from ⟨ _, refl _, ξ_choice (choice₂ k A As) ⟩
+--   -- },
+-- end
 
 private def ν₁_unpair :
   ∀ {Γ ℓ} {α : label ℍ Γ kind.concretion} {M : affinity ℍ}

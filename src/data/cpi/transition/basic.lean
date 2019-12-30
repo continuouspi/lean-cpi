@@ -244,7 +244,7 @@ inductive transition :
 
 /- Additional transition to project project into where our choiceₙ rules apply. -/
 | ξ_choice
-    {Γ ℓ f} {π : prefix_expr ℍ Γ f} {A : species ℍ ω (f.apply Γ)} {As : species.choices ℍ ω Γ}
+    {Γ ℓ f} {π : prefix_expr ℍ Γ f} {A : species ℍ ω (context.extend f Γ)} {As : species.choices ℍ ω Γ}
     {k} {l : label ℍ Γ k} {E : production ℍ ω Γ k}
 
   : transition (Σ# As) ℓ l E
@@ -262,7 +262,7 @@ inductive transition :
     {Γ ℓ}
 
     (k : ℍ) (A : species ℍ ω Γ) (As : species.choices ℍ ω Γ)
-  : transition (Σ# species.whole.cons (τ@k) A As) ℓ τ@'k A
+  : transition (Σ# species.whole.cons (τ@k) (species.rename name.extend A) As) ℓ τ@'k A
 
 | com₁
     {Γ ℓ x y} {A B : species ℍ ω Γ} {a b : name Γ}
@@ -349,7 +349,7 @@ namespace transition
 
     case choice₁ : Γ ℓ a b y A As {
       simp only [ rename.choice, rename.cons,
-                  prefix_expr.ext_communicate, prefix_expr.rename_communicate,
+                  prefix_expr.rename_communicate,
                   list.length, list.map ],
 
       suffices
@@ -372,6 +372,7 @@ namespace transition
 
     case choice₂ : Γ ℓ k A As {
       simp only [species.rename.choice, species.rename.cons],
+      rw [species.rename_compose, name.ext_extend, ← species.rename_compose],
       from ⟨ τ@'k, _, choice₂ k (species.rename ρ A) (species.rename ρ As), rfl, rfl ⟩
     },
 
