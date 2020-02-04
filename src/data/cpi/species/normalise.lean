@@ -205,6 +205,11 @@ lemma normalise_to_equiv [decidable_linear_order ℍ] :
     from trans this (symm (normalise_to B).snd),
 end
 
+example
+    {Γ : context} (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
+  : species ℍ ω Γ
+  := if h : level.zero ∈ A then ν(M) A
+     else rename_with A (drop_var (λ l, l ∈ A) h)
 end species
 end cpi
 

@@ -405,7 +405,6 @@ namespace prefix_expr
       end
     | ._ (τ@_) inj a b eq := by { simp only [ext_spontanious] at eq, from inj eq, }
   end rename_equations
-
 end prefix_expr
 
 end cpi

@@ -38,11 +38,11 @@ inductive equivalent : ∀ {Γ} (A B : species ℍ ω Γ), Type
           (Σ# (whole.cons π₂ B (whole.cons π₁ A As)))
 
 -- Species forms a commutative monoid using parallel.
-| parallel_nil₁   : ∀ {Γ} {A : species ℍ ω Γ},     equivalent (A |ₛ nil) A
-| parallel_nil₂   : ∀ {Γ} {A : species ℍ ω Γ},     equivalent A (A |ₛ nil)
-| parallel_symm   : ∀ {Γ} {A B : species ℍ ω Γ},   equivalent (A |ₛ B) (B |ₛ A)
-| parallel_assoc₁ : ∀ {Γ} {A B C : species ℍ ω Γ}, equivalent ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
-| parallel_assoc₂ : ∀ {Γ} {A B C : species ℍ ω Γ}, equivalent (A |ₛ (B |ₛ C)) ((A |ₛ B) |ₛ C)
+| parallel_nil₁   {Γ} {A : species ℍ ω Γ}     : equivalent (A |ₛ nil) A
+| parallel_nil₂   {Γ} {A : species ℍ ω Γ}     : equivalent A (A |ₛ nil)
+| parallel_symm   {Γ} {A B : species ℍ ω Γ}   : equivalent (A |ₛ B) (B |ₛ A)
+| parallel_assoc₁ {Γ} {A B C : species ℍ ω Γ} : equivalent ((A |ₛ B) |ₛ C) (A |ₛ (B |ₛ C))
+| parallel_assoc₂ {Γ} {A B C : species ℍ ω Γ} : equivalent (A |ₛ (B |ₛ C)) ((A |ₛ B) |ₛ C)
 
 | ν_parallel₁
     {Γ} (M : affinity ℍ) {A : species ℍ ω Γ} {B : species ℍ ω (context.extend M.arity Γ)}
@@ -59,7 +59,7 @@ inductive equivalent : ∀ {Γ} (A B : species ℍ ω Γ), Type
 | ν_swap₁
     {Γ} (M N : affinity ℍ)
     {A  : species ℍ ω (context.extend N.arity (context.extend M.arity Γ))}
-  : @equivalent Γ (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
+  : equivalent (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
 | ν_swap₂ -- Strictly the same as ν_swap₁, as name.swap is symmetric, but...
     {Γ} (M N : affinity ℍ)
     {A  : species ℍ ω (context.extend N.arity (context.extend M.arity Γ))}
