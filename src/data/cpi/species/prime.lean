@@ -1,4 +1,4 @@
-import data.cpi.species.equivalence
+import data.cpi.species.congruence
 
 namespace cpi
 namespace species

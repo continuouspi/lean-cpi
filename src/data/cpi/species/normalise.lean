@@ -1,4 +1,4 @@
-import data.cpi.species.equivalence data.cpi.species.order
+import data.cpi.species.congruence data.cpi.species.order
 import data.list.sort
 
 namespace cpi
@@ -25,6 +25,10 @@ private def drop {Γ} {n} {A : species ℍ ω (context.extend n Γ)}
   : level.zero ∉ A → species ℍ ω Γ
 | free := rename_with A (drop_var (λ l, l ∈ A) free)
 
+private def drops {Γ} {n} {As : list (species ℍ ω (context.extend n Γ))}
+  (all : ∀ A ∈ As, level.zero ∉ A) : list (species ℍ ω Γ)
+  := list.map_witness As (λ A mem, drop (all A mem))
+
 private lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (fr : level.zero ∉ A)
   : rename name.extend (drop fr) = A
   := begin
@@ -33,6 +37,16 @@ private lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (f
         drop_var_compose (λ l, l ∈ A) fr,
         rename_with_id]
   end
+
+private def drops_extend {Γ} {n} :
+  ∀ {As : list (species ℍ ω (context.extend n Γ))} (all : ∀ A ∈ As, level.zero ∉ A)
+  , rename name.extend (parallel.from_list (drops all)) = parallel.from_list As
+| [] _ := by simp only [drops, list.map_witness, parallel.from_list, rename.nil]
+| [A] all := by simp only [drops, list.map_witness, parallel.from_list, drop_extend]
+| (A :: B :: As) all := begin
+  simp only [drops, list.map_witness, parallel.from_list, rename.parallel, drop_extend],
+  from ⟨ rfl, drops_extend (λ C mem, all C (list.mem_cons_of_mem _ mem)) ⟩,
+end
 
 /-- Splits the parallel component of a restriction into two parts - those
     which can be lifted out of it, and those which cannot. -/
@@ -110,59 +124,55 @@ private def partition_restriction : ∀ {Γ}
 
 /-- Simplifies a restriction as much as possible. This lifts any parallel
     components out of it if possible, and removes the entire thing if possible. -/
-private def normalise_restriction [decidable_linear_order ℍ] : ∀ {Γ}
+private def normalise_restriction : ∀ {Γ}
     (M : affinity ℍ)
-    (A : species ℍ ω (context.extend (M.arity) Γ))
-  , Σ' (B : species ℍ ω Γ), (ν(M) A) ≈ B
-| Γ M A :=
-  if h : level.zero ∈ A then
-    let ⟨ As, Bs, eq ⟩ := partition_restriction M (parallel.to_list A) nil in
-    let As' : list _ := (ν(M) parallel.from_list As) :: Bs in
-    ⟨ parallel.from_list (list.insertion_sort (≤) As'),
-      calc  (ν(M) A)
-          ≈ (ν(M) parallel.from_list (parallel.to_list A))
-            : equiv.ξ_restriction M (symm (parallel.from_to A))
+    (A : list (species ℍ ω (context.extend (M.arity) Γ)))
+  , Σ' (B : list (species ℍ ω Γ))
+    , (ν(M) parallel.from_list A) ≈ parallel.from_list B
+| Γ M As :=
+  if h : ∃ A ∈ As, level.zero ∈ A then
+    let ⟨ As₁, Bs, eq ⟩ := partition_restriction M As nil in
+    let As₂ : list _ := (ν(M) parallel.from_list As₁) :: Bs in
+    ⟨ As₂,
+      calc  (ν(M) parallel.from_list As)
 
-      ... ≈ (ν(M) nil |ₛ parallel.from_list (parallel.to_list A))
+          ≈ (ν(M) nil |ₛ parallel.from_list As)
             : equiv.ξ_restriction M (symm equiv.parallel_nil')
 
-      ... ≈ ((ν(M) nil |ₛ parallel.from_list As) |ₛ parallel.from_list Bs) : eq
+      ... ≈ ((ν(M) nil |ₛ parallel.from_list As₁) |ₛ parallel.from_list Bs) : eq
 
-      ... ≈ ((ν(M) parallel.from_list As) |ₛ parallel.from_list Bs)
+      ... ≈ ((ν(M) parallel.from_list As₁) |ₛ parallel.from_list Bs)
             : equiv.ξ_parallel₁ $ equiv.ξ_restriction M equiv.parallel_nil'
 
-      ... ≈ parallel.from_list As'
-            : symm (parallel.from_list_cons _ Bs)
-
-      ... ≈ parallel.from_list (list.insertion_sort has_le.le As')
-           : symm (parallel.permute (list.perm_insertion_sort (≤) _)) ⟩
+      ... ≈ parallel.from_list As₂
+          : symm (parallel.from_list_cons _ Bs) ⟩
   else
     -- Unused, drop
-    ⟨ drop h, begin
-      suffices : (ν(M) rename name.extend (drop h)) ≈ drop h,
-        rw drop_extend h at this, from this,
+    let all : ∀ A ∈ As, level.zero ∉ A := λ A mem occurs, h ⟨ A, mem, occurs ⟩ in
+    ⟨ drops all, begin
+      suffices : (ν(M) rename name.extend (parallel.from_list (drops all)))
+               ≈ parallel.from_list (drops all),
+      { rw drops_extend all at this, from this },
       from equiv.ν_drop₁ M
      end ⟩
 
 /-- Wraps species.equiv to work on both species and lists of choices. -/
 def equivalence_of : ∀ {k} {Γ}, whole ℍ ω k Γ → Type
-| kind.species Γ A := Σ' (B : species ℍ ω Γ), A ≈ B
+| kind.species Γ A := Σ' (B : list (species ℍ ω Γ)), A ≈ parallel.from_list B
 | kind.choices Γ A := Σ' (B : choices ℍ ω Γ), (Σ# A) ≈ (Σ# B)
 
 /-- Reduce a term to some equivalent normal form. -/
-def normalise_to [decidable_linear_order ℍ] : ∀ {k} {Γ} (A : whole ℍ ω k Γ), equivalence_of A
-| ._ ._ nil := ⟨ nil, refl _ ⟩
-| ._ ._ (apply D as) := ⟨ apply D as, refl _ ⟩
+def normalise_to : ∀ {k} {Γ} (A : whole ℍ ω k Γ), equivalence_of A
+| ._ ._ nil := ⟨ [], refl _ ⟩
+| ._ ._ (apply D as) := ⟨ [apply D as], refl _ ⟩
 | ._ Γ (A |ₛ B) :=
   let ⟨ A', ea ⟩ := normalise_to A in
   let ⟨ B', eb ⟩ := normalise_to B in
-  let as := parallel.to_list A' ++ parallel.to_list B' in
-  ⟨ parallel.from_list (list.insertion_sort (≤) as),
+  ⟨ A' ++ B',
     calc  (A |ₛ B)
-        ≈ (A' |ₛ B') : trans (equiv.ξ_parallel₁ ea) (equiv.ξ_parallel₂ eb)
-    ... ≈ parallel.from_list as : symm (parallel.from_to_append A' B')
-    ... ≈ parallel.from_list (list.insertion_sort has_le.le as)
-          : parallel.permute (list.perm.symm (list.perm_insertion_sort (≤) _)) ⟩
+        ≈ (parallel.from_list A' |ₛ parallel.from_list B')
+          : trans (equiv.ξ_parallel₁ ea) (equiv.ξ_parallel₂ eb)
+    ... ≈ parallel.from_list (A' ++ B') : symm (parallel.from_append A' B') ⟩
 | ._ Γ (ν(M) A) :=
   let ⟨ A', ea ⟩ := normalise_to A in
   let ⟨ B, eb ⟩ := normalise_restriction M A' in
@@ -170,18 +180,16 @@ def normalise_to [decidable_linear_order ℍ] : ∀ {k} {Γ} (A : whole ℍ ω k
 | ._ Γ (Σ# As) :=
   let ⟨ As', eqa ⟩ := normalise_to As in
   let as := choice.to_list As' in
-  ⟨ Σ# (choice.from_list (list.insertion_sort choice.le as)),
+  ⟨ [ Σ# (choice.from_list as) ],
     calc  (Σ# As)
         ≈ (Σ# As') : eqa
-    ... ≈ (Σ# choice.from_list as) : by rw choice.from_to
-    ... ≈ Σ# choice.from_list (list.insertion_sort choice.le as)
-          : choice.permute (list.perm.symm (list.perm_insertion_sort choice.le _)) ⟩
+    ... ≈ (Σ# choice.from_list as) : by rw choice.from_to ⟩
 
 | ._ Γ whole.empty := ⟨ whole.empty, refl _ ⟩
 | ._ Γ (whole.cons π A As) :=
   let ⟨ A', eqa ⟩ := normalise_to A in
   let ⟨ As', eqas ⟩ := normalise_to As in
-  ⟨ whole.cons π A' As',
+  ⟨ whole.cons π (parallel.from_list A') As',
     trans (equiv.ξ_choice_here π eqa) (equiv.ξ_choice_there π eqas) ⟩
 
 using_well_founded {
@@ -191,17 +199,17 @@ using_well_founded {
 }
 
 /-- Reduce a term to some equivalent normal form. -/
-def normalise [decidable_linear_order ℍ] : ∀ {k} {Γ}, whole ℍ ω k Γ → whole ℍ ω k Γ
-| kind.species Γ A := (normalise_to A).fst
+def normalise : ∀ {k} {Γ}, whole ℍ ω k Γ → whole ℍ ω k Γ
+| kind.species Γ A := parallel.from_list (normalise_to A).fst
 | kind.choices Γ A := (normalise_to A).fst
 
 /-- If two terms reduce to the same thing, then they are equivalent. -/
-lemma normalise_to_equiv [decidable_linear_order ℍ] :
+lemma normalise_to_equiv :
   ∀ {Γ} {A B : species ℍ ω Γ}
   , normalise A = normalise B → A ≈ B
 | Γ A B eq := begin
     unfold normalise at eq,
-    have : A ≈ (normalise_to B).fst := eq ▸ (normalise_to A).snd,
+    have : A ≈ parallel.from_list (normalise_to B).fst := eq ▸ (normalise_to A).snd,
     from trans this (symm (normalise_to B).snd),
 end
 
