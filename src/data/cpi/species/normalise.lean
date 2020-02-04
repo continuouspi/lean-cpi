@@ -1,5 +1,4 @@
 import data.cpi.species.congruence data.cpi.species.order
-import data.list.sort
 
 namespace cpi
 namespace species
