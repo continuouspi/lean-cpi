@@ -427,38 +427,6 @@ namespace parallel
   end
 end parallel
 
-/- Show choice can be converted to/from a list and is isomorphic. -/
-namespace choice
-  /-- Unfold a sequence of choices, turning it into a list of dependent pairs. -/
-  def to_list {Γ} : choices ℍ ω Γ → list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
-  | empty := []
-  | (cons π A As) := ⟨ _, π, A ⟩ :: to_list As
-
-  /-- The inverse of `to_list` -/
-  def from_list {Γ} : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)) → choices ℍ ω Γ
-  | [] := empty
-  | (⟨ _, π, A ⟩ :: As) := cons π A (from_list As)
-
-  instance lift_to {Γ} : has_lift (choices ℍ ω Γ) (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
-    := ⟨ to_list ⟩
-  instance lift_from {Γ} : has_lift (list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))) (choices ℍ ω Γ)
-    := ⟨ from_list ⟩
-
-  lemma from_to {Γ} : ∀ (A : choices ℍ ω Γ), from_list (to_list A) = A
-  | empty := by unfold to_list from_list
-  | (cons π A As) := by { simp [to_list, from_list], from from_to As }
-
-  lemma to_from {Γ} :
-    ∀ (As : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ)))
-    , to_list (from_list As) = As
-  | [] := by unfold to_list from_list
-  | (⟨ _, π,  A⟩ :: As) := by { simp [to_list, from_list], from to_from As }
-
-  /-- An isomorphism between choices and lists of prefixes and species.-/
-  def list_iso {Γ} : choices ℍ ω Γ ≃ list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))
-    := { to_fun := to_list, inv_fun := from_list, left_inv := from_to, right_inv := to_from }
-end choice
-
 end species
 
 /- Re-export all the definitions. Don't ask - apparently export within

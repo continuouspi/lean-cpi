@@ -471,26 +471,6 @@ namespace parallel
   end quot
 end parallel
 
-namespace choice
-  lemma permute {Γ} :
-    ∀ {As Bs : list (Σ' {f} (π : prefix_expr ℍ Γ f), species ℍ ω (f.apply Γ))}
-    , As ≈ Bs → (Σ# from_list As) ≈ (Σ# from_list Bs) := λ _ _ perm, begin
-    induction perm,
-
-    case list.perm.nil { from refl _ },
-    case list.perm.skip : A As Bs pm ih {
-      cases A with f this, cases this with π A,
-      unfold from_list,
-      from equiv.ξ_choice_there π ih
-     },
-    case list.perm.swap : A B As {
-      rcases A with ⟨ f₁, π₁, A ⟩, rcases B with ⟨ f₂, π₂, B ⟩,
-      from equiv.choice_swap π₂ π₁
-    },
-    case list.perm.trans : As Bs Cs ab bc ih_ab ih_bc { from trans ih_ab ih_bc }
-  end
-end choice
-
 section examples
   variable {Γ : context}
   variables A A' B C : species ℍ ω Γ

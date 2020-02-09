@@ -178,11 +178,7 @@ def normalise_to : ∀ {k} {Γ} (A : whole ℍ ω k Γ), equivalence_of A
   ⟨ B, trans (equiv.ξ_restriction M ea) eb ⟩
 | ._ Γ (Σ# As) :=
   let ⟨ As', eqa ⟩ := normalise_to As in
-  let as := choice.to_list As' in
-  ⟨ [ Σ# (choice.from_list as) ],
-    calc  (Σ# As)
-        ≈ (Σ# As') : eqa
-    ... ≈ (Σ# choice.from_list as) : by rw choice.from_to ⟩
+  ⟨ [ Σ# As' ], eqa ⟩
 
 | ._ Γ whole.empty := ⟨ whole.empty, refl _ ⟩
 | ._ Γ (whole.cons π A As) :=
@@ -202,21 +198,22 @@ def normalise : ∀ {k} {Γ}, whole ℍ ω k Γ → whole ℍ ω k Γ
 | kind.species Γ A := parallel.from_list (normalise_to A).fst
 | kind.choices Γ A := (normalise_to A).fst
 
-/-- If two terms reduce to the same thing, then they are equivalent. -/
-lemma normalise_to_equiv :
-  ∀ {Γ} {A B : species ℍ ω Γ}
-  , normalise A = normalise B → A ≈ B
-| Γ A B eq := begin
-    unfold normalise at eq,
-    have : A ≈ parallel.from_list (normalise_to B).fst := eq ▸ (normalise_to A).snd,
-    from trans this (symm (normalise_to B).snd),
-end
+namespace normalise
+  /-- Two species are n-equivalent if they normalise to the same term. -/
+  def equiv {Γ : context} (A B : species ℍ ω Γ) : Prop := normalise A = normalise B
 
-example
-    {Γ : context} (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
-  : species ℍ ω Γ
-  := if h : level.zero ∈ A then ν(M) A
-     else rename_with A (drop_var (λ l, l ∈ A) h)
+  instance equiv.decide [decidable_eq ℍ] {Γ : context} : decidable_rel (@equiv ℍ ω Γ)
+  | A B := species.whole.decidable_eq (normalise A) (normalise B)
+
+  /-- If two terms reduce to the same thing, then they are equivalent. -/
+  lemma equiv.imp_congruent {Γ} {A B : species ℍ ω Γ} : equiv A B → A ≈ B
+  | eq := begin
+      unfold equiv normalise at eq,
+      have : A ≈ parallel.from_list (normalise_to B).fst := eq ▸ (normalise_to A).snd,
+      from trans this (symm (normalise_to B).snd),
+  end
+end normalise
+
 end species
 end cpi
 
