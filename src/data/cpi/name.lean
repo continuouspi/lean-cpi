@@ -389,6 +389,25 @@ namespace name
       := funext $λ α, by { cases α; unfold mk_apply id function.comp }
   end application
 
+  section drop
+    /-- Reduce the level of a variable by one, given a proof it's unused.  -/
+    def drop_var {Γ} {n}
+        (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
+      : Π a, P (name.to_level a) → name Γ
+    | (name.zero idx) q := by { unfold name.to_level at q, contradiction }
+    | (name.extend a) _ := a
+
+    /-- Show a renaming function which drops then extends is the identity. -/
+    lemma drop_var_compose {Γ} {n}
+      (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
+      : (λ a f, name.extend (drop_var P p a f)) = λ a _, a
+      := funext $ λ a, funext $ λ q, begin
+        cases a,
+        case name.zero { unfold name.to_level at q, contradiction },
+        case name.extend { from rfl }
+      end
+  end drop
+
   /-- Get the index of a name in the singleton context . -/
   def to_idx {n : ℕ} : name (context.extend n context.nil) → fin n
   | (name.zero i) := i

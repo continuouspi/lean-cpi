@@ -3,6 +3,7 @@ import data.cpi.concretion data.upair
 namespace cpi
 
 variables {ℍ : Type} {ω : context}
+open_locale congruence
 
 /-- The kind of a production, either a species or concretion-/
 @[derive decidable_eq]

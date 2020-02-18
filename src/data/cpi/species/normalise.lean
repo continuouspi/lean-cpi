@@ -4,52 +4,25 @@ namespace cpi
 namespace species
 
 variables {ℍ : Type} {ω : context}
+open_locale congruence
 
-private def drop_var {Γ} {n}
-    (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
-  : Π a, P (name.to_level a) → name Γ
-| (name.zero idx) q := by { unfold name.to_level at q, contradiction }
-| (name.extend a) _ := a
-
-private lemma drop_var_compose {Γ} {n}
-  (P : level (context.extend n Γ) → Prop) (p : (¬ P level.zero))
-  : (λ a f, name.extend (drop_var P p a f)) = λ a _, a
-  := funext $ λ a, funext $ λ q, begin
-    cases a,
-    case name.zero { unfold name.to_level at q, contradiction },
-    case name.extend { from rfl }
-  end
-
-private def drop {Γ} {n} {A : species ℍ ω (context.extend n Γ)}
+/-- Drop a binder from a species, assuming the binder is unused. -/
+def drop {Γ} {n} {A : species ℍ ω (context.extend n Γ)}
   : level.zero ∉ A → species ℍ ω Γ
-| free := rename_with A (drop_var (λ l, l ∈ A) free)
+| free := rename_with A (name.drop_var (λ l, l ∈ A) free)
 
-private def drops {Γ} {n} {As : list (species ℍ ω (context.extend n Γ))}
-  (all : ∀ A ∈ As, level.zero ∉ A) : list (species ℍ ω Γ)
-  := list.map_witness As (λ A mem, drop (all A mem))
-
-private lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (fr : level.zero ∉ A)
+lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (fr : level.zero ∉ A)
   : rename name.extend (drop fr) = A
   := begin
     unfold drop,
     rw [rename_with_compose,
-        drop_var_compose (λ l, l ∈ A) fr,
+        name.drop_var_compose (λ l, l ∈ A) fr,
         rename_with_id]
   end
 
-private def drops_extend {Γ} {n} :
-  ∀ {As : list (species ℍ ω (context.extend n Γ))} (all : ∀ A ∈ As, level.zero ∉ A)
-  , rename name.extend (parallel.from_list (drops all)) = parallel.from_list As
-| [] _ := by simp only [drops, list.map_witness, parallel.from_list, rename.nil]
-| [A] all := by simp only [drops, list.map_witness, parallel.from_list, drop_extend]
-| (A :: B :: As) all := begin
-  simp only [drops, list.map_witness, parallel.from_list, rename.parallel, drop_extend],
-  from ⟨ rfl, drops_extend (λ C mem, all C (list.mem_cons_of_mem _ mem)) ⟩,
-end
-
 /-- Splits the parallel component of a restriction into two parts - those
     which can be lifted out of it, and those which cannot. -/
-private def partition_restriction : ∀ {Γ}
+def partition_restriction : ∀ {Γ}
     (M : affinity ℍ)
     (As : list (species ℍ ω (context.extend (M.arity) Γ)))
     (C : species ℍ ω (context.extend (M.arity) Γ))
@@ -123,37 +96,27 @@ private def partition_restriction : ∀ {Γ}
 
 /-- Simplifies a restriction as much as possible. This lifts any parallel
     components out of it if possible, and removes the entire thing if possible. -/
-private def normalise_restriction : ∀ {Γ}
+def normalise_restriction : ∀ {Γ}
     (M : affinity ℍ)
     (A : list (species ℍ ω (context.extend (M.arity) Γ)))
   , Σ' (B : list (species ℍ ω Γ))
     , (ν(M) parallel.from_list A) ≈ parallel.from_list B
 | Γ M As :=
-  if h : ∃ A ∈ As, level.zero ∈ A then
-    let ⟨ As₁, Bs, eq ⟩ := partition_restriction M As nil in
-    let As₂ : list _ := (ν(M) parallel.from_list As₁) :: Bs in
-    ⟨ As₂,
-      calc  (ν(M) parallel.from_list As)
+  let ⟨ As₁, Bs, eq ⟩ := partition_restriction M As nil in
+  let As₂ : list _ := (ν(M) parallel.from_list As₁) :: Bs in
+  ⟨ As₂,
+    calc  (ν(M) parallel.from_list As)
 
-          ≈ (ν(M) nil |ₛ parallel.from_list As)
-            : equiv.ξ_restriction M (symm equiv.parallel_nil')
+        ≈ (ν(M) nil |ₛ parallel.from_list As)
+          : equiv.ξ_restriction M (symm equiv.parallel_nil')
 
-      ... ≈ ((ν(M) nil |ₛ parallel.from_list As₁) |ₛ parallel.from_list Bs) : eq
+    ... ≈ ((ν(M) nil |ₛ parallel.from_list As₁) |ₛ parallel.from_list Bs) : eq
 
-      ... ≈ ((ν(M) parallel.from_list As₁) |ₛ parallel.from_list Bs)
-            : equiv.ξ_parallel₁ $ equiv.ξ_restriction M equiv.parallel_nil'
+    ... ≈ ((ν(M) parallel.from_list As₁) |ₛ parallel.from_list Bs)
+          : equiv.ξ_parallel₁ $ equiv.ξ_restriction M equiv.parallel_nil'
 
-      ... ≈ parallel.from_list As₂
-          : symm (parallel.from_list_cons _ Bs) ⟩
-  else
-    -- Unused, drop
-    let all : ∀ A ∈ As, level.zero ∉ A := λ A mem occurs, h ⟨ A, mem, occurs ⟩ in
-    ⟨ drops all, begin
-      suffices : (ν(M) rename name.extend (parallel.from_list (drops all)))
-               ≈ parallel.from_list (drops all),
-      { rw drops_extend all at this, from this },
-      from equiv.ν_drop₁ M
-     end ⟩
+    ... ≈ parallel.from_list As₂
+        : symm (parallel.from_list_cons _ Bs) ⟩
 
 /-- Wraps species.equiv to work on both species and lists of choices. -/
 def equivalence_of : ∀ {k} {Γ}, whole ℍ ω k Γ → Type
@@ -205,6 +168,15 @@ namespace normalise
   instance equiv.decide [decidable_eq ℍ] {Γ : context} : decidable_rel (@equiv ℍ ω Γ)
   | A B := species.whole.decidable_eq (normalise A) (normalise B)
 
+  lemma equiv.refl {Γ} : reflexive (@equiv ℍ ω Γ)
+  | A := rfl
+
+  lemma equiv.symm {Γ} : symmetric (@equiv ℍ ω Γ)
+  | A B eql := eq.symm eql
+
+  lemma equiv.trans {Γ} : transitive (@equiv ℍ ω Γ)
+  | A B C ab bc := eq.trans ab bc
+
   /-- If two terms reduce to the same thing, then they are equivalent. -/
   lemma equiv.imp_congruent {Γ} {A B : species ℍ ω Γ} : equiv A B → A ≈ B
   | eq := begin
@@ -212,6 +184,13 @@ namespace normalise
       have : A ≈ parallel.from_list (normalise_to B).fst := eq ▸ (normalise_to A).snd,
       from trans this (symm (normalise_to B).snd),
   end
+
+  /-- Equivalence under normalisation. Namely, two species are equivalent if they
+      normalise to identical species. -/
+  def setoid {Γ} : setoid (species ℍ ω Γ) :=
+    ⟨ equiv, ⟨ @equiv.refl ℍ ω Γ, @equiv.symm ℍ ω Γ, @equiv.trans ℍ ω Γ ⟩ ⟩
+
+  localized "attribute [instance] cpi.species.normalise.setoid" in normalise
 end normalise
 
 end species

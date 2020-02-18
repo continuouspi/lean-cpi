@@ -2,31 +2,31 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] {M : affinity ℍ} {conc : ℍ ↪ ℂ}
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] {M : affinity ℍ} {conc : ℍ ↪ ℂ} [species_equiv ℍ ω]
 local attribute [instance] prime_equal concretion_equal
 
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
 private noncomputable def interaction_tensor_worker (conc : ℍ ↪ ℂ)
   : ( species' ℍ ω (context.extend M.arity context.nil)
-    × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
+    × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
   → ( species' ℍ ω (context.extend M.arity context.nil)
-    × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
+    × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ :=
   option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
     if h : bF = yG ∧ yF = bG then begin
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-      have fg := to_process_space (concretion.pseudo_apply.quotient F G),
+      have fg := to_process_space (species_equiv.pseudo_apply F G),
       from conc aff • (fg - to_process_space A - to_process_space B),
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
 private lemma interaction_tensor_worker.comm
   : ∀ (A B : species' ℍ ω (context.extend M.arity context.nil)
-           × (Σ' (b y), quotient (@concretion.setoid ℍ ω (context.extend M.arity context.nil) b y))
+           × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
            × name (context.extend M.arity context.nil))
   , interaction_tensor_worker conc A B = interaction_tensor_worker conc B A
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ := begin
@@ -44,7 +44,7 @@ private lemma interaction_tensor_worker.comm
       rcases this with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       let h : bF = bF ∧ yF = yF := ⟨ rfl, rfl ⟩,
       let g : yF = yF ∧ bF = bF := ⟨ rfl, rfl ⟩,
-      simp only [dif_pos h, dif_pos g, concretion.psuedo_apply.quotient.symm],
+      simp only [dif_pos h, dif_pos g, species_equiv.pseudo_apply_symm],
       simp only [fin_fn.sub_eq_add_neg, add_comm, add_left_comm],
     },
     {

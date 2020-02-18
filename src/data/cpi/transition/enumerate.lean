@@ -4,6 +4,7 @@ namespace cpi
 namespace transition
 
 variables {ℍ : Type} {ω : context}
+open_locale congruence
 
 /-- ξ_choice acts as an embedding. This is effectively ξ_choice.inj but
     lifted to transitions. -/

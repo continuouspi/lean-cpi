@@ -4,6 +4,7 @@ namespace cpi
 namespace transition
 
 variables {ℍ : Type} {ω : context}
+open_locale congruence
 
 open species.equiv
 

@@ -57,6 +57,7 @@ using_well_founded {
 }
 
 open species.equiv (hiding trans symm refl)
+open_locale congruence
 
 protected lemma pseudo_apply.on_parallel₁ :
   ∀ {Γ} {a b} (F : concretion ℍ ω Γ a b) (G : concretion ℍ ω Γ b a) (A : species ℍ ω Γ)
@@ -603,15 +604,14 @@ protected lemma pseudo_apply.parallel_shift
 
 /-- Pseudo application lifted to the level of quotients. -/
 def pseudo_apply.quotient {Γ a b}
-  : quotient (@concretion.setoid ℍ ω Γ a b) → quotient (@concretion.setoid ℍ ω Γ b a)
-  → quotient (@species.setoid ℍ ω Γ)
+  : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a
+  → species' ℍ ω Γ
 | F G := quotient.lift_on₂ F G
   (λ F G, ⟦ pseudo_apply F G ⟧)
   (λ F G F' G' eqF eqG, quot.sound (pseudo_apply.equiv eqF eqG))
 
 lemma psuedo_apply.quotient.symm {Γ a b} :
-  ∀ (F : quotient (@concretion.setoid ℍ ω Γ a b))
-    (G : quotient (@concretion.setoid ℍ ω Γ b a))
+  ∀ (F : concretion' ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
   , pseudo_apply.quotient F G = pseudo_apply.quotient G F
 | F G := begin
   rcases quot.exists_rep F with ⟨ F, ⟨ _ ⟩ ⟩,

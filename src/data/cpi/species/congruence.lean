@@ -283,19 +283,19 @@ namespace equiv
       {Γ} (M N : affinity ℍ) {A : species ℍ ω (context.extend N.arity (context.extend M.arity Γ))}
     : (ν(N)ν(M) rename name.swap A) ~ (ν(M)ν(N) A)
     := ⟨ equivalent.ν_swap₂ M N ⟩
-end equiv
 
-instance {Γ} : is_equiv (species ℍ ω Γ) equiv :=
-  { refl := equiv.refl, symm := @equiv.symm ℍ ω Γ, trans := @equiv.trans ℍ ω Γ }
-instance {Γ} : is_refl (species ℍ ω Γ) equiv := ⟨ equiv.refl ⟩
-instance {Γ} : setoid (species ℍ ω Γ) :=
-  ⟨ equiv, ⟨ @equiv.refl ℍ ω Γ, @equiv.symm ℍ ω Γ, @equiv.trans ℍ ω Γ ⟩ ⟩
+  -- Show equiv is an equivalence and reflexive operator
+  instance {Γ} : is_equiv (species ℍ ω Γ) equiv :=
+    { refl := equiv.refl, symm := @equiv.symm ℍ ω Γ, trans := @equiv.trans ℍ ω Γ }
+  instance {Γ} : is_refl (species ℍ ω Γ) equiv := ⟨ equiv.refl ⟩
 
--- -- Somewhat odd instance, but required for transitivity of the operator form.
-instance setoid.is_equiv {Γ} : is_equiv (species ℍ ω Γ) has_equiv.equiv :=
-  species.is_equiv
+  /-- The setoid of species under structural congruence. Can be brought into
+      scope with the "congruence" locale. -/
+  def setoid {Γ} : setoid (species ℍ ω Γ) :=
+    ⟨ equiv, ⟨ @equiv.refl ℍ ω Γ, @equiv.symm ℍ ω Γ, @equiv.trans ℍ ω Γ ⟩ ⟩
 
-namespace equiv
+  localized "attribute [instance] cpi.species.equiv.setoid" in congruence
+
   lemma parallel_symm₁ {Γ} {A B C : species ℍ ω Γ} : (A |ₛ B |ₛ C) ≈ (B |ₛ A |ₛ C) :=
     calc  (A |ₛ (B |ₛ C))
         ≈ ((A |ₛ B) |ₛ C) : parallel_assoc₂
@@ -320,6 +320,8 @@ namespace equiv
         ≈ (A |ₛ nil) : parallel_symm
     ... ≈ A : parallel_nil₁
 end equiv
+
+open_locale congruence
 
 namespace parallel
   lemma from_list_cons {Γ} (A : species ℍ ω Γ) :
@@ -395,11 +397,11 @@ namespace parallel
 
   namespace quot
     /-- Make a parallel species from a quotient of two species. -/
-    def mk {Γ} : quotient (@species.setoid ℍ ω Γ) → quotient (@species.setoid ℍ ω Γ) → quotient (@species.setoid ℍ ω Γ)
+    def mk {Γ} : species' ℍ ω Γ → species' ℍ ω Γ → species' ℍ ω Γ
     | A B := quotient.lift_on₂ A B (λ A B, ⟦ A |ₛ B ⟧)
         (λ A B A' B' eqA eqB, quot.sound (trans (equiv.ξ_parallel₁ eqA) ((equiv.ξ_parallel₂ eqB))))
 
-    lemma assoc {Γ} (A B C : quotient (@species.setoid ℍ ω Γ))
+    lemma assoc {Γ} (A B C : species' ℍ ω Γ)
       : mk A (mk B C) = mk (mk A B) C
       := begin
         rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
@@ -410,13 +412,13 @@ namespace parallel
 
     /-- parallel.from_list, lifted to the level of quotients. -/
     def from_list {Γ} :
-      list (quotient (@species.setoid ℍ ω Γ)) → quotient (@species.setoid ℍ ω Γ)
+      list (species' ℍ ω Γ) → species' ℍ ω Γ
     | [] := ⟦ nil ⟧
     | [A] := A
     | (A :: As) := mk A (from_list As)
 
     lemma from_append {Γ} :
-      ∀ (A B : list (quotient (@species.setoid ℍ ω Γ)))
+      ∀ (A B : list (species' ℍ ω Γ))
       , from_list (A ++ B) = mk (from_list A) (from_list B)
     | [] B := begin
         simp only [list.nil_append],
@@ -431,7 +433,7 @@ namespace parallel
       end
 
     private lemma from_cons {Γ} :
-      ∀ (A : quotient (@species.setoid ℍ ω Γ)) {As Bs : list _}
+      ∀ (A : species' ℍ ω Γ) {As Bs : list _}
       , from_list As = from_list Bs
       → from_list (A :: As) = from_list (A :: Bs)
     | A [] [] _ := refl _
@@ -448,7 +450,7 @@ namespace parallel
     | A (A' :: As) (B' :: Bs') eq := by simp only [from_list, eq]
 
     lemma permute {Γ} :
-      ∀ {As Bs : list (quotient (@species.setoid ℍ ω Γ))}
+      ∀ {As Bs : list (species' ℍ ω Γ)}
       , As ≈ Bs → from_list As = from_list Bs := λ _ _ perm, begin
       induction perm,
 
@@ -486,9 +488,6 @@ section examples
 end examples
 
 end species
-
-/-- A quotient of all structurally congruent species. -/
-def species' (ℍ : Type) (ω Γ : context) := quotient (@species.setoid ℍ ω Γ)
 
 end cpi
 

@@ -1,9 +1,10 @@
-import data.cpi.species.prime
+import data.cpi.species.congruence data.cpi.species.prime
 
 namespace cpi
 namespace species
 
 variables {ℍ : Type} {ω : context}
+open_locale congruence
 
 section depth
   private def depth : ∀ {Γ}, species ℍ ω Γ → ℕ

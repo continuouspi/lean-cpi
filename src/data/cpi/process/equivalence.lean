@@ -3,7 +3,7 @@ import data.cpi.species data.cpi.process.basic
 namespace cpi
 namespace process
 
-variables {ℂ ℍ : Type} {ω : context} [has_add ℂ]
+variables {ℂ ℍ : Type} {ω : context} [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
 
 /-- Structural congruence of processes. -/
 inductive equiv {Γ} : process ℂ ℍ ω Γ → process ℂ ℍ ω Γ → Prop
@@ -25,10 +25,10 @@ inductive equiv {Γ} : process ℂ ℍ ω Γ → process ℂ ℍ ω Γ → Prop
 | join  {A : species ℍ ω Γ} {c d : ℂ} : equiv (c ◯ A |ₚ d ◯ A) ((c + d) ◯ A)
 
 instance {Γ} : is_equiv (process ℂ ℍ ω Γ) equiv :=
-  { refl := @equiv.refl _ _ _ _ Γ, symm := @equiv.symm _ _ _ _ Γ, trans := @equiv.trans _ _ _ _ Γ }
+  { refl := @equiv.refl _ _ _ _ _ Γ, symm := @equiv.symm _ _ _ _ _ Γ, trans := @equiv.trans _ _ _ _ _ Γ }
 instance {Γ} : is_refl (process ℂ ℍ ω Γ) equiv := ⟨ λ _, equiv.refl ⟩
 instance {Γ} : setoid (process ℂ ℍ ω Γ) :=
-  ⟨ equiv, ⟨ @equiv.refl _ _ _ _ Γ, @equiv.symm _ _ _ _ Γ, @equiv.trans _ _ _ _ Γ ⟩ ⟩
+  ⟨ equiv, ⟨ @equiv.refl _ _ _ _ _ Γ, @equiv.symm _ _ _ _ _ Γ, @equiv.trans _ _ _ _ _ Γ ⟩ ⟩
 instance setoid.is_equiv {Γ} : is_equiv (process ℂ ℍ ω Γ) has_equiv.equiv :=
   process.is_equiv
 
@@ -48,11 +48,11 @@ end equiv
 
 namespace parallel.quot
   /-- Make a parallel process from a quotient of two process. -/
-  def mk {Γ} : quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@process.setoid ℂ ℍ ω _ Γ)
+  def mk {Γ} : quotient (@process.setoid ℂ ℍ ω _ _ Γ) → quotient (@process.setoid ℂ ℍ ω _ _ Γ) → quotient (@process.setoid ℂ ℍ ω _ _ Γ)
   | A B := quotient.lift_on₂ A B (λ A B, ⟦ A |ₚ B ⟧)
       (λ A B A' B' eqA eqB, quot.sound (trans (equiv.ξ_parallel₁ eqA) ((equiv.ξ_parallel₂ eqB))))
 
-  lemma assoc {Γ} (A B C : quotient (@process.setoid ℂ ℍ ω _ Γ))
+  lemma assoc {Γ} (A B C : quotient (@process.setoid ℂ ℍ ω _ _ Γ))
     : mk A (mk B C) = mk (mk A B) C
     := begin
       rcases quot.exists_rep A with ⟨ A, ⟨ _ ⟩ ⟩,
@@ -85,12 +85,12 @@ inductive equiv2 {Γ} : process ℂ ℍ ω Γ → process ℂ ℍ ω Γ → Prop
 infix ` ≡⁺ `:50 := equiv2
 
 instance equiv2.is_equiv {Γ} : is_equiv (process ℂ ℍ ω Γ) equiv2 :=
-  { refl := @equiv2.refl _ _ _ _ Γ, symm := @equiv2.symm _ _ _ _ Γ, trans := @equiv2.trans _ _ _ _ Γ }
+  { refl := @equiv2.refl _ _ _ _ _ Γ, symm := @equiv2.symm _ _ _ _ _ Γ, trans := @equiv2.trans _ _ _ _ _ Γ }
 instance equiv2.is_refl {Γ} : is_refl (process ℂ ℍ ω Γ) equiv2 := ⟨ λ _, equiv2.refl ⟩
 
 /-- Wraps ≡⁺ in a setoid. -/
 def equiv2.setoid {Γ} : setoid (process ℂ ℍ ω Γ) :=
-  ⟨ equiv2, ⟨ @equiv2.refl _ _ _ _ Γ, @equiv2.symm _ _ _ _ Γ, @equiv2.trans _ _ _ _ Γ ⟩ ⟩
+  ⟨ equiv2, ⟨ @equiv2.refl _ _ _ _ _ Γ, @equiv2.symm _ _ _ _ _ Γ, @equiv2.trans _ _ _ _ _ Γ ⟩ ⟩
 
 lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℂ ℍ ω Γ}, P ≈ Q → P ≡⁺ Q
 | P Q eq := begin
@@ -108,16 +108,18 @@ lemma equiv2.of_equiv {Γ} : ∀ {P Q : process ℂ ℍ ω Γ}, P ≈ Q → P �
 end
 
 /-- Convert a process' to a process'2. -/
-def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℂ ℍ ω _ Γ) → quotient (@equiv2.setoid ℂ ℍ ω _ Γ)
+def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℂ ℍ ω _ _ Γ) → quotient (@equiv2.setoid ℂ ℍ ω _ _ Γ)
 | P := quot.lift_on P (@quotient.mk _ equiv2.setoid) (λ P Q r, quot.sound (equiv2.of_equiv r))
 
 end process
 
 /-- A quotient of all structurally congruent processes. -/
-def process' (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] := quotient (@process.setoid ℂ ℍ ω _ Γ)
+def process' (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
+  := quotient (@process.setoid ℂ ℍ ω _ _ Γ)
 
 /-- A quotient of all structurally congruent processes, using ≡⁺ -/
-def process'2 (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] := quotient (@process.equiv2.setoid ℂ ℍ ω _ Γ)
+def process'2 (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
+  := quotient (@process.equiv2.setoid ℂ ℍ ω _ _ Γ)
 
 end cpi
 

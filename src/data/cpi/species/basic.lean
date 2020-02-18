@@ -440,6 +440,9 @@ export species (renaming
   species → species
 )
 
+/-- A quotient of all structurally congruent species. -/
+def species' (ℍ : Type) (ω Γ : context) [r : setoid (species ℍ ω Γ)] := quotient r
+
 end cpi
 
 /- Re-export all the definitions. Don't ask - apparently export within

@@ -3,7 +3,7 @@ import data.cpi.concretion.basic
 namespace cpi
 namespace concretion
 
-variables {ℍ : Type} {ω : context}
+variables {ℍ : Type} {ω : context} [∀ Γ, setoid (species ℍ ω Γ)]
 
 /-- Structural congruence between concretions. -/
 inductive equiv : ∀ {Γ} {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Γ b y → Prop
@@ -66,10 +66,10 @@ inductive equiv : ∀ {Γ} {b y}, concretion ℍ ω Γ b y → concretion ℍ ω
   : equiv (#(bs; y) (species.rename name.extend A |ₛ B)) (A |₂ #(bs; y) B)
 
 instance {Γ} {b y} : is_equiv (concretion ℍ ω Γ b y) equiv :=
-  { refl := @equiv.refl ℍ _ Γ b y, symm := @equiv.symm ℍ _ Γ b y, trans := @equiv.trans ℍ _ Γ b y }
+  { refl := @equiv.refl ℍ _ _ Γ b y, symm := @equiv.symm ℍ _ _ Γ b y, trans := @equiv.trans ℍ _ _ Γ b y }
 instance {Γ} {b y} : is_refl (concretion ℍ ω Γ b y) equiv := ⟨ λ _, equiv.refl ⟩
 instance {Γ} {b y} : setoid (concretion ℍ ω Γ b y) :=
-  ⟨ equiv, ⟨ @equiv.refl ℍ _ Γ b y, @equiv.symm ℍ _ Γ b y, @equiv.trans ℍ _ Γ b y ⟩ ⟩
+  ⟨ equiv, ⟨ @equiv.refl ℍ _ _ Γ b y, @equiv.symm ℍ _ _ Γ b y, @equiv.trans ℍ _ _ Γ b y ⟩ ⟩
 instance setoid.is_equiv {Γ} {b y} : is_equiv (concretion ℍ ω Γ b y) has_equiv.equiv :=
   concretion.is_equiv
 
@@ -92,6 +92,11 @@ protected lemma equiv.parallel_assoc₃
   ... ≈ (A |₂ B |₂ F) : equiv.ξ_parallel₂ equiv.parallel_symm
 
 end concretion
+
+/-- A quotient of all structurally congruent concretions. -/
+def concretion' (ℍ : Type) (ω Γ : context) (b y : ℕ) [r : ∀ Γ, setoid (species ℍ ω Γ)]
+  := quotient (@concretion.setoid ℍ ω r Γ b y)
+
 end cpi
 
 #lint-
