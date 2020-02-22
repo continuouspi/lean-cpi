@@ -1,5 +1,5 @@
 import data.cpi.name
-import data.list.witness order.lexicographic
+import data.list.witness
 
 namespace cpi
 
@@ -53,80 +53,6 @@ namespace prefix_expr
     inductive wrap (ℍ : Type) : context → Type
     | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
 
-    /-- Basic comparison of two (wrapped) prefixes. Simply a lexicographic
-        ordering where communication ≤ spontanious. -/
-    protected def le {Γ} [has_le ℍ] : wrap ℍ Γ → wrap ℍ Γ → Prop
-    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
-      let order := (@lex_has_le (name Γ) (lex (list (name Γ)) ℕ) _ lex_preorder) in
-      @has_le.le _ order (a, b, y) (a', b', y')
-    | ⟨ _#(_; _) ⟩ ⟨ τ@_ ⟩ := true
-    | ⟨ τ@_ ⟩ ⟨ _#(_; _) ⟩ := false
-    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := k ≤ k'
-
-    private theorem le_refl {Γ} [preorder ℍ] : ∀ (a : wrap ℍ Γ), prefix_expr.le a a
-    | ⟨ a#(b; y) ⟩ := by simp only [prefix_expr.le]
-    | ⟨ τ@k ⟩ := by unfold prefix_expr.le
-
-    private theorem le_trans {Γ} [preorder ℍ]:
-      ∀ (a b c : wrap ℍ Γ)
-      , prefix_expr.le a b → prefix_expr.le b c → prefix_expr.le a c
-    | ⟨ a1#(b1; y1) ⟩ ⟨ a2#(b2; y2) ⟩ ⟨ a3#(b3; y3) ⟩ h12 h23 := begin
-        simp only [prefix_expr.le] at h12 h23 ⊢,
-        from preorder.le_trans _ _ _ h12 h23
-      end
-    | ⟨ τ@k1 ⟩ ⟨ τ@k2 ⟩ ⟨ τ@k3 ⟩ h12 h23 := begin
-        unfold prefix_expr.le at h12 h23 ⊢,
-        from preorder.le_trans _ _ _ h12 h23,
-      end
-    | ⟨ a#(b; y) ⟩ ⟨ _#(_ ; _) ⟩ ⟨ τ@k ⟩ h12 h23 := by unfold prefix_expr.le
-    | ⟨ a#(b; y) ⟩ ⟨ τ@_ ⟩ ⟨ τ@k ⟩ h12 h23 := by unfold prefix_expr.le
-    | ⟨ τ@k ⟩ ⟨ a#(b;y) ⟩ _ h12 h23 := by { unfold prefix_expr.le at h12, contradiction }
-
-    private theorem le_total {Γ} [linear_order ℍ] :
-      ∀ (a b : wrap ℍ Γ), prefix_expr.le a b ∨ (prefix_expr.le b a)
-    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { simp only [prefix_expr.le], from linear_order.le_total _ _ }
-    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := by { unfold prefix_expr.le, simp only [true_or] }
-    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := by { unfold prefix_expr.le, simp only [or_true] }
-    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := by { unfold prefix_expr.le, from linear_order.le_total k k' }
-
-    private theorem le_antisymm {Γ} [linear_order ℍ]:
-      ∀ (a b : wrap ℍ Γ), prefix_expr.le a b → prefix_expr.le b a → a = b
-    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ ab ba := begin
-        simp only [prefix_expr.le] at ab ba,
-        have eq : (⟨ a, b, y ⟩ : lex _ (lex _ _)) = ⟨ a', b', y' ⟩,
-        from @linear_order.le_antisymm (lex _ _)
-          (@lex_linear_order (name Γ) (lex (list (name Γ)) ℕ) _ _)
-          (a, b, y) (a', b', y') ab ba,
-        simp at eq, simp [eq],
-        have h : y = y' := by simp only [eq],
-        subst h
-      end
-    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ ab _ := by { unfold prefix_expr.le at ab, contradiction }
-    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ _ ba := by { unfold prefix_expr.le at ba, contradiction }
-    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ ab ba := begin
-        unfold prefix_expr.le at ab ba,
-        have eq : k = k', from linear_order.le_antisymm _ _ ab ba, subst eq
-      end
-
-    private def decidable_le {Γ} [has_le ℍ] [@decidable_rel ℍ (≤)] :
-      ∀ (a b : wrap ℍ Γ), decidable (prefix_expr.le a b)
-    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ := by { unfold prefix_expr.le, apply_instance }
-    | ⟨ _#(_; _) ⟩ ⟨ τ@_ ⟩ := is_true true.intro
-    | ⟨ τ@_ ⟩ ⟨ _#(_; _) ⟩ := is_false not_false
-    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ := by { unfold prefix_expr.le, apply_instance }
-
-    /-- Somewhat bizzare helper function to show the impossible cannot happen.
-
-        It's hopefully possible to remove this I just haven't worked out how. -/
-    private lemma no_extend {y : ℕ} : ∀ {Γ}, ¬ (context.extend y Γ = Γ)
-    | context.nil eq := by contradiction
-    | (context.extend n Γ) eq := begin
-        simp only [] at eq,
-        have : y = n := and.left eq, subst this,
-        have : context.extend y Γ = Γ := and.right eq,
-        from no_extend this
-      end
-
     private def decidable_eq' {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ)
     | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
         if hy : y = y'
@@ -146,16 +72,6 @@ namespace prefix_expr
       else is_false (λ x, begin simp at x, contradiction end)
 
     instance {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ) := decidable_eq'
-
-    instance {Γ} [decidable_linear_order ℍ] : decidable_linear_order (wrap ℍ Γ) :=
-      { le := prefix_expr.le,
-        le_refl := le_refl,
-        le_trans := le_trans,
-        le_total := le_total,
-        le_antisymm := le_antisymm,
-        decidable_eq := decidable_eq',
-        decidable_le := decidable_le,
-      }
   end ordering
 
   section free

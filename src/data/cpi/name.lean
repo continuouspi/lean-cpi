@@ -67,119 +67,11 @@ inductive level : context → Type
 | zero   {Γ} {n} : level (context.extend n Γ)
 | extend {Γ} {n} : level Γ → level (context.extend n Γ)
 
-namespace reference
-  /- Just show that names form a decidable linear order. -/
-  section ordering
-    /-- Lexiographic ordering for references. -/
-    inductive le : ∀ {ω} {n}, reference n ω → reference n ω → Prop
-    | zero {ω} (n) : le (@zero ω n) (@zero ω n)
-    | one  {ω} {n} (a : reference n ω) : le (@zero ω n) (extend a)
-    | succ {ω} {n m} {a b : reference n ω} : le a b → le (@extend ω n m a) (extend b)
-
-    private theorem le_refl {n} : ∀ {ω} (α : reference n ω), reference.le α α
-    | ._ (zero x) := le.zero x
-    | ._ (extend x) := le.succ (le_refl x)
-
-    private theorem le_trans {n} :
-      ∀ {ω} (a b c : reference n ω), reference.le a b → reference.le b c → reference.le a c
-    | ._ ._ ._ ._ (le.zero n) (le.zero _) := le.zero n
-    | ._ ._ ._ ._ (le.zero n) (le.one c) := le.one c
-    | ._ ._ ._ ._ (le.succ ab) (le.succ bc) := le.succ (le_trans _ _ _ ab bc)
-    | ._ ._ ._ ._ (le.one β') (le.succ _) := le.one _
-
-    private theorem le_antisymm {n} :
-      ∀ {ω} (a b : reference n ω), le a b → le b a → a = b
-    | ._ (zero a) (zero b) (le.zero n) (le.zero _) := rfl
-    | ._ (extend a) (extend b) (le.succ ab) (le.succ ba) := by rw le_antisymm a b ab ba
-
-    private theorem le_total {n} : ∀ {ω} (a b : reference n ω), le a b ∨ le b a
-    | ._ (zero n) (zero _) := or.inl (le.zero n)
-    | ._ (extend a) (extend b) := or.imp le.succ le.succ (le_total a b)
-    | ._ (zero _) (extend _) := or.inl (le.one _)
-    | ._ (extend _) (zero _) := or.inr (le.one _)
-
-    private def decidable_le {n} : ∀ {ω} (a b : reference n ω), decidable (le a b)
-    | ._ (zero n) (zero _) := is_true (le.zero n)
-    | ._ (zero i) (extend a) := is_true (le.one _)
-    | ._ (extend a) (zero i) := is_false (λ x, by cases x)
-    | ._ (extend a) (extend b) :=
-      match decidable_le a b with
-      | is_true h := is_true (le.succ h)
-      | is_false h := is_false (λ x, by { clear _match, cases x, contradiction })
-      end
-
-    instance {ω} {n} : decidable_linear_order (reference n ω) :=
-      { le := reference.le,
-        le_refl := le_refl,
-        le_trans := le_trans,
-        le_antisymm := le_antisymm,
-        le_total := le_total,
-        decidable_le := decidable_le,
-        decidable_eq := by apply_instance }
-  end ordering
-
-end reference
-
 namespace name
   /-- Get the level of this name. -/
   def to_level : ∀ {Γ}, name Γ → level Γ
   | ._ (zero _) := level.zero
   | ._ (extend a) := level.extend (to_level a)
-
-  /- Just show that names form a decidable linear order. -/
-  section ordering
-    /-- Lexiographic ordering for names. -/
-    inductive le : ∀ {Γ}, name Γ → name Γ → Prop
-    | zero {Γ} {n} {i j : fin n} :    i ≤ j → le (@zero Γ n i) (zero j)
-    | one  {Γ} {n} {i : fin n} (a : name Γ) : le (@zero Γ n i) (extend a)
-    | succ {Γ} {n} {a b : name Γ} :  le a b → le (@extend Γ n a) (extend b)
-
-    private theorem le_refl : ∀ {Γ} (α : name Γ), name.le α α
-    | ._ (zero x) := le.zero (nat.le_refl x.val)
-    | ._ (extend x) := le.succ (le_refl x)
-
-    private theorem le_trans :
-      ∀ {Γ} (a b c : name Γ), name.le a b → name.le b c → name.le a c
-    | ._ ._ ._ ._ (le.zero ab) (le.zero bc) := le.zero (preorder.le_trans _ _ _ ab bc)
-    | ._ ._ ._ ._ (le.zero ab) (le.one c) := le.one c
-    | ._ ._ ._ ._ (le.succ ab) (le.succ bc) := le.succ (le_trans _ _ _ ab bc)
-    | ._ ._ ._ ._ (le.one β') (le.succ _) := le.one _
-
-    private theorem le_antisymm : ∀ {Γ} (a b : name Γ), le a b → le b a → a = b
-    | ._ (zero a) (zero b) (le.zero ab) (le.zero ba) := by rw partial_order.le_antisymm _ _ ab ba
-    | ._ (extend a) (extend b) (le.succ ab) (le.succ ba) := by rw le_antisymm a b ab ba
-
-    private theorem le_total : ∀ {Γ} (a b : name Γ), le a b ∨ le b a
-    | ._ (name.zero i) (name.zero j) :=
-      if h : i ≤ j
-      then or.inl (le.zero h)
-      else or.inr (le.zero (le_of_not_le h))
-    | ._ (name.extend a) (name.extend b) := or.imp le.succ le.succ (le_total a b)
-    | ._ (name.zero _) (name.extend _) := or.inl (le.one _)
-    | ._ (name.extend _) (name.zero _) := or.inr (le.one _)
-
-    private def decidable_le : ∀ {Γ} (a b : name Γ), decidable (le a b)
-    | ._ (name.zero i) (name.zero j) :=
-      if h : i ≤ j
-      then is_true (le.zero h)
-      else is_false (λ x, begin cases x, contradiction end)
-    | ._ (name.zero i) (name.extend a) := is_true (le.one _)
-    | ._ (name.extend a) (name.zero i) := is_false (λ x, begin cases x end)
-    | ._ (name.extend a) (name.extend b) :=
-      match decidable_le a b with
-      | is_true h := is_true (le.succ h)
-      | is_false h := is_false (λ x, begin cases x, contradiction end)
-      end
-
-    instance {Γ} : decidable_linear_order (name Γ) :=
-      { le := name.le,
-        le_refl := le_refl,
-        le_trans := le_trans,
-        le_antisymm := le_antisymm,
-        le_total := le_total,
-        decidable_le := decidable_le,
-        decidable_eq := by apply_instance }
-  end ordering
 
   section free
     /-- Determine if this variable is on a specific level or depth.
