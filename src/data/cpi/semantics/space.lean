@@ -1,27 +1,44 @@
-import data.cpi.process data.cpi.concretion
+import data.cpi.process data.cpi.transition
 import data.fin_fn data.multiset2 algebra.half_ring
 
 namespace cpi
+
+/-- Given two equivalent species, there is some isomorphism between species of
+    the same  kind and label, such that isomorphic transitions have equivalent
+    productions. -/
+def has_iso {ℍ : Type} {ω Γ : context} [∀ Γ, setoid (species ℍ ω Γ)] {A B : species ℍ ω Γ}
+    (ℓ : lookup ℍ ω Γ)
+  : A ≈ B → Type
+| c := ∀ k (α : label ℍ Γ k)
+       , Σ' (iso : (Σ' E, A [ℓ, α]⟶ E) ≃ (Σ' E, B [ℓ, α]⟶ E))
+         , ∀ E (t : A [ℓ, α]⟶ E), E ≈ (iso.to_fun ⟨ E, t ⟩).1
 
 /-- An equivalence class over species, which allows for a notion of "prime
     decomposition". -/
 class species_equiv (ℍ : Type) (ω : context) :=
   [relation {} : ∀ Γ, setoid (species ℍ ω Γ)]
 
+  [decide_species {} : ∀ Γ, decidable_rel (relation Γ).r]
+
+  /- Show our equivalence relation holds over transitions. Namely the transition
+     sets are isomorphic, and have equivalent productions. -/
+  ( transition_iso {Γ} (ℓ : lookup ℍ ω Γ) {A B : species ℍ ω Γ} (eq : A ≈ B)
+  : nonempty (has_iso ℓ eq) )
+
   /- Build a parallel composition of prime species. -/
   (from_prime_set {Γ} : multiset (prime_species' ℍ ω Γ) → species' ℍ ω Γ)
 
   /- Decompose a species into primes. -/
   ( prime_decompose {Γ} (A : species' ℍ ω Γ)
-    : Σ' (As : multiset (prime_species' ℍ ω Γ))
-      , from_prime_set As = A )
+  : Σ' (As : multiset (prime_species' ℍ ω Γ))
+    , from_prime_set As = A )
 
   /- Prime decomposition of nil, returns an empty set. -/
   (prime_decompose_nil {Γ} : (prime_decompose ⟦@species.nil ℍ ω Γ⟧).1 = 0)
 
   ( pseudo_apply {Γ} {a b : ℕ}
-    : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a
-    → species' ℍ ω Γ )
+  : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a
+  → species' ℍ ω Γ )
 
   ( pseudo_apply_symm {Γ} {a b : ℕ} (F : concretion' ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
     : pseudo_apply F G = pseudo_apply G F )
@@ -29,6 +46,35 @@ class species_equiv (ℍ : Type) (ω : context) :=
 instance species_equiv.to_species (ℍ : Type) (ω Γ : context) [r : species_equiv ℍ ω]
   : setoid (species ℍ ω Γ)
   := species_equiv.relation Γ
+
+def species_equiv.transition_from_fwd {ℍ : Type} {ω Γ : context} [r : species_equiv ℍ ω] {A B : species ℍ ω Γ}
+    {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}
+  : has_iso ℓ eq
+  → transition.transition_from ℓ A → transition.transition_from ℓ B
+| iso ⟨ k, α, p ⟩ := ⟨ k, α, (iso k α).1.to_fun p ⟩
+
+def species_equiv.transition_from_inv {ℍ : Type} {ω Γ : context} [r : species_equiv ℍ ω] {A B : species ℍ ω Γ}
+    {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}
+  : has_iso ℓ eq
+  → transition.transition_from ℓ B → transition.transition_from ℓ A
+| iso ⟨ k, α, p ⟩ := ⟨ k, α, (iso k α).1.inv_fun p ⟩
+
+/-- species_equiv.transition_iso, lifted to transition_from -/
+def species_equiv.transition_from_iso {ℍ : Type} {ω Γ : context} [r : species_equiv ℍ ω] {A B : species ℍ ω Γ}
+    {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}
+  : has_iso ℓ eq
+  → transition.transition_from ℓ A ≃ transition.transition_from ℓ B
+| iso :=
+  { to_fun    := species_equiv.transition_from_fwd iso,
+    inv_fun   := species_equiv.transition_from_inv iso,
+    left_inv  := λ ⟨ k, α, p ⟩, begin
+      simp only [species_equiv.transition_from_fwd, species_equiv.transition_from_inv],
+      rw (iso k α).1.left_inv p
+    end,
+    right_inv := λ ⟨ k, α, p ⟩, begin
+      simp only [species_equiv.transition_from_fwd, species_equiv.transition_from_inv],
+      rw (iso k α).1.right_inv p
+    end }
 
 /-- A vector-space representation of processes, mapping prime species into their
     concentrations. -/
@@ -43,8 +89,13 @@ def process_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [species_e
 
 /-- Determine if two prime species are equal. Effectively a decision procedure
     structural congruence. -/
-noncomputable def prime_equal {ℍ ω Γ} [setoid (species ℍ ω Γ)] :
-  decidable_eq (prime_species' ℍ ω Γ) := classical.dec_eq _
+instance prime_equal {ℍ ω Γ} [decidable_eq ℍ] [r : species_equiv ℍ ω] : decidable_eq (prime_species' ℍ ω Γ)
+| A B := quotient.rec_on_subsingleton₂ A B
+  (λ ⟨ a, _ ⟩ ⟨ b, _ ⟩,
+    match species_equiv.decide_species Γ a b with
+    | is_true h := is_true (quot.sound h)
+    | is_false h := is_false (λ h', absurd (quotient.exact h') h)
+    end)
 
 /-- Determine if two concretions are equal. Effectively a decision procedure for
     structural congruence. -/
@@ -53,20 +104,20 @@ noncomputable def concretion_equal {ℍ ω Γ} [species_equiv ℍ ω] :
                × (Σ' (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
   := classical.dec_eq _
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [species_equiv ℍ ω]
-local attribute [instance] prime_equal concretion_equal
+variables {ℂ ℍ : Type} {ω : context} [decidable_eq ℍ] [half_ring ℂ] [species_equiv ℍ ω]
+local attribute [instance] concretion_equal
 
 -- instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
 --   := by { unfold process_space, apply_instance }
-noncomputable instance process_space.add_comm_monoid {Γ}
+instance process_space.add_comm_monoid {Γ}
   : add_comm_monoid (process_space ℂ ℍ ω Γ)
   := fin_fn.add_comm_monoid _ ℂ
 
-noncomputable instance process_space.has_sub {Γ}
+instance process_space.has_sub {Γ}
   : has_sub (process_space ℂ ℍ ω Γ)
   := fin_fn.has_sub _ ℂ
 
-noncomputable instance process_space.distrib_mul_action {Γ}
+instance process_space.distrib_mul_action {Γ}
   : distrib_mul_action ℂ (process_space ℂ ℍ ω Γ)
   := fin_fn.distrib_mul_action _ ℂ
 
@@ -74,7 +125,7 @@ noncomputable instance process_space.distrib_mul_action {Γ}
     of the prime decomposition.
 
     This is defined as ⟨A⟩ within the paper. -/
-noncomputable def to_process_space {Γ} (A : species' ℍ ω Γ)
+def to_process_space {Γ} (A : species' ℍ ω Γ)
   : process_space ℂ ℍ ω Γ
   := multiset.sum_map fin_fn.mk_basis (species_equiv.prime_decompose A).1
 
@@ -84,7 +135,7 @@ noncomputable def to_process_space {Γ} (A : species' ℍ ω Γ)
 -- ⟨A|B⟩ = ⟨A⟩ + ⟨B⟩ when A ≠ 0 ≠ B
 
 @[simp]
-lemma to_process_space.nil {Γ} : @to_process_space ℂ ℍ ω _ _ Γ ⟦nil⟧ = 0 := begin
+lemma to_process_space.nil {Γ} : to_process_space ⟦nil⟧ = (0 : process_space ℂ ℍ ω Γ) := begin
   unfold to_process_space multiset.sum_map,
   rw species_equiv.prime_decompose_nil,
   simp only [multiset.map_zero, multiset.fold_zero],
@@ -112,7 +163,7 @@ noncomputable instance interaction_space.distrib_mul_action {Γ}
   := fin_fn.distrib_mul_action _ ℂ
 
 /-- Convert a process into a process space. -/
-noncomputable def process.to_space {Γ}
+def process.to_space {Γ}
   : process ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ
 | (c ◯ A) := c • to_process_space ⟦ A ⟧
 | (P |ₚ Q) := process.to_space P + process.to_space Q
@@ -148,7 +199,7 @@ def process.from_space {Γ} : process_space ℂ ℍ ω Γ → process' ℂ ℍ �
 | Ps := process.from_prime_multiset Ps.space Ps.defined.val
 
 /-- Convert a class of equivalent processes into a process space. -/
-noncomputable def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ
+def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ
 | P := begin
   refine quot.lift_on P process.to_space _,
   assume P Q eq,
@@ -172,7 +223,7 @@ noncomputable def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_sp
 end
 
 axiom process.from_inverse {Γ} :
-  function.left_inverse process.to_space' (@process.from_space ℂ ℍ ω _ _ Γ)
+  function.left_inverse process.to_space' (@process.from_space ℂ ℍ ω _ _ _ Γ)
 
 /-- Show that process spaces can be embeeded into equivalence classes of processes. -/
 def process.space_embed {Γ} : process_space ℂ ℍ ω Γ ↪ process' ℂ ℍ ω Γ :=
@@ -181,4 +232,4 @@ def process.space_embed {Γ} : process_space ℂ ℍ ω Γ ↪ process' ℂ ℍ 
 
 end cpi
 
-#lint-
+#lint- only def_lemma doc_blame

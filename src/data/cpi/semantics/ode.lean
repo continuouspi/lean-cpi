@@ -2,8 +2,8 @@ import data.cpi.semantics.basic data.mv_polynomial
 
 namespace cpi
 
-variables {ℍ : Type} {ω : context} [half_ring ℍ]
-local attribute [instance] prime_equal concretion_equal
+variables {ℍ : Type} {ω : context} [half_ring ℍ] [decidable_eq ℍ] [species_equiv ℍ ω]
+local attribute [instance] concretion_equal
 
 /-- All species which may occur within the transition graph of a process.
 

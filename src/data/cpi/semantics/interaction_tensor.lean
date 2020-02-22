@@ -2,12 +2,13 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] {M : affinity ℍ} {conc : ℍ ↪ ℂ} [species_equiv ℍ ω]
-local attribute [instance] prime_equal concretion_equal
+variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ}
+          [half_ring ℂ] [decidable_eq ℍ] [species_equiv ℍ ω]
+local attribute [instance] concretion_equal
 
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
-private noncomputable def interaction_tensor_worker (conc : ℍ ↪ ℂ)
+private def interaction_tensor_worker (conc : ℍ ↪ ℂ)
   : ( species' ℍ ω (context.extend M.arity context.nil)
     × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
@@ -57,7 +58,7 @@ end
 
 /-- Compute the interaction tensor between two elements in the interaction
     space. -/
-noncomputable def interaction_tensor (conc: ℍ ↪ ℂ)
+def interaction_tensor (conc: ℍ ↪ ℂ)
   : interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
   → interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)

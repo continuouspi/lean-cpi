@@ -3,10 +3,11 @@ import tactic.abel algebra.distrib_embedding
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ]
+variables {ℂ ℍ : Type} {ω : context}
   {M : affinity ℍ}
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
-local attribute [instance] prime_equal concretion_equal
+  [half_ring ℂ] [decidable_eq ℍ] [species_equiv ℍ ω]
+local attribute [instance] concretion_equal
 
 /-- Maps a potential transition to the interaction space. -/
 private noncomputable def potential_interaction_space {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
@@ -21,7 +22,7 @@ private lemma potential_interaction_space.equiv
   ∀ {k} {α : label ℍ Γ k} {E E' : production ℍ ω Γ k}
     {t : A [ℓ, α]⟶ E} {t' : B [ℓ, α]⟶ E'}
   , A ≈ B → E ≈ E'
-  → @potential_interaction_space ℂ ℍ ω _ Γ ℓ _ (transition.transition_from.mk t)
+  → @potential_interaction_space ℂ ℍ ω _ _ _ Γ ℓ _ (transition.transition_from.mk t)
   = potential_interaction_space (transition.transition_from.mk t')
 | _ (# a) (@production.concretion _ _ _ b y E) (production.concretion E') t t' eqA (production.equiv.concretion eqE) := begin
   unfold transition.transition_from.mk potential_interaction_space,
@@ -36,7 +37,7 @@ end
 
     This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
     components of the definition of d(c ◯ A)/dt. -/
-private noncomputable def immediate_process_space
+private def immediate_process_space
     {A : species ℍ ω (context.extend M.arity context.nil)}
     (conc : ℍ ↪ ℂ)
   : transition.transition_from ℓ A
@@ -143,7 +144,6 @@ lemma process_potential.equiv
   case process.equiv.ξ_species : c A B eq {
     simp only [process_potential],
 
-    cases eq,
     generalize : transition.enumerate ℓ A = As,
     generalize : transition.enumerate ℓ B = Bs,
 
@@ -152,20 +152,24 @@ lemma process_potential.equiv
       = multiset.sum_map potential_interaction_space Bs.elems.val,
       from congr_arg (has_scalar.smul _) this,
 
+    cases species_equiv.transition_iso ℓ eq with iso,
+    let isoF := species_equiv.transition_from_iso iso,
     suffices : ∀ x
       , potential_interaction_space x
-      = potential_interaction_space ((transition.equivalent_of.is_equiv eq).to_fun x),
-      let iso := transition.equivalent_of.is_equiv eq,
+      = potential_interaction_space (isoF.to_fun x),
       from multiset.sum_map_iso
-        potential_interaction_space potential_interaction_space iso this
+        potential_interaction_space potential_interaction_space isoF this
         As.elems Bs.elems
-        (λ x _, @fintype.complete _ Bs (iso.to_fun x))
-        (λ x _, @fintype.complete _ As (iso.inv_fun x)),
+        (λ x _, @fintype.complete _ Bs (isoF.to_fun x))
+        (λ x _, @fintype.complete _ As (isoF.inv_fun x)),
 
     rintros ⟨ k, α, E, t ⟩,
-    simp only [transition.equivalent_of.is_equiv, transition.equivalent_of.transition_from],
-    rcases (transition.equivalent_of eq t) with ⟨ E', eqE, t' ⟩,
-    from potential_interaction_space.equiv ⟨ eq ⟩ eqE,
+    simp only [
+      isoF, species_equiv.transition_from_iso,
+      species_equiv.transition_from_fwd, species_equiv.transition_from_inv],
+    have eqE := (iso k α).2 E t,
+    cases ((iso k α).fst).to_fun ⟨E, t⟩ with E' t',
+    from potential_interaction_space.equiv eq eqE,
   },
   case process.equiv.ξ_parallel₁ : P P' Q eq ih {
     unfold process_potential, rw ih,
@@ -249,21 +253,24 @@ lemma process_immediate.equiv [add_monoid ℍ]
         := process_potential.equiv M ℓ (process.equiv.ξ_species eq),
       rw [this, eql] },
 
-    cases eq,
+    cases species_equiv.transition_iso ℓ eq with iso,
+    let isoF := species_equiv.transition_from_iso iso,
     suffices : ∀ x
       , immediate_process_space conc.to_embed x
-      = immediate_process_space conc.to_embed ((transition.equivalent_of.is_equiv eq).to_fun x),
-      let iso := transition.equivalent_of.is_equiv eq,
+      = immediate_process_space conc.to_embed (isoF.to_fun x),
       from multiset.sum_map_iso
-        (immediate_process_space _) (immediate_process_space _) iso this
+        (immediate_process_space _) (immediate_process_space _) isoF this
         As.elems Bs.elems
-        (λ x _, @fintype.complete _ Bs (iso.to_fun x))
-        (λ x _, @fintype.complete _ As (iso.inv_fun x)),
+        (λ x _, @fintype.complete _ Bs (isoF.to_fun x))
+        (λ x _, @fintype.complete _ As (isoF.inv_fun x)),
 
     rintros ⟨ k, α, E, t ⟩,
-    simp only [transition.equivalent_of.is_equiv, transition.equivalent_of.transition_from],
-    rcases (transition.equivalent_of eq t) with ⟨ E', eqE, t' ⟩,
-    from immediate_process_space.equiv ⟨ eq ⟩ eqE,
+    simp only [
+      isoF, species_equiv.transition_from_iso,
+      species_equiv.transition_from_fwd, species_equiv.transition_from_inv],
+    have eqE := (iso k α).2 E t,
+    cases ((iso k α).fst).to_fun ⟨E, t⟩ with E' t',
+    from immediate_process_space.equiv eq eqE,
   },
   case process.equiv.ξ_parallel₁ : P P' Q eq ih {
     unfold process_immediate,
