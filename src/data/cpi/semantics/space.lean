@@ -47,12 +47,14 @@ instance species_equiv.to_species (ℍ : Type) (ω Γ : context) [r : species_eq
   : setoid (species ℍ ω Γ)
   := species_equiv.relation Γ
 
+/-- Build an equivalent transition in the forward direction. -/
 def species_equiv.transition_from_fwd {ℍ : Type} {ω Γ : context} [r : species_equiv ℍ ω] {A B : species ℍ ω Γ}
     {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}
   : has_iso ℓ eq
   → transition.transition_from ℓ A → transition.transition_from ℓ B
 | iso ⟨ k, α, p ⟩ := ⟨ k, α, (iso k α).1.to_fun p ⟩
 
+/-- Build an equivalent transition in the reverse direction. -/
 def species_equiv.transition_from_inv {ℍ : Type} {ω Γ : context} [r : species_equiv ℍ ω] {A B : species ℍ ω Γ}
     {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}
   : has_iso ℓ eq
