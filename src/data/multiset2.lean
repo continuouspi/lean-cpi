@@ -1,4 +1,4 @@
-import data.finset
+import data.finset data.list.partition_map
 
 /-- Map elements together and sum them. -/
 def multiset.sum_map {α β : Type} [add_comm_monoid β] (f : α → β) (xs : multiset α) : β
@@ -117,4 +117,46 @@ def finset.filter_map {α β : Type}
   finset α → finset β
 | ⟨ xs, nodup ⟩ := ⟨ multiset.filter_map f xs, multiset.nodup_filter_map f H nodup ⟩
 
-#lint -
+/-- Partition a multiset into two multisets. -/
+def multiset.partition_map {α β γ : Type} (f : α → β ⊕ γ) (xs : multiset α) : multiset β × multiset γ
+  := quot.lift_on xs
+    (λ x, prod.mk ((list.partition_map f x).1 : multiset β)
+                  ((list.partition_map f x).2 : multiset γ))
+    (λ x y perm, begin
+      simp only [prod.mk.inj_iff, multiset.coe_eq_coe],
+      from list.perm_partition_map f perm,
+    end)
+
+lemma multiset.partition_map_append {α β γ : Type} (f : α → β ⊕ γ) :
+  ∀ (xs : multiset α)
+  , multiset.map sum.inl (multiset.partition_map f xs).1 + multiset.map sum.inr (multiset.partition_map f xs).2
+  = multiset.map f xs
+| xs := begin
+  rcases quot.exists_rep xs with ⟨ xs, ⟨ _ ⟩ ⟩,
+  from quot.sound (list.partition_map_append f xs),
+end
+
+lemma multiset.partition_map_map {α β γ δ : Type} (f : δ → β ⊕ γ) (g : α → δ):
+  ∀ (xs : multiset α)
+  , multiset.partition_map (f ∘ g) xs = multiset.partition_map f (multiset.map g xs)
+| xs := begin
+  rcases quot.exists_rep xs with ⟨ xs, ⟨ _ ⟩ ⟩,
+  simp only [multiset.map, multiset.partition_map, quot.lift_on], unfold_coes,
+  rw list.partition_map_map f g xs,
+end
+
+lemma multiset.partition_map_map_id {α β γ : Type} (f : α → β ⊕ γ) :
+  ∀ (xs : multiset α)
+  , multiset.partition_map f xs = multiset.partition_map id (multiset.map f xs)
+| xs := multiset.partition_map_map id f xs
+
+/-- Partition a multiset into two multisets. -/
+def finset.partition_map {α β γ : Type} (f : α ↪ β ⊕ γ) : finset α → finset β × finset γ
+| ⟨ xs, nodup ⟩ := begin
+  refine ⟨ ⟨ (xs.partition_map f.1).1, _ ⟩, ⟨ (xs.partition_map f.1).2, _ ⟩ ⟩,
+  apply quot.induction_on xs,
+  simp only [multiset.partition_map],
+  sorry, sorry,
+end
+
+#lint-
