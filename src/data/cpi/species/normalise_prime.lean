@@ -27,15 +27,86 @@ def atom_singleton_parallel {Γ} :
 | [A] atom := ⟨ A, rfl ⟩
 | (A::B::As) atom := by { exfalso, cases atom }
 
-axiom parallel_restriction_atom {Γ} (M : affinity ℍ) :
+private lemma partition_restriction_atom {Γ} (M : affinity ℍ) :
+  ∀ (As : list (species ℍ ω (context.extend (M.arity) Γ)))
+    (C : species ℍ ω (context.extend (M.arity) Γ))
+    (h : ∀ A ∈ As, normalise.atom normalise.kind'.atom A ∧ level.zero ∈ A)
+  , partition_restriction M As C (λ x mem, (h x mem).1)
+  = ⟨ As, [], equiv.parallel_nil₂, h, λ x mem, by cases mem ⟩
+| [] C h := begin
+  simp only [partition_restriction],
+  from ⟨ rfl, heq.rfl ⟩,
+end
+| (A::As) C h := begin
+  simp only [partition_restriction],
+
+  have h := partition_restriction_atom As (C |ₛ A)
+    (λ x mem, h x (list.mem_cons_of_mem _ mem)),
+  rw h, clear h,
+
+  simp only [partition_restriction._match_1, dite],
+  cases (@free_in.decidable ℍ ω _ _ level.zero A),
+
+  case is_false : notFree {
+    simp only [],
+    from absurd (h A (list.mem_cons_self A _)).2 notFree,
+  },
+
+  simp only [],
+  from ⟨ ⟨ rfl, rfl ⟩, heq.rfl ⟩,
+end
+
+private lemma undo_choice {Γ} (M : affinity ℍ) :
+  ∀ (A : species ℍ ω (context.extend (M.arity) Γ))
+    (As : list (species ℍ ω (context.extend (M.arity) Γ)))
+  , atom (kind'.in_nu M) (parallel.from_list (A::As))
+  → (∀ (B : whole ℍ ω kind.species (context.extend (M.arity) Γ)), B ∈ (list.cons A As) → atom kind'.atom B)
+  → ∀ B ∈ (list.cons A As), normalise.atom normalise.kind'.atom B ∧ level.zero ∈ B
+| A [] atomAs atomEach B mem := begin
+  -- We're a singleton list, so must be nu_one.
+  cases mem, case or.inr { cases mem }, subst mem,
+  cases atomAs, case atom.nu_cons { cases atomEach _ (list.mem_cons_self _ _) },
+
+  from ⟨ ‹ atom kind'.atom B ›, ‹ level.zero ∈ B › ⟩,
+end
+| A (A'::As) atomAs atomEach B mem := begin
+  -- Similarly, we must be nu_cons.
+  cases atomAs, case atom.nu_one : atomA { cases atomA },
+
+  cases mem,
+  case or.inl { subst mem, from ⟨ ‹ atom kind'.atom B ›, ‹ level.zero ∈ B › ⟩ },
+  case or.inr {
+    from undo_choice A' As ‹ atom (kind'.in_nu M) (parallel.from_list (A' :: As)) ›
+      (λ x mem, atomEach x (list.mem_cons_of_mem _ mem))
+      _ mem,
+  }
+end
+
+private lemma parallel_restriction_atom {Γ} (M : affinity ℍ) :
   ∀ (A : list (species ℍ ω (context.extend (M.arity) Γ)))
     (atomA : atom (kind'.in_nu M) (parallel.from_list A))
     (atomEach : ∀ (B : whole ℍ ω kind.species (context.extend (M.arity) Γ)), B ∈ A → atom kind'.atom B)
   , parallel.from_list ((normalise_restriction M A atomEach).fst)
   = ν(M) parallel.from_list A
--- | A atom atomEach := begin
---   simp only [normalise_restriction],
--- end
+| As atomAs atomEach := begin
+  simp only [normalise_restriction],
+
+  cases As with A As,
+  case list.nil { cases atomAs, cases atomAs_a },
+
+  have atomLike : ∀ B ∈ (list.cons A As), normalise.atom normalise.kind'.atom B ∧ level.zero ∈ B
+    := undo_choice M A As atomAs atomEach,
+
+  rw partition_restriction_atom M (A::As) nil atomLike,
+  simp only [normalise_restriction._match_2],
+
+  rcases defB : build_restriction M (A :: As) [] atomLike _ with ⟨ As₂, eq₂, atomAs₂ ⟩,
+  simp only [build_restriction] at defB,
+  simp only [normalise_restriction._match_1],
+
+  rw ← defB.1,
+  from rfl,
+end
 
 lemma normalise_atom :
   ∀ {sk} {k : kind' ℍ sk} {Γ} {A : whole ℍ ω sk Γ}
@@ -133,7 +204,7 @@ end
 
 
 /-- Show that any atomic species must be prime. -/
-lemma atom_prime : ∀ {Γ} (A : species ℍ ω Γ), atom kind'.atom A → prime A
+lemma atom_prime : ∀ {Γ} {A : species ℍ ω Γ}, atom kind'.atom A → prime A
 | Γ A atomA := ⟨ λ isNil, begin
     unfold_projs at isNil, unfold equiv at isNil,
     rw [normalise_atom atomA] at isNil, subst isNil,
@@ -177,6 +248,12 @@ lemma atom_prime : ∀ {Γ} (A : species ℍ ω Γ), atom kind'.atom A → prime
       }
     }
   end ⟩
+
+/-- Decompose a species into a list of prime species. -/
+def prime_decompose {Γ} : species ℍ ω Γ → list (prime_species ℍ ω Γ)
+| A :=
+  let ⟨ As, _, atomAs ⟩ := normalise_to A in
+  list.map_witness As (λ A mem, ⟨ A, atom_prime (atomAs A mem) ⟩ )
 
 end normalise
 end species
