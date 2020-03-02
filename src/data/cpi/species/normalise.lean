@@ -85,6 +85,31 @@ namespace normalise
     }
   end
 
+  /-- parallel.from_list is injective on atoms. -/
+  lemma atom_parallel_inj {Γ} :
+    ∀ (As Bs : list (species ℍ ω Γ))
+    , parallel.from_list As = parallel.from_list Bs
+    → (∀ (A : whole ℍ ω kind.species Γ), A ∈ As → atom kind'.atom A)
+    → (∀ (A : whole ℍ ω kind.species Γ), A ∈ Bs → atom kind'.atom A)
+    → As = Bs
+  | [] [] ⟨ _ ⟩ atomA atomB := rfl
+  | [] [_] ⟨ _ ⟩ atomA atomB := by cases atomB _ (list.mem_cons_self _ _)
+  | [] (B::B'::Bs) eq atomA atomB := by cases eq
+
+  | [_] [] ⟨ _ ⟩ atomA atomB := by cases atomA _ (list.mem_cons_self _ _)
+  | [A] [B] ⟨ _ ⟩ atomA atomB := rfl
+  | [A] (B::B'::Bs') ⟨ _ ⟩ atomA atomB := by cases atomA _ (list.mem_cons_self _ _)
+
+  | (A::A'::As) [] eq atomA atomB := by cases eq
+  | (A::A'::As) [B] ⟨ _ ⟩ atomA atomB := by cases atomB _ (list.mem_cons_self _ _)
+  | (A::A'::As) (B::B'::Bs) eq atomA atomB := begin
+    simp only [parallel.from_list] at eq,
+    have h := atom_parallel_inj (A'::As) (B'::Bs) eq.2
+      (λ x mem, atomA x (list.mem_cons_of_mem _ mem))
+      (λ x mem, atomB x (list.mem_cons_of_mem _ mem)),
+    rw [eq.1, h],
+  end
+
   axiom drop_atom :
     ∀ {Γ} {sk} {k : kind' ℍ sk} {n} {A : whole ℍ ω sk (context.extend n Γ)} (h : level.zero ∉ A)
     , atom k A → atom k (drop h)
@@ -331,6 +356,16 @@ namespace normalise
       unfold equiv normalise at eq,
       have : A ≈ parallel.from_list (normalise_to B).1 := eq ▸ (normalise_to A).2.1,
       from trans this (symm (normalise_to B).2.1),
+  end
+
+  lemma equiv.normalise_to {Γ} {A B : species ℍ ω Γ} :
+    equiv A B → (normalise_to A).1 = (normalise_to B).1
+  | ab := begin
+    unfold equiv normalise at ab, clear equiv.normalise_to,
+    rcases normalise_to A with ⟨ As, eq, atomA ⟩, assume ab, simp only [] at ⊢ ab, clear eq,
+    rcases normalise_to B with ⟨ Bs, eq, atomB ⟩, assume ab, simp only [] at ⊢ ab, clear eq,
+
+    from atom_parallel_inj As Bs ab atomA atomB,
   end
 
   /-- Equivalence under normalisation. Namely, two species are equivalent if they

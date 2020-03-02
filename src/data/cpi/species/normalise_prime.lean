@@ -255,6 +255,26 @@ def prime_decompose {Γ} : species ℍ ω Γ → list (prime_species ℍ ω Γ)
   let ⟨ As, _, atomAs ⟩ := normalise_to A in
   list.map_witness As (λ A mem, ⟨ A, atom_prime (atomAs A mem) ⟩ )
 
+/-- prime_decompose' on setoids. -/
+def prime_decompose' {Γ} : species' ℍ ω Γ → multiset (prime_species' ℍ ω Γ)
+  := begin
+  refine quot.map (λ A, list.map quotient.mk (prime_decompose A)) _,
+
+  assume A B equi,
+  show (list.map quotient.mk (prime_decompose A))
+     ~ (list.map quotient.mk (prime_decompose B)),
+
+  suffices : prime_decompose A = prime_decompose B, { rw this },
+
+  suffices : (normalise_to A).1 = (normalise_to B).1,
+    unfold prime_decompose,
+    rcases defA : normalise_to A with ⟨ A', eqA, atomA ⟩,
+    rcases defB : normalise_to B with ⟨ B', eqB, atomB ⟩,
+    rw [defA, defB] at this, simp only [] at this, subst this,
+    from rfl,
+
+  from equiv.normalise_to equi
+end
 end normalise
 end species
 end cpi
