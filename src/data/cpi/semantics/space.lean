@@ -25,16 +25,11 @@ class species_equiv (ℍ : Type) (ω : context) :=
   ( transition_iso {Γ} (ℓ : lookup ℍ ω Γ) {A B : species ℍ ω Γ} (eq : A ≈ B)
   : nonempty (has_iso ℓ eq) )
 
-  /- Build a parallel composition of prime species. -/
-  (from_prime_set {Γ} : multiset (prime_species' ℍ ω Γ) → species' ℍ ω Γ)
-
   /- Decompose a species into primes. -/
-  ( prime_decompose {Γ} (A : species' ℍ ω Γ)
-  : Σ' (As : multiset (prime_species' ℍ ω Γ))
-    , from_prime_set As = A )
+  (prime_decompose {Γ} : species' ℍ ω Γ → multiset (prime_species' ℍ ω Γ))
 
   /- Prime decomposition of nil, returns an empty set. -/
-  (prime_decompose_nil {Γ} : (prime_decompose ⟦@species.nil ℍ ω Γ⟧).1 = 0)
+  (prime_decompose_nil {Γ} : prime_decompose ⟦@species.nil ℍ ω Γ⟧ = 0)
 
   ( pseudo_apply {Γ} {a b : ℕ}
   : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a
@@ -129,7 +124,7 @@ instance process_space.distrib_mul_action {Γ}
     This is defined as ⟨A⟩ within the paper. -/
 def to_process_space {Γ} (A : species' ℍ ω Γ)
   : process_space ℂ ℍ ω Γ
-  := multiset.sum_map fin_fn.mk_basis (species_equiv.prime_decompose A).1
+  := multiset.sum_map fin_fn.mk_basis (species_equiv.prime_decompose A)
 
 -- TODO: Show that this satisfies the required definitions:
 -- ⟨A⟩ = 0
