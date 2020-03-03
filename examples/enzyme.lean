@@ -66,10 +66,14 @@ def Eₛ_ : species ℝ ω Γ :=
 def E_ : choices ℝ ω (context.extend M.arity Γ) :=
   (name.extend e #⟨ [u, r] ⟩) ⬝' (name.extend t # ⬝ ν(M) apply E (u :: r :: t :: ∅))
 
+def S'_ : species ℝ ω Γ := Σ# S_
+def E'_ : species ℝ ω Γ := ν(M) apply E (u :: r :: t :: ∅)
+
 -- P = P' = τ@k_degrade. 0
 def Pₛ_ : species ℝ ω Γ := τ@k_degrade ⬝ nil
 
 def P_ : choices ℝ ω Γ := τ@k_degrade ⬝' nil
+def P'_ : species ℝ ω Γ := Σ# P_
 
 def ℓ : lookup ℝ ω Γ
 | _ S := species.rename name.extend S_
@@ -79,10 +83,57 @@ def ℓ : lookup ℝ ω Γ
 | (nat.succ n) (reference.extend (reference.extend a)) := by { cases a, cases a_a, cases a_a_a }
 
 -- S [s]—→ (; x, y) (x.S + y.(P|P'))
-example : (Σ# S_) [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
+example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
   Σ# ( whole.cons (x#) (apply S ∅)
      ∘ whole.cons (y#) (apply P₁ ∅ |ₛ apply P₂ ∅)
      $ whole.empty )))
 := transition.choice₁ _ _ _ _ _
 
+-- P₁ [τ@k_degrade]⟶ 0
+example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
+  := transition.choice₂ k_degrade whole.nil whole.empty
+
+-- set_option pp.notation false
+example : E'_ [ℓ, #e]⟶ (production.concretion
+  (ν'(M)
+    #(vector.map (name.mk_apply (u :: r :: t :: ∅)) (u :: r :: vector.nil) ; 0)
+    rename (name.ext (name.mk_apply (u :: r :: t :: ∅)))
+    (rename (name.ext (name.ext name.extend))
+      (name.extend t#(0) ⬝ ν(M) whole.apply E (u :: r :: t :: ∅)))))
+:= begin
+
+  have :
+    (Σ# (rename (name.ext (@name.extend _ M.arity)) E_))
+      [ (lookup.rename name.extend ∘ lookup.rename name.extend $ ℓ)
+      , # (name.extend (name.extend e))
+      ]⟶
+      (production.concretion
+        (#((u :: r :: vector.nil) ; 0) (rename (name.ext (name.ext name.extend))
+          (name.extend t# ⬝ ν(M) whole.apply E (u :: r :: t :: ∅))))),
+  {
+    simp [E_, u, r],
+    from transition.choice₁
+      (name.extend (name.extend e))
+      (u :: r :: list.nil)
+      0 (rename (name.ext (name.ext name.extend))
+          (name.extend t# ⬝ ν(M) whole.apply E (u :: r :: t :: ∅))) whole.empty,
+  },
+
+  have : E'_ [ℓ, _]⟶ _,
+  {
+    refine transition.ν₁ M _,
+
+    show (whole.apply E (u :: r :: t :: ∅))
+      [lookup.rename name.extend ℓ, label.rename name.extend (# e)]⟶ _,
+    have h := transition.defn (lookup.rename name.extend ℓ) E (u :: r :: t :: ∅) _,
+
+    show (Σ# lookup.rename name.extend ℓ (M.arity) E)
+      [lookup.rename name.extend (lookup.rename name.extend ℓ), _]⟶ _,
+    from this,
+
+    simp [name.mk_apply, label.rename, production.rename, concretion.rename] at h,
+    from h,
+  },
+  from this,
+end
 end
