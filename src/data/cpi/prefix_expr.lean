@@ -6,6 +6,7 @@ namespace cpi
 /-- A telescope may extend a context by 0 or 1 levels. This is effectively a
     function on contexts, but having it be inductive allows us to case split on
     it, simplifying some proofs. -/
+@[derive decidable_eq]
 inductive telescope : Type
 | extend : ℕ → telescope
 | preserve : telescope
@@ -30,6 +31,7 @@ def telescope.apply : telescope → context → context
   complexities to the proof when renaming, as you need to
   `augment (rename π) = augment π', while preserving type safety.
 -/
+@[derive decidable_eq]
 inductive prefix_expr (ℍ : Type) : context → telescope → Type
 | communicate {} {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (telescope.extend y)
 | spontanious {} {Γ} (k : ℍ) : prefix_expr Γ telescope.preserve
@@ -45,34 +47,11 @@ notation a `#` := prefix_expr.communicate a [] 0
 notation `τ@`:max k:max := prefix_expr.spontanious k
 
 namespace prefix_expr
-  /- Just show that prefixes form a decidable linear order. -/
-  section ordering
     /-- A wrapper for prefixed expressions, which hides the extension function.
 
         This is suitable for comparing prefixes. -/
     inductive wrap (ℍ : Type) : context → Type
     | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
-
-    private def decidable_eq' {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ)
-    | ⟨ a#(b; y) ⟩ ⟨ a'#(b'; y') ⟩ :=
-        if hy : y = y'
-        then if ha : a = a'
-             then if hb : b = b'
-                  then is_true (by rw [hy, ha, hb])
-                  else is_false (begin rw [hy], simp [hb] end)
-            else is_false (begin rw [hy], simp [ha] end)
-        else is_false (λ x, by { simp only [] at x, from hy x.1 })
-    | ⟨ a#(b; y) ⟩ ⟨ τ@k ⟩ := is_false (λ x, begin
-        simp only [] at x, from x.1,
-      end)
-    | ⟨ τ@k ⟩ ⟨ a#(b; y) ⟩ := is_false (λ x, by { simp only [] at x, from x.1 })
-    | ⟨ τ@k ⟩ ⟨ τ@k' ⟩ :=
-      if h : k = k'
-      then is_true (by rw [h])
-      else is_false (λ x, begin simp at x, contradiction end)
-
-    instance {Γ} [decidable_eq ℍ] : decidable_eq (wrap ℍ Γ) := decidable_eq'
-  end ordering
 
   section free
     /-- Determine if any variable with a given level occurs within this prefix.

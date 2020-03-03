@@ -32,6 +32,7 @@ inductive kind
     In order to avoid these problems, we represent mutually-recursive type the
     same way that Lean does (as a single type indexed by what group it belongs
     to), but avoid the indirection that such a definition would introduce. -/
+@[derive decidable_eq]
 inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 /- Species -/
 | nil {} {Γ} : whole kind.species Γ
@@ -44,7 +45,6 @@ inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 | empty {} {Γ} : whole kind.choices Γ
 | cons {Γ} {f} (π : prefix_expr ℍ Γ f) :
     whole kind.species (f.apply Γ) → whole kind.choices Γ → whole kind.choices Γ
-
 
 /-- An alias for species within the `whole' datatype. -/
 @[reducible]

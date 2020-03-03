@@ -1,4 +1,4 @@
-import data.cpi.species.congruence data.cpi.species.order
+import data.cpi.species.congruence
 
 namespace cpi
 namespace species
@@ -339,7 +339,7 @@ namespace normalise
   def equiv {Γ : context} (A B : species ℍ ω Γ) : Prop := normalise A = normalise B
 
   instance equiv.decide [decidable_eq ℍ] {Γ : context} : decidable_rel (@equiv ℍ ω Γ)
-  | A B := species.whole.decidable_eq (normalise A) (normalise B)
+  | A B := species.whole.decidable_eq ℍ ω kind.species Γ (normalise A) (normalise B)
 
   lemma equiv.refl {Γ} : reflexive (@equiv ℍ ω Γ)
   | A := rfl
