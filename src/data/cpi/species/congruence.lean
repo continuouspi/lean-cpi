@@ -7,6 +7,7 @@ variables {ℍ : Type} {ω : context}
 
 /-- A chain of rewrite rules, to transform a species from one kind to another
     equivalent one. -/
+@[nolint has_inhabited_instance]
 inductive equivalent : ∀ {Γ} (A B : species ℍ ω Γ), Type
 | refl  {Γ} {A : species ℍ ω Γ} : equivalent A A
 | trans {Γ} {A B C : species ℍ ω Γ} : equivalent A B → equivalent B C → equivalent A C

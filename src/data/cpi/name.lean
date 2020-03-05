@@ -37,19 +37,19 @@ namespace cpi
 
     Each level of the context holds the arity of the name defined at that point.
 -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive context : Type
 | nil : context
 | extend : ℕ → context → context
 
 /-- A reference to a species definition within the global definition context. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive reference : ℕ → context → Type
 | zero   {ω : context} (n : ℕ) : reference n (context.extend n ω)
 | extend {ω : context} {n m : ℕ} : reference n ω → reference n (context.extend m ω)
 
 /-- The set of names within the continuous π-calculus. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive name : context → Type
 | zero   {Γ} {n : ℕ} : fin n → name (context.extend n Γ)
 | extend {Γ} {n : ℕ} : name Γ → name (context.extend n Γ)
@@ -62,7 +62,7 @@ inductive name : context → Type
 
     Technically this property could be defined as "does any name of this level
     appear" - it may be worth seeing if that simplifies things in the future. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive level : context → Type
 | zero   {Γ} {n} : level (context.extend n Γ)
 | extend {Γ} {n} : level Γ → level (context.extend n Γ)

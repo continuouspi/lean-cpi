@@ -22,6 +22,7 @@ lemma drop_extend {Γ} {n} {A : species ℍ ω (context.extend n Γ)} (fr : leve
 
 namespace normalise
   /-- A version of species.kind, but for atoms. -/
+  @[nolint has_inhabited_instance]
   inductive kind' (ℍ : Type) : kind → Type
   | atom       {} : kind' kind.species
   | in_choice  {} : kind' kind.species
@@ -278,6 +279,7 @@ def normalise_restriction {Γ} : ∀ (M : affinity ℍ)
   atomAs₂ ⟩
 
 /-- Wraps species.equiv to work on both species and lists of choices. -/
+@[nolint has_inhabited_instance]
 def equivalence_of : ∀ {k} {Γ}, whole ℍ ω k Γ → Type
 | kind.species Γ A :=
   Σ' (Bs : list (species ℍ ω Γ))

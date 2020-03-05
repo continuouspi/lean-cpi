@@ -8,6 +8,7 @@ namespace species
 /-- As the doc-strinct of 'whole' says, species and their choices are bundled
     into one type. We index on this "kind", which says whether this constructor
     represents a species, or is part of a guarded choice. -/
+@[nolint has_inhabited_instance]
 inductive kind
 | species
 | choices
@@ -32,7 +33,7 @@ inductive kind
     In order to avoid these problems, we represent mutually-recursive type the
     same way that Lean does (as a single type indexed by what group it belongs
     to), but avoid the indirection that such a definition would introduce. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive whole (ℍ : Type) (ω : context) : kind → context → Type
 /- Species -/
 | nil {} {Γ} : whole kind.species Γ
@@ -47,7 +48,7 @@ inductive whole (ℍ : Type) (ω : context) : kind → context → Type
     whole kind.species (f.apply Γ) → whole kind.choices Γ → whole kind.choices Γ
 
 /-- An alias for species within the `whole' datatype. -/
-@[reducible]
+@[reducible, nolint dup_namespace]
 def species (ℍ : Type) (ω : context) := @whole ℍ ω kind.species
 
 /-- An alias for choices within the `whole' datatype. -/
@@ -441,6 +442,7 @@ export species (renaming
 )
 
 /-- A quotient of all structurally congruent species. -/
+@[nolint has_inhabited_instance]
 def species' (ℍ : Type) (ω Γ : context) [r : setoid (species ℍ ω Γ)] := quotient r
 
 end cpi
@@ -456,5 +458,4 @@ export cpi.species (renaming
   species → cpi.species
 )
 
--- No "dup_namespace"
-#lint- only unused_arguments def_lemma illegal_constants instance_priority doc_blame
+#lint-

@@ -7,6 +7,7 @@ variables {ℍ : Type} {ω : context}
 /-- A transition from one species to a production. This represents the potential
     for a reaction. The label indicates the kind of reaction (spontantious or
     communicating). -/
+@[nolint has_inhabited_instance]
 inductive transition :
   Π {Γ} {k}
   , species ℍ ω Γ → lookup ℍ ω Γ → label ℍ Γ k → production ℍ ω Γ k
@@ -233,6 +234,7 @@ namespace transition
 
 
 /-- A transition from a specific species, to any production. -/
+@[nolint has_inhabited_instance]
 def transition_from {ω Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) : Type
   := (Σ' k (α : label ℍ Γ k) E, A [ℓ, α]⟶ E)
 

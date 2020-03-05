@@ -14,6 +14,7 @@ namespace upair
   variable {α : Type u}
 
   /-- A pair of items, both of the same type. -/
+  @[nolint has_inhabited_instance]
   protected structure pair (α : Type u) := (fst snd : α)
 
   /-- Two pairs are equivalent if they are equal or equal when swapped. -/
@@ -44,6 +45,7 @@ namespace upair
 end upair
 
 /-- An unordered pair of items. -/
+@[nolint has_inhabited_instance]
 def upair (α : Type u) : Type u := quotient (@upair.setoid α)
 
 namespace upair

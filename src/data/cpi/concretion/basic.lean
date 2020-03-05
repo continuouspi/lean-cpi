@@ -4,7 +4,7 @@ namespace cpi
 
 /-- A concretion represents the potential for a species to interact with another.
     -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive concretion (ℍ : Type) (ω : context) : context → ℕ → ℕ → Type
 | apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
         , species ℍ ω (context.extend y Γ)

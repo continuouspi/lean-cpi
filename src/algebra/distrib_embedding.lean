@@ -3,6 +3,7 @@ import logic.embedding
 universes u v
 
 /-- An embedding which distributes over an operator. -/
+@[nolint has_inhabited_instance]
 structure distrib_embedding (α : Sort u) (β : Sort v) (opl : α → α → α) (opr : β → β → β) :=
   (to_embed : α ↪ β)
   (distrib : ∀ x y, to_embed (opl x y) = opr (to_embed x) (to_embed y))

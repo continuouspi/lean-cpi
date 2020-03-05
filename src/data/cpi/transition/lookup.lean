@@ -5,6 +5,7 @@ namespace cpi
 variables {ℍ : Type} {ω : context}
 
 /-- A function to look up names within the environment. -/
+@[nolint has_inhabited_instance]
 def lookup (ℍ : Type) (ω Γ : context) := ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ)
 
 /-- Rename a lookup function, embedding the returned species into another

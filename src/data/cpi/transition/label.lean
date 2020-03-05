@@ -5,13 +5,13 @@ namespace cpi
 variables {ℍ : Type} {ω : context}
 
 /-- The kind of a production, either a species or concretion-/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive kind
 | species
 | concretion
 
 /-- A transition from a species to some production of a given kind. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive label (ℍ : Type) : context → kind → Type
 /- From a species to a concretion. Sends $b$ values on channel $a$ and evolves
    into whatever species the concretion applies, substituting $y$ variables

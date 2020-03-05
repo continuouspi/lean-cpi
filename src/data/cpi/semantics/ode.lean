@@ -10,6 +10,7 @@ local attribute [instance] concretion_equal
     As the transition graph may be infinite, we visit the graph with a finite
     amount of gas. If we run out of gas, we return an incomplete set, otherwise
     we return a complete one. -/
+@[nolint has_inhabited_instance]
 inductive all_species
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
     -- (P : process ℍ ω (context.extend M.arity context.nil))

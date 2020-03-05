@@ -114,10 +114,12 @@ def equiv2.quot_of_equiv {Γ} : quotient (@process.setoid ℂ ℍ ω _ _ Γ) →
 end process
 
 /-- A quotient of all structurally congruent processes. -/
+@[nolint has_inhabited_instance]
 def process' (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
   := quotient (@process.setoid ℂ ℍ ω _ _ Γ)
 
 /-- A quotient of all structurally congruent processes, using ≡⁺ -/
+@[nolint has_inhabited_instance]
 def process'2 (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
   := quotient (@process.equiv2.setoid ℂ ℍ ω _ _ Γ)
 

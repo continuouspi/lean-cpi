@@ -5,6 +5,7 @@ import algebra.pi_instances data.finset
 
     This is used to define a basic vector space, where every defined basis is
     known. -/
+@[nolint has_inhabited_instance]
 structure fin_fn (α : Type*) (β : Type*) [add_monoid β] :=
   (space : α → β)
   (defined : finset α)

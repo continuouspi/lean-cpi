@@ -79,7 +79,6 @@ lemma interaction_tensor.zero_right
   , 0 ⊘[conc] A = 0
 | A := fin_fn.bind₂_zero_right A _
 
-@[simp]
 lemma interaction_tensor.comm
     (A B : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   : A ⊘[conc] B = B ⊘[conc] A := begin

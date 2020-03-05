@@ -5,7 +5,7 @@ namespace cpi
 variables {ℍ : Type} {ω : context}
 
 /-- The right hand side of a transition, determined by a specific kind. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive production (ℍ : Type) (ω : context) (Γ : context) : kind → Type
 | species (A : species ℍ ω Γ) : production kind.species
 | concretion {b y} (F : concretion ℍ ω Γ b y) : production kind.concretion

@@ -6,7 +6,7 @@ namespace cpi
 /-- A telescope may extend a context by 0 or 1 levels. This is effectively a
     function on contexts, but having it be inductive allows us to case split on
     it, simplifying some proofs. -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive telescope : Type
 | extend : ℕ → telescope
 | preserve : telescope
@@ -31,7 +31,7 @@ def telescope.apply : telescope → context → context
   complexities to the proof when renaming, as you need to
   `augment (rename π) = augment π', while preserving type safety.
 -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 inductive prefix_expr (ℍ : Type) : context → telescope → Type
 | communicate {} {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (telescope.extend y)
 | spontanious {} {Γ} (k : ℍ) : prefix_expr Γ telescope.preserve
@@ -50,6 +50,7 @@ namespace prefix_expr
     /-- A wrapper for prefixed expressions, which hides the extension function.
 
         This is suitable for comparing prefixes. -/
+    @[nolint has_inhabited_instance]
     inductive wrap (ℍ : Type) : context → Type
     | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
 

@@ -7,7 +7,7 @@ namespace cpi
     This is composed of $arity$ names, and a partial function `f' which defines
     the affinities between elements of this matrix.
 -/
-@[derive decidable_eq]
+@[derive decidable_eq, nolint has_inhabited_instance]
 structure affinity (ℍ : Type) := intro ::
   (arity : ℕ)
   (f : fin arity → fin arity → option ℍ)
@@ -17,4 +17,4 @@ variables {ℍ : Type}
 
 end cpi
 
-#lint -
+#lint-

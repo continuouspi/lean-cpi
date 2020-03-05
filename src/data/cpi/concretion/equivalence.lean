@@ -94,6 +94,7 @@ protected lemma equiv.parallel_assoc₃
 end concretion
 
 /-- A quotient of all structurally congruent concretions. -/
+@[nolint has_inhabited_instance]
 def concretion' (ℍ : Type) (ω Γ : context) (b y : ℕ) [r : ∀ Γ, setoid (species ℍ ω Γ)]
   := quotient (@concretion.setoid ℍ ω r Γ b y)
 

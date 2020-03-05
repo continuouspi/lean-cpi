@@ -6,6 +6,7 @@ namespace cpi
 /-- Given two equivalent species, there is some isomorphism between species of
     the same  kind and label, such that isomorphic transitions have equivalent
     productions. -/
+@[nolint has_inhabited_instance]
 def has_iso {ℍ : Type} {ω Γ : context} [∀ Γ, setoid (species ℍ ω Γ)] {A B : species ℍ ω Γ}
     (ℓ : lookup ℍ ω Γ)
   : A ≈ B → Type
@@ -75,6 +76,7 @@ def species_equiv.transition_from_iso {ℍ : Type} {ω Γ : context} [r : specie
 
 /-- A vector-space representation of processes, mapping prime species into their
     concentrations. -/
+@[nolint has_inhabited_instance]
 def process_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [species_equiv ℍ ω]
   := fin_fn (prime_species' ℍ ω Γ) ℂ
 
@@ -86,7 +88,7 @@ def process_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [species_e
 
 /-- Determine if two prime species are equal. Effectively a decision procedure
     structural congruence. -/
-instance prime_equal {ℍ ω Γ} [decidable_eq ℍ] [r : species_equiv ℍ ω] : decidable_eq (prime_species' ℍ ω Γ)
+instance prime_equal {ℍ ω Γ} [r : species_equiv ℍ ω] : decidable_eq (prime_species' ℍ ω Γ)
 | A B := quotient.rec_on_subsingleton₂ A B
   (λ ⟨ a, _ ⟩ ⟨ b, _ ⟩,
     match species_equiv.decide_species Γ a b with
@@ -101,7 +103,7 @@ noncomputable def concretion_equal {ℍ ω Γ} [species_equiv ℍ ω] :
                × (Σ' (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
   := classical.dec_eq _
 
-variables {ℂ ℍ : Type} {ω : context} [decidable_eq ℍ] [half_ring ℂ] [species_equiv ℍ ω]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [species_equiv ℍ ω]
 local attribute [instance] concretion_equal
 
 -- instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
@@ -140,6 +142,7 @@ end
 
 /-- The vector space (A, E, a)→ℍ relating transitions from A to E with label #a.
   -/
+@[nolint has_inhabited_instance]
 def interaction_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [species_equiv ℍ ω] : Type
   := fin_fn
       ( species' ℍ ω Γ
@@ -220,7 +223,7 @@ def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω
 end
 
 axiom process.from_inverse {Γ} :
-  function.left_inverse process.to_space' (@process.from_space ℂ ℍ ω _ _ _ Γ)
+  function.left_inverse process.to_space' (@process.from_space ℂ ℍ ω _ _ Γ)
 
 /-- Show that process spaces can be embeeded into equivalence classes of processes. -/
 def process.space_embed {Γ} : process_space ℂ ℍ ω Γ ↪ process' ℂ ℍ ω Γ :=
@@ -229,4 +232,4 @@ def process.space_embed {Γ} : process_space ℂ ℍ ω Γ ↪ process' ℂ ℍ 
 
 end cpi
 
-#lint- only def_lemma doc_blame
+#lint-

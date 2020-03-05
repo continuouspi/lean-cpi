@@ -16,7 +16,7 @@ variables {ℍ : Type} {ω Γ : context} [setoid (species ℍ ω Γ)]
 /-- A species is prime if it is non-nil, and for any decomposition into two
     parallel species, one of those must be nil.  -/
 def prime (A : species ℍ ω Γ) : Prop
-  := ¬ A ≈ nil ∧ ∀ (B C : species ℍ ω Γ), A ≈ (B |ₛ C) → B ≈ nil ∨ C ≈ nil
+  := ¬ A ≈ nil ∧ ∀ B C, A ≈ (B |ₛ C) → B ≈ nil ∨ C ≈ nil
 
 lemma prime.equivalent_imp {A B : species ℍ ω Γ} : A ≈ B → prime A → prime B
 | ab ⟨ neq, prime ⟩ := ⟨ λ nil, neq (trans ab nil), λ A B eq, prime A B (trans ab eq) ⟩
@@ -26,6 +26,7 @@ lemma prime.equivalent {A B : species ℍ ω Γ} : A ≈ B → prime A = prime B
 | eq := propext ⟨ prime.equivalent_imp eq, prime.equivalent_imp (symm eq) ⟩
 
 /-- The set of all species which are prime. -/
+@[nolint has_inhabited_instance]
 def prime_species (ℍ : Type) (ω Γ : context) [setoid (species ℍ ω Γ)] :Type
   := { A : species ℍ ω Γ // prime A }
 
@@ -36,6 +37,7 @@ instance prime_species.setoid: setoid (prime_species ℍ ω Γ) :=
               λ _ _ _ ab bc, by from trans ab bc ⟩ }
 
 /-- A quotient of all structurally congruent species which are prime. -/
+@[nolint has_inhabited_instance]
 def prime_species' (ℍ : Type) (ω Γ : context) [r : setoid (species ℍ ω Γ)] :=
   quotient (@prime_species.setoid ℍ ω Γ r)
 
