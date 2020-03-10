@@ -6,14 +6,14 @@ namespace cpi
     -/
 @[derive decidable_eq, nolint has_inhabited_instance]
 inductive concretion (ℍ : Type) (ω : context) : context → ℕ → ℕ → Type
-| apply : ∀ {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
-        , species ℍ ω (context.extend y Γ)
-        → concretion Γ b y
-| parallel₁ : ∀ {Γ} {b y}, concretion Γ b y → species ℍ ω Γ → concretion Γ b y
-| parallel₂ : ∀ {Γ} {b y}, species ℍ ω Γ → concretion Γ b y → concretion Γ b y
-| restriction : ∀ {Γ} {b y} (M : affinity ℍ)
-              , concretion (context.extend M.arity Γ) b y
-              → concretion Γ b y
+| apply {Γ} {b} (bs : vector (name Γ) b) (y : ℕ)
+  : species ℍ ω (context.extend y Γ)
+  → concretion Γ b y
+| parallel₁ {Γ} {b y} : concretion Γ b y → species ℍ ω Γ → concretion Γ b y
+| parallel₂ {Γ} {b y} : species ℍ ω Γ → concretion Γ b y → concretion Γ b y
+| restriction {Γ} {b y} (M : affinity ℍ)
+  : concretion (context.extend M.arity Γ) b y
+  → concretion Γ b y
 
 notation `#(` b ` ; ` y `)` A := concretion.apply b y A
 
