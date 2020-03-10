@@ -10,14 +10,14 @@ variables {ℂ ℍ : Type} {ω : context}
 local attribute [instance] concretion_equal
 
 /-- Maps a potential transition to the interaction space. -/
-private noncomputable def potential_interaction_space {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
+noncomputable def potential_interaction_space {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
   : transition.transition_from ℓ A
   → interaction_space ℂ ℍ ω Γ
 | ⟨ _, # a , @production.concretion _ _ _ b y G, tr ⟩ := fin_fn.mk_basis ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩
 | ⟨ _, τ@'_, E, tr ⟩ := 0
 | ⟨ _, τ⟨_⟩, E, tr ⟩ := 0
 
-private lemma potential_interaction_space.equiv
+lemma potential_interaction_space.equiv
   {Γ} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ} :
   ∀ {k} {α : label ℍ Γ k} {E E' : production ℍ ω Γ k}
     {t : A [ℓ, α]⟶ E} {t' : B [ℓ, α]⟶ E'}
@@ -37,7 +37,7 @@ end
 
     This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
     components of the definition of d(c ◯ A)/dt. -/
-private def immediate_process_space
+def immediate_process_space
     {A : species ℍ ω (context.extend M.arity context.nil)}
     (conc : ℍ ↪ ℂ)
   : transition.transition_from ℓ A
@@ -55,7 +55,7 @@ private def immediate_process_space
     end) in
   option.cases_on arity 0 (λ k, conc k • (to_process_space ⟦ B ⟧ - to_process_space ⟦ A ⟧))
 
-private lemma immediate_process_space.equiv
+lemma immediate_process_space.equiv
     {A B : species ℍ ω (context.extend M.arity context.nil)} {conc : ℍ ↪ ℂ}
   : ∀ {k} {α : label ℍ (context.extend M.arity context.nil) k}
       {E E' : production ℍ ω (context.extend M.arity context.nil) k}
@@ -336,130 +336,6 @@ noncomputable def process_immediate.space [half_ring ℍ]
   : process_space ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | P := process_immediate.quot M ℓ conc (process.from_space P)
-
-axiom process_potential.equiv2 [add_monoid ℍ]
-    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+))
-  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
-    (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
-  , P ≡⁺ Q
-  → process_potential M ℓ P ⊘[conc.to_embed] ξ = process_potential M ℓ Q ⊘[conc] ξ
-/-
-| P Q ξ eq := begin
-  induction eq,
-  case process.equiv2.refl { from rfl, },
-  case process.equiv2.symm : P Q _ ih { from symm ih },
-  case process.equiv2.trans : P Q R _ _ pq qr { from trans pq qr },
-  case process.equiv2.ξ_species : c A B eq {
-    rw process_potential.equiv M ℓ (process.equiv.ξ_species eq),
-  },
-  case process.equiv2.ξ_parallel₁ : P P' Q eq ih {
-    simp only [process_potential, interaction_tensor.left_distrib, ih],
-  },
-  case process.equiv2.ξ_parallel₂ : P Q Q' eq ih {
-    simp only [process_potential, interaction_tensor.left_distrib, ih],
-  },
-
-  case process.equiv2.parallel_nil {
-    rw process_potential.equiv M ℓ process.equiv.parallel_nil,
-  },
-  case process.equiv2.parallel_symm {
-    rw process_potential.equiv M ℓ process.equiv.parallel_symm,
-  },
-  case process.equiv2.parallel_assoc {
-    rw process_potential.equiv M ℓ process.equiv.parallel_assoc,
-  },
-  case process.equiv2.join {
-    rw process_potential.equiv M ℓ process.equiv.join,
-  },
-
-  case process.equiv2.split : A B c {
-    simp only [process_potential, interaction_tensor.left_distrib],
-
-    suffices
-      : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val)
-      = multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
-      + multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val),
-      rw [← interaction_tensor.left_distrib, ← smul_add, ← this],
-
-    have : ∀ (x : transition.transition_from ℓ (A |ₛ B)),
-      psum (potential_interaction_space x = 0)
-      (sum (transition.transition_from ℓ A)
-            (transition.transition_from ℓ B)),
-    {
-      assume x,
-      rcases x with ⟨ k, α, E, t ⟩,
-      cases t,
-      case transition.com₁ : x y a b F G tf tg { from psum.inl rfl },
-      case transition.parₗ : E t' { from psum.inr (sum.inl ⟨ k, α, E, t' ⟩) },
-      case transition.parᵣ : E t' { from psum.inr (sum.inr ⟨ k, α, E, t' ⟩) },
-    },
-
-    -- TODO: Show isomorphism between the two, then use multiset.map_ido
-  },
-end
--/
-
-axiom process_immediate.equiv2 [add_monoid ℍ]
-    (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+))
-  : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
-  , P ≡⁺ Q → process_immediate M ℓ conc.to_embed P = process_immediate M ℓ conc.to_embed Q
-/-
-| P Q eq := begin
-  induction eq,
-  case process.equiv2.refl { from rfl, },
-  case process.equiv2.symm : P Q _ ih { from symm ih },
-  case process.equiv2.trans : P Q R _ _ pq qr { from trans pq qr },
-  case process.equiv2.ξ_species : c A B eq {
-    from process_immediate.equiv M ℓ (process.equiv.ξ_species eq),
-  },
-  case process.equiv2.ξ_parallel₁ : P P' Q eq ih {
-    unfold process_immediate,
-    rw [process_potential.equiv2 M ℓ _ eq, ih],
-  },
-  case process.equiv2.ξ_parallel₂ : P Q Q' eq ih {
-    unfold process_immediate,
-    rw [interaction_tensor.comm _ _,
-        process_potential.equiv2 M ℓ _ eq,
-        interaction_tensor.comm _ _,
-        ih],
-  },
-
-  case process.equiv2.parallel_nil {
-    from process_immediate.equiv M ℓ process.equiv.parallel_nil,
-  },
-  case process.equiv2.parallel_symm {
-    from process_immediate.equiv M ℓ process.equiv.parallel_symm,
-  },
-  case process.equiv2.parallel_assoc {
-    from process_immediate.equiv M ℓ process.equiv.parallel_assoc,
-  },
-  case process.equiv2.join {
-    from process_immediate.equiv M ℓ process.equiv.join,
-  },
-
-  case process.equiv2.split : A B c {
-    simp only [process_immediate],
-
-    generalize eqPab : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val) = Pab,
-    generalize eqPa : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ A)).val) = Pa,
-    generalize eqPb : multiset.sum_map immediate_process_space ((fintype.elems (transition.transition_from ℓ B)).val) = Pb,
-
-    rw [process_potential.equiv2 M ℓ _ process.equiv2.split,
-        interaction_tensor.comm (process_potential M ℓ (c ◯ A |ₚ c ◯ B)) _,
-        process_potential.equiv2 M ℓ _ process.equiv2.split],
-    simp only [process_potential],
-
-    generalize eqDab : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val) = Dab,
-    generalize eqDa : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val) = Da,
-    generalize eqDb : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val) = Db,
-
-    simp only [interaction_tensor.left_distrib, interaction_tensor.right_distrib, smul_add],
-    simp only [add_comm, add_left_comm],
-  }
-end
--/
 
 end cpi
 
