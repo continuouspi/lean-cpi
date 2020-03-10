@@ -9,15 +9,14 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [species_equiv ℍ ω]
 local attribute [instance] concretion_equal transition.transition_eq
 
 axiom process_potential.split
-  (ξ : interaction_space ℂ ℍ ω (context.extend (M.arity) context.nil))
-  (P Q : process ℂ ℍ ω (context.extend (M.arity) context.nil))
   (A B : species ℍ ω (context.extend (M.arity) context.nil))
-  (c : ℂ)
-: process_potential M ℓ (c ◯ (A |ₛ B)) ⊘[conc.to_embed] ξ
-= process_potential M ℓ (c ◯ A |ₚ c ◯ B) ⊘[↑conc] ξ
+: ( multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val)
+  : interaction_space ℂ ℍ ω (context.extend M.arity context.nil) )
+= multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
++ multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val)
 
 axiom process_immediate.split
-  (A B : whole ℍ ω species.kind.species (context.extend M.arity context.nil))
+  (A B : species ℍ ω (context.extend M.arity context.nil))
 : multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ (A |ₛ B))).val
 = multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ A)).val
 + multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ B)).val
@@ -63,7 +62,10 @@ lemma process_potential.equiv2
   },
 
   case process.equiv2.split : A B c {
-    from process_potential.split conc ξ P Q A B c,
+    simp only [process_potential, interaction_tensor.left_distrib],
+    unfold_coes,
+    rw [← interaction_tensor.left_distrib, ← smul_add,
+        ← process_potential.split A B],
   },
 end
 
