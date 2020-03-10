@@ -8,7 +8,6 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ]
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
 
 /-- Maps a potential transition to the interaction space. -/
-@[nolint unused_arguments]
 def potential_interaction_space [cpi_equiv ℍ ω] {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
   : transition.transition_from ℓ A
   → interaction_space ℂ ℍ ω Γ
@@ -36,7 +35,6 @@ end
 
     This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
     components of the definition of d(c ◯ A)/dt. -/
-@[nolint unused_arguments]
 def immediate_process_space [cpi_equiv ℍ ω]
     {A : species ℍ ω (context.extend M.arity context.nil)}
     (conc : ℍ ↪ ℂ)
