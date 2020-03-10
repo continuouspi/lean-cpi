@@ -275,6 +275,78 @@ def prime_decompose' {Γ} : species' ℍ ω Γ → multiset (prime_species' ℍ 
 
   from equiv.normalise_to equi
 end
+
+lemma normalise_to.parallel {Γ} (A B : species ℍ ω Γ)
+  : (normalise_to (A |ₛ B)).fst = (normalise_to A).fst ++ (normalise_to B).fst := begin
+  unfold normalise_to,
+
+  rcases normalise_to A with ⟨ A', eqA, atomA' ⟩,
+  rcases normalise_to B with ⟨ B', eqB, atomB' ⟩,
+  from rfl,
+end
+
+lemma prime_decompose.parallel {Γ} (A B : species ℍ ω Γ)
+  : prime_decompose (A |ₛ B) = prime_decompose A ++ prime_decompose B
+  := begin
+  unfold prime_decompose,
+
+  have h := normalise_to.parallel A B,
+  rcases normalise_to A with ⟨ A', eqA, atomA ⟩, assume h,
+  rcases normalise_to B with ⟨ B', eqB, atomB ⟩, assume h,
+  rcases normalise_to (A |ₛ B) with ⟨ AB', eqAB, atomAB ⟩, assume h,
+
+  unfold prime_decompose._match_1, unfold_projs at h, clear eqA eqB eqAB A B,
+
+  induction A' generalizing AB',
+  case list.nil {
+    simp only [list.append, list.nil_append, list.map_witness] at ⊢ h,
+    subst h,
+  },
+  case list.cons : A' As' ih {
+    simp only [list.append, list.cons_append, list.map_witness] at ⊢ h,
+    subst h,
+    simp only [list.map_witness],
+    from ⟨ rfl, ih _ _ _ rfl ⟩,
+  }
+end
+
+lemma prime_decompose'.parallel {Γ} (A B : species ℍ ω Γ)
+  : prime_decompose' ⟦A |ₛ B⟧ = prime_decompose' ⟦ A ⟧ + prime_decompose' ⟦ B ⟧
+  := quot.sound (begin
+    simp only [prime_decompose.parallel, list.map_append],
+    from refl _,
+  end)
+
+axiom normalise_to.prime {Γ} (A : species ℍ ω Γ)
+  : prime A → (normalise_to A).fst = [A]
+
+lemma prime_decompose.prime {Γ} (A : prime_species ℍ ω Γ)
+  : prime_decompose A.val = [A] := begin
+  unfold prime_decompose,
+
+  have h := normalise_to.prime A.val A.property,
+  rcases normalise_to A.val with ⟨ A', eqA, atomA ⟩, assume h,
+
+  simp only [] at h, subst h,
+  unfold prime_decompose._match_1 list.map_witness,
+  simp only [subtype.eta],
+  from ⟨ rfl, rfl ⟩,
+end
+
+lemma prime_decompose'.prime {Γ} (A : prime_species' ℍ ω Γ)
+  : prime_decompose' (prime_species.unwrap A) = [ A ]
+  := begin
+    rcases quot.exists_rep A with ⟨ ⟨ A, prime ⟩, eq ⟩, subst eq,
+
+    show prime_decompose' ⟦A⟧ = ⟦ [quot.mk setoid.r ⟨A, prime⟩] ⟧,
+
+    suffices : list.map quotient.mk (prime_decompose A) ≈ [quot.mk setoid.r ⟨A, prime⟩],
+      from quot.sound this,
+
+    rw prime_decompose.prime ⟨ A, prime ⟩,
+    from refl _,
+  end
+
 end normalise
 end species
 end cpi

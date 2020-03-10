@@ -32,6 +32,12 @@ class species_equiv (ℍ : Type) (ω : context) :=
   /- Prime decomposition of nil, returns an empty set. -/
   (prime_decompose_nil {Γ} : prime_decompose ⟦@species.nil ℍ ω Γ⟧ = 0)
 
+  ( prime_decompose_parallel {Γ} (A B : species ℍ ω Γ)
+  : prime_decompose ⟦A |ₛ B⟧ = prime_decompose ⟦ A ⟧ + prime_decompose ⟦ B ⟧ )
+
+  ( prime_decompose_prime {Γ} (A : prime_species' ℍ ω Γ)
+  : prime_decompose (prime_species.unwrap A) = [ A ] )
+
   ( pseudo_apply {Γ} {a b : ℕ}
   : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a
   → species' ℍ ω Γ )
@@ -128,16 +134,33 @@ def to_process_space {Γ} (A : species' ℍ ω Γ)
   : process_space ℂ ℍ ω Γ
   := multiset.sum_map fin_fn.mk_basis (species_equiv.prime_decompose A)
 
--- TODO: Show that this satisfies the required definitions:
--- ⟨A⟩ = 0
--- ⟨A⟩ = A          when A prime
--- ⟨A|B⟩ = ⟨A⟩ + ⟨B⟩ when A ≠ 0 ≠ B
-
 @[simp]
 lemma to_process_space.nil {Γ} : to_process_space ⟦nil⟧ = (0 : process_space ℂ ℍ ω Γ) := begin
   unfold to_process_space multiset.sum_map,
   rw species_equiv.prime_decompose_nil,
   simp only [multiset.map_zero, multiset.fold_zero],
+end
+
+lemma to_process_space.prime {Γ} (A : prime_species' ℍ ω Γ)
+  : (to_process_space (prime_species.unwrap A) : process_space ℂ ℍ ω Γ)
+  = fin_fn.mk_basis A := begin
+  unfold to_process_space multiset.sum_map,
+  rw species_equiv.prime_decompose_prime,
+  simp only [
+    multiset.coe_map,  multiset.coe_fold_r, add_zero,
+    list.map_nil, list.foldr, list.foldr_nil, list.map],
+end
+
+lemma to_process_space.parallel {Γ} (A B : species ℍ ω Γ)
+  : (to_process_space ⟦ A |ₛ B ⟧ : process_space ℂ ℍ ω Γ)
+  = to_process_space ⟦ A ⟧ + to_process_space ⟦ B ⟧ := begin
+  unfold to_process_space multiset.sum_map,
+  rw species_equiv.prime_decompose_parallel A B,
+  simp only [multiset.map_add],
+
+  have h := multiset.fold_add (+) (0 : process_space ℂ ℍ ω Γ) 0,
+  simp only [add_zero] at h,
+  rw h,
 end
 
 /-- The vector space (A, E, a)→ℍ relating transitions from A to E with label #a.
