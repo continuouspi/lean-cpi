@@ -103,6 +103,11 @@ end rename
 
 end concretion
 
+/-- A quotient of all equivalent concretions. -/
+@[nolint has_inhabited_instance]
+def concretion' (ℍ : Type) (ω Γ : context) (b y : ℕ) [r : setoid (concretion ℍ ω Γ b y)]
+  := quotient r
+
 end cpi
 
 #lint-

@@ -1,4 +1,4 @@
-import data.cpi.concretion.equivalence
+import data.cpi.concretion.congruence
 
 namespace cpi
 namespace concretion

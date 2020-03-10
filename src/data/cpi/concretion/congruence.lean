@@ -68,35 +68,35 @@ inductive equiv : ∀ {Γ} {b y}, concretion ℍ ω Γ b y → concretion ℍ ω
 instance {Γ} {b y} : is_equiv (concretion ℍ ω Γ b y) equiv :=
   { refl := @equiv.refl ℍ _ _ Γ b y, symm := @equiv.symm ℍ _ _ Γ b y, trans := @equiv.trans ℍ _ _ Γ b y }
 instance {Γ} {b y} : is_refl (concretion ℍ ω Γ b y) equiv := ⟨ λ _, equiv.refl ⟩
-instance {Γ} {b y} : setoid (concretion ℍ ω Γ b y) :=
-  ⟨ equiv, ⟨ @equiv.refl ℍ _ _ Γ b y, @equiv.symm ℍ _ _ Γ b y, @equiv.trans ℍ _ _ Γ b y ⟩ ⟩
-instance setoid.is_equiv {Γ} {b y} : is_equiv (concretion ℍ ω Γ b y) has_equiv.equiv :=
-  concretion.is_equiv
 
-protected lemma equiv.ξ_parallel'
-    {Γ} {b y} {F : concretion ℍ ω Γ b y} {A A' : species ℍ ω Γ} (eq : A ≈ A')
-  : (A |₂ F) ≈ (A' |₂ F) :=
-    calc  (A |₂ F)
-        ≈ (F |₁ A) : symm equiv.parallel_symm
-    ... ≈ (F |₁ A') : equiv.ξ_parallel eq
-    ... ≈ (A' |₂ F) : equiv.parallel_symm
+namespace equiv
+  /-- The setoid of species under structural congruence. Can be brought into
+      scope with the "congruence" locale. -/
+  def setoid {Γ} {b y} : setoid (concretion ℍ ω Γ b y) :=
+    ⟨ equiv, ⟨ @refl ℍ _ _ Γ b y, @symm ℍ _ _ Γ b y, @trans ℍ _ _ Γ b y ⟩ ⟩
 
-protected lemma equiv.parallel_assoc₃
-    {Γ} {b y : ℕ} {A B : species ℍ ω Γ} {F : concretion ℍ ω Γ b y}
-  : ((A |ₛ B) |₂ F) ≈ (A |₂ B |₂ F) :=
-  calc  ((A |ₛ B) |₂ F)
-      ≈ (F |₁ (A |ₛ B)) : symm equiv.parallel_symm
-  ... ≈ ((F |₁ A) |₁ B) : symm equiv.parallel_assoc₁
-  ... ≈ ((A |₂ F) |₁ B) : equiv.ξ_parallel₁ equiv.parallel_symm
-  ... ≈ (A |₂ F |₁ B) : equiv.parallel_assoc₂
-  ... ≈ (A |₂ B |₂ F) : equiv.ξ_parallel₂ equiv.parallel_symm
+  localized "attribute [instance] cpi.concretion.equiv.setoid" in congruence
 
+  protected lemma ξ_parallel'
+      {Γ} {b y} {F : concretion ℍ ω Γ b y} {A A' : species ℍ ω Γ} (eq : A ≈ A')
+    : (A |₂ F) ≈ (A' |₂ F) :=
+      calc  (A |₂ F)
+          ≈ (F |₁ A) : symm parallel_symm
+      ... ≈ (F |₁ A') : ξ_parallel eq
+      ... ≈ (A' |₂ F) : parallel_symm
+
+  protected lemma parallel_assoc₃
+      {Γ} {b y : ℕ} {A B : species ℍ ω Γ} {F : concretion ℍ ω Γ b y}
+    : ((A |ₛ B) |₂ F) ≈ (A |₂ B |₂ F) :=
+    calc  ((A |ₛ B) |₂ F)
+        ≈ (F |₁ (A |ₛ B)) : symm parallel_symm
+    ... ≈ ((F |₁ A) |₁ B) : symm parallel_assoc₁
+    ... ≈ ((A |₂ F) |₁ B) : ξ_parallel₁ parallel_symm
+    ... ≈ (A |₂ F |₁ B) : parallel_assoc₂
+    ... ≈ (A |₂ B |₂ F) : ξ_parallel₂ parallel_symm
+
+end equiv
 end concretion
-
-/-- A quotient of all structurally congruent concretions. -/
-@[nolint has_inhabited_instance]
-def concretion' (ℍ : Type) (ω Γ : context) (b y : ℕ) [r : ∀ Γ, setoid (species ℍ ω Γ)]
-  := quotient (@concretion.setoid ℍ ω r Γ b y)
 
 end cpi
 

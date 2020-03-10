@@ -2,11 +2,10 @@ import data.cpi.semantics.basic
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [species_equiv ℍ ω] [decidable_eq ℍ] [add_monoid ℍ]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
   {M : affinity ℍ}
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
   (conc : distrib_embedding ℍ ℂ (+) (+))
-local attribute [instance] concretion_equal transition.transition_eq
 
 axiom process_potential.split
   (A B : species ℍ ω (context.extend (M.arity) context.nil))

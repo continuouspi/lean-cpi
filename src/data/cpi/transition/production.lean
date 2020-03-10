@@ -47,13 +47,13 @@ lemma production.rename_id
 
 /-- Equivalence of productions. This just wraps equivalence of species and
     concretions. -/
-inductive production.equiv {Γ} [∀ Γ, setoid (species ℍ ω Γ)] :
+inductive production.equiv [∀ Γ, setoid (species ℍ ω Γ)] [∀ Γ b y, setoid (concretion ℍ ω Γ b y)] {Γ} :
   ∀ {k : kind}, production ℍ ω Γ k → production ℍ ω Γ k → Prop
 | species {A B : species ℍ ω Γ}                 : A ≈ B → @production.equiv kind.species A B
 | concretion {b y} {F G : concretion ℍ ω Γ b y} : F ≈ G → @production.equiv kind.concretion F G
 
 namespace production
-  variable [∀ Γ, setoid (cpi.species ℍ ω Γ)]
+  variables [∀ Γ, setoid (cpi.species ℍ ω Γ)] [∀ Γ b y, setoid (cpi.concretion ℍ ω Γ b y)]
 
   lemma equiv.refl {Γ} : ∀ {k : kind} (E : production ℍ ω Γ k), equiv E E
   | ._ (species A) := equiv.species (refl A)
@@ -76,13 +76,16 @@ namespace production
     production.is_equiv
 end production
 
-lemma production.equiv.unwrap_s [∀ Γ, setoid (species ℍ ω Γ)] :
+section equivalence
+variables [∀ Γ, setoid (cpi.species ℍ ω Γ)] [∀ Γ b y, setoid (cpi.concretion ℍ ω Γ b y)]
+
+lemma production.equiv.unwrap_s :
   ∀ {Γ} {A B : species ℍ ω Γ}, production.species A ≈ production.species B → A ≈ B
 | Γ A B (production.equiv.species eq) := eq
 
 /-- If two concretions are equivalent under a production, cast one to the type
     of the other. -/
-def production.cast_c [∀ Γ, setoid (species ℍ ω Γ)] :
+def production.cast_c :
   ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
   → concretion ℍ ω Γ a x
@@ -90,25 +93,25 @@ def production.cast_c [∀ Γ, setoid (species ℍ ω Γ)] :
 
 /-- An alternative to 'cast_c', which casts some other concretion of the same
     type. -/
-def production.cast_with_c [∀ Γ, setoid (species ℍ ω Γ)] :
+def production.cast_with_c :
   ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G G' : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
   → concretion ℍ ω Γ a x
 | Γ a b x y F G G' eq := cast (by { cases eq, from rfl }) G' -- TODO: Remove this?
 
-lemma production.cast_c.equiv [∀ Γ, setoid (species ℍ ω Γ)] :
+lemma production.cast_c.equiv :
   ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
     (eq : production.concretion F ≈ production.concretion G)
   , F ≈ production.cast_c eq
 | Γ a b x y F G (production.equiv.concretion eq) := eq
 
-lemma production.cast_c.eq [∀ Γ, setoid (species ℍ ω Γ)] :
+lemma production.cast_c.eq :
   ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
     (eq : production.concretion F ≈ production.concretion G)
   , production.concretion G = production.concretion (production.cast_c eq)
 | Γ a b x y F G (production.equiv.concretion eq) := rfl
 
-lemma production.equiv.map {Γ Δ} [∀ Γ, setoid (species ℍ ω Γ)] :
+lemma production.equiv.map {Γ Δ} :
   ∀ {k : kind}
     {s : species ℍ ω Γ → species ℍ ω Δ}
     {c : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
@@ -121,7 +124,7 @@ lemma production.equiv.map {Γ Δ} [∀ Γ, setoid (species ℍ ω Γ)] :
 | ._ s c ._ ._ ms mc (production.equiv.species eq) := production.equiv.species (ms eq)
 | ._ s c ._ ._ ms mc (production.equiv.concretion eq) := production.equiv.concretion (mc eq)
 
-lemma production.equiv.map_over {Γ Δ} [∀ Γ, setoid (species ℍ ω Γ)] :
+lemma production.equiv.map_over {Γ Δ} :
   ∀ {k : kind}
     {s s' : species ℍ ω Γ → species ℍ ω Δ}
     {c c' : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
@@ -132,6 +135,7 @@ lemma production.equiv.map_over {Γ Δ} [∀ Γ, setoid (species ℍ ω Γ)] :
   , production.map @s @c E ≈ production.map @s' @c' E
 | ._ s s' c c' ms mc (production.species A) := production.equiv.species (ms A)
 | ._ s s' c c' ms mc (production.concretion F) := production.equiv.concretion (mc F)
+end equivalence
 
 section
   open_locale congruence

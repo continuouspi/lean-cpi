@@ -2,13 +2,11 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ}
-          [half_ring ℂ] [decidable_eq ℍ] [species_equiv ℍ ω]
-local attribute [instance] concretion_equal
+variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ} [half_ring ℂ]
 
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
-private def interaction_tensor_worker (conc : ℍ ↪ ℂ)
+private def interaction_tensor_worker [cpi_equiv ℍ ω] (conc : ℍ ↪ ℂ)
   : ( species' ℍ ω (context.extend M.arity context.nil)
     × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
@@ -20,12 +18,12 @@ private def interaction_tensor_worker (conc : ℍ ↪ ℂ)
   option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
     if h : bF = yG ∧ yF = bG then begin
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-      have fg := to_process_space (species_equiv.pseudo_apply F G),
+      have fg := to_process_space (cpi_equiv.pseudo_apply F G),
       from conc aff • (fg - to_process_space A - to_process_space B),
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
-private lemma interaction_tensor_worker.comm
+private lemma interaction_tensor_worker.comm [cpi_equiv_prop ℍ ω]
   : ∀ (A B : species' ℍ ω (context.extend M.arity context.nil)
            × (Σ' (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
            × name (context.extend M.arity context.nil))
@@ -45,7 +43,7 @@ private lemma interaction_tensor_worker.comm
       rcases this with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       let h : bF = bF ∧ yF = yF := ⟨ rfl, rfl ⟩,
       let g : yF = yF ∧ bF = bF := ⟨ rfl, rfl ⟩,
-      simp only [dif_pos h, dif_pos g, species_equiv.pseudo_apply_symm],
+      simp only [dif_pos h, dif_pos g, cpi_equiv_prop.pseudo_apply_symm],
       simp only [fin_fn.sub_eq_add_neg, add_comm, add_left_comm],
     },
     {
@@ -58,7 +56,7 @@ end
 
 /-- Compute the interaction tensor between two elements in the interaction
     space. -/
-def interaction_tensor (conc: ℍ ↪ ℂ)
+def interaction_tensor [cpi_equiv ℍ ω] (conc: ℍ ↪ ℂ)
   : interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
   → interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
@@ -68,18 +66,18 @@ infix ` ⊘ `:73 := interaction_tensor _
 notation x ` ⊘[`:73 conc `] ` y:73 := interaction_tensor conc x y
 
 @[simp]
-lemma interaction_tensor.zero_left
+lemma interaction_tensor.zero_left [cpi_equiv ℍ ω]
   : ∀ (A : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   , A ⊘[conc] 0 = 0
 | A := fin_fn.bind₂_zero_left A _
 
 @[simp]
-lemma interaction_tensor.zero_right
+lemma interaction_tensor.zero_right [cpi_equiv ℍ ω]
   : ∀ (A : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   , 0 ⊘[conc] A = 0
 | A := fin_fn.bind₂_zero_right A _
 
-lemma interaction_tensor.comm
+lemma interaction_tensor.comm [cpi_equiv_prop ℍ ω]
     (A B : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   : A ⊘[conc] B = B ⊘[conc] A := begin
   suffices : (λ x y, interaction_tensor_worker conc x y)
@@ -94,13 +92,13 @@ lemma interaction_tensor.comm
 end
 
 @[simp]
-lemma interaction_tensor.left_distrib {M : affinity ℍ}
+lemma interaction_tensor.left_distrib {M : affinity ℍ} [cpi_equiv ℍ ω]
     (A B C : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   : (A + B) ⊘[conc] C = A ⊘[conc] C + B ⊘[conc] C
   := by simp only [interaction_tensor, fin_fn.bind₂, fin_fn.bind_distrib]
 
 @[simp]
-lemma interaction_tensor.right_distrib {M : affinity ℍ}
+lemma interaction_tensor.right_distrib {M : affinity ℍ} [cpi_equiv_prop ℍ ω]
     (A B C : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   : A ⊘[conc] (B + C) = A ⊘[conc] B + A ⊘[conc] C
   := calc  A ⊘ (B + C)
