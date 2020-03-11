@@ -134,32 +134,6 @@ lemma bind_zero {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] (f
 lemma empty_zero [has_zero β] [decidable_eq β] : ∀ (f : fin_fn α β), f.support = ∅ → f = 0
 | ⟨ f, _, iff ⟩ ⟨ _ ⟩ := ext (λ x, by_contradiction (iff x).mp)
 
-private lemma finset.exists_insert_of_mem {α : Type*} [decidable_eq α] :
-  ∀ {s : finset α} {a : α}
-  , a ∈ s → ∃ t, s = insert a t ∧ a ∉ t
-| ⟨ s, nodup ⟩ a mem := begin
-  rcases multiset.exists_cons_of_mem mem with ⟨ t, ⟨ _ ⟩ ⟩, clear h,
-  refine ⟨ ⟨ t, (multiset.nodup_cons.mp nodup).2 ⟩, _, (multiset.nodup_cons.mp nodup).1 ⟩,
-
-  simp only [insert, has_insert.insert, multiset.ndinsert],
-  from symm (multiset.ndinsert_of_not_mem (multiset.nodup_cons.mp nodup).1),
-end
-
-private lemma finset.not_mem_insert [add_monoid β] [decidable_eq α]
-    {x : α} {xs ys ys' : finset α} {f : α → β}
-    (ymem : x ∉ ys)
-    (yimp : ∀ z, z ∈ ys → z ∈ ys')
-    (xif : ∀ (z : α), z ∉ insert x xs → z ∈ ys' → f z = 0) :
-  ∀ (z : α), z ∉ xs → z ∈ ys → f z = 0
-| z xnmem ymem := begin
-  have : z ∉ insert x xs,
-    assume mem,
-    cases finset.mem_insert.mp mem,
-    case or.inr { contradiction },
-    case or.inl { subst h, contradiction },
-  from xif z this (yimp z ymem),
-end
-
 lemma bind_distrib {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
   ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
   , bind (x + y) f = bind x f + bind y f

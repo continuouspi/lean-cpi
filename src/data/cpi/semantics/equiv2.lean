@@ -9,16 +9,16 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω
 
 axiom process_potential.split
   (A B : species ℍ ω (context.extend (M.arity) context.nil))
-: ( multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val)
+: ( finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) potential_interaction_space
   : interaction_space ℂ ℍ ω (context.extend M.arity context.nil) )
-= multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val)
-+ multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val)
+= finset.sum (fintype.elems (transition.transition_from ℓ A)) potential_interaction_space
++ finset.sum (fintype.elems (transition.transition_from ℓ B)) potential_interaction_space
 
 axiom process_immediate.split
   (A B : species ℍ ω (context.extend M.arity context.nil))
-: multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ (A |ₛ B))).val
-= multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ A)).val
-+ multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ B)).val
+: finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) (immediate_process_space conc.to_embed)
+= finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed)
++ finset.sum (fintype.elems (transition.transition_from ℓ B)) (immediate_process_space conc.to_embed)
 
 lemma process_potential.equiv2
   : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
@@ -115,14 +115,14 @@ lemma process_immediate.equiv2
     rw [process_potential.equiv2 conc _ process.equiv2.split],
     simp only [process_potential],
 
-    generalize eqPab : multiset.sum_map (immediate_process_space conc.to_embed) ((fintype.elems (transition.transition_from ℓ (A |ₛ B))).val) = Pab,
-    generalize eqPa  : multiset.sum_map (immediate_process_space conc.to_embed) ((fintype.elems (transition.transition_from ℓ A)).val) = Pa,
-    generalize eqPb  : multiset.sum_map (immediate_process_space conc.to_embed) ((fintype.elems (transition.transition_from ℓ B)).val) = Pb,
+    generalize eqPab : finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) (immediate_process_space conc.to_embed) = Pab,
+    generalize eqPa  : finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed) = Pa,
+    generalize eqPb  : finset.sum (fintype.elems (transition.transition_from ℓ B)) (immediate_process_space conc.to_embed) = Pb,
 
     suffices : Pab = Pa + Pb,
     {
-      generalize : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ A)).val) = Da,
-      generalize : multiset.sum_map potential_interaction_space ((fintype.elems (transition.transition_from ℓ B)).val) = Db,
+      generalize : finset.sum (fintype.elems (transition.transition_from ℓ A)) potential_interaction_space = Da,
+      generalize : finset.sum (fintype.elems (transition.transition_from ℓ B)) potential_interaction_space = Db,
       unfold_coes,
 
       simp only [interaction_tensor.left_distrib, interaction_tensor.right_distrib, smul_add],

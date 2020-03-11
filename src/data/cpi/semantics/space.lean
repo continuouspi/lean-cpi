@@ -126,14 +126,13 @@ instance process_space.semimodule {Γ} : semimodule ℂ (process_space ℂ ℍ �
 
     This is defined as ⟨A⟩ within the paper. -/
 def to_process_space {Γ} (A : species' ℍ ω Γ) : process_space ℂ ℍ ω Γ
-  := multiset.sum_map fin_fn.single (cpi_equiv.prime_decompose A) 1
+  := multiset.sum (multiset.map (λ A, fin_fn.single A 1) (cpi_equiv.prime_decompose A))
 
 @[simp]
 lemma to_process_space.nil {Γ} : to_process_space ⟦nil⟧ = (0 : process_space ℂ ℍ ω Γ) := begin
   unfold to_process_space,
   rw cpi_equiv.prime_decompose_nil,
-  simp only [multiset.sum_map, multiset.sum_zero, multiset.map_zero],
-  from rfl,
+  simp only [multiset.sum_zero, multiset.map_zero],
 end
 
 lemma to_process_space.prime {Γ} (A : prime_species' ℍ ω Γ)
@@ -142,17 +141,17 @@ lemma to_process_space.prime {Γ} (A : prime_species' ℍ ω Γ)
   unfold to_process_space,
   rw cpi_equiv.prime_decompose_prime,
   -- Not the best way, but the easiest.
-  simp only [multiset.sum_map, list.sum_cons, multiset.coe_map, add_zero,
+  simp only [list.sum_cons, multiset.coe_map, add_zero,
     list.sum_nil, pi.add_apply, pi.zero_apply, list.map_nil, multiset.coe_sum,
-    list.map],
+    list.map_cons],
 end
 
 lemma to_process_space.parallel {Γ} (A B : species ℍ ω Γ)
   : (to_process_space ⟦ A |ₛ B ⟧ : process_space ℂ ℍ ω Γ)
   = to_process_space ⟦ A ⟧ + to_process_space ⟦ B ⟧ := begin
-  unfold to_process_space multiset.sum_map,
+  unfold to_process_space,
   rw cpi_equiv.prime_decompose_parallel A B,
-  simpa only [multiset.map_add, multiset.sum_add],
+  simp only [multiset.map_add, multiset.sum_add],
 end
 
 /-- The vector space (A, E, a)→ℍ relating transitions from A to E with label #a.
