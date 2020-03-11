@@ -338,11 +338,11 @@ namespace parallel
   | (A :: A' :: As) B := begin
       have h := from_append (A' :: As) B,
       simp only [from_list, list.cons_append],
-      from calc  (A |ₛ from_list (A' :: (As ++ B)))
-               ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list B))
-                 : equiv.ξ_parallel₂ h
-           ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list B)
-                : symm equiv.parallel_assoc₁
+      calc  (A |ₛ from_list (A' :: (As ++ B)))
+          ≈ (A |ₛ (from_list (A' :: As) |ₛ from_list B))
+            : equiv.ξ_parallel₂ h
+      ... ≈ ((A |ₛ from_list (A' :: As)) |ₛ from_list B)
+            : symm equiv.parallel_assoc₁
     end
 
   lemma from_to {Γ} : ∀ (A : species ℍ ω Γ), from_list (to_list A) ≈ A
@@ -353,11 +353,11 @@ namespace parallel
   | (A |ₛ B) := begin
       unfold from_list to_list,
       have a := from_to A, have b := from_to B,
-      from calc  from_list (to_list A ++ to_list B)
-               ≈ (from_list (to_list A) |ₛ from_list (to_list B))
-                 : from_append (to_list A) (to_list B)
-           ... ≈ (from_list (to_list A) |ₛ B) : equiv.ξ_parallel₂ b
-           ... ≈ (A |ₛ B) : equiv.ξ_parallel₁ a,
+      calc  from_list (to_list A ++ to_list B)
+          ≈ (from_list (to_list A) |ₛ from_list (to_list B))
+            : from_append (to_list A) (to_list B)
+      ... ≈ (from_list (to_list A) |ₛ B) : equiv.ξ_parallel₂ b
+      ... ≈ (A |ₛ B) : equiv.ξ_parallel₁ a,
     end
 
   lemma from_to_append {Γ} (A B : species ℍ ω Γ)

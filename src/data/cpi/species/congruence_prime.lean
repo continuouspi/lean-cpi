@@ -55,17 +55,17 @@ section depth
   | _ (Σ# _) eq:= by { unfold depth at eq, contradiction }
   | _ (A |ₛ B) eq := begin
     unfold depth at eq,
-    from calc  (A |ₛ B)
-            ≈ (A |ₛ nil) : equiv.ξ_parallel₂ (depth_nil_rev (nat.eq_zero_of_add_eq_zero_left eq))
-        ... ≈ A : equiv.parallel_nil₁
-        ... ≈ nil : depth_nil_rev (nat.eq_zero_of_add_eq_zero_right eq)
+    calc  (A |ₛ B)
+        ≈ (A |ₛ nil) : equiv.ξ_parallel₂ (depth_nil_rev (nat.eq_zero_of_add_eq_zero_left eq))
+    ... ≈ A : equiv.parallel_nil₁
+    ... ≈ nil : depth_nil_rev (nat.eq_zero_of_add_eq_zero_right eq)
   end
   | _ (ν(M) A) eq := begin
     unfold depth at eq,
-    from calc  (ν(M) A)
-            ≈ (ν(M) nil) : equiv.ξ_restriction M (depth_nil_rev eq)
-        ... ≈ (ν(M) species.rename name.extend nil) : by simp only [rename.nil]
-        ... ≈ nil : equiv.ν_drop₁ M
+    calc  (ν(M) A)
+        ≈ (ν(M) nil) : equiv.ξ_restriction M (depth_nil_rev eq)
+    ... ≈ (ν(M) species.rename name.extend nil) : by simp only [rename.nil]
+    ... ≈ nil : equiv.ν_drop₁ M
   end
   using_well_founded {
     rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, whole.sizeof ℍ ω kind.species x.1 x.2.1 ) ⟩ ],

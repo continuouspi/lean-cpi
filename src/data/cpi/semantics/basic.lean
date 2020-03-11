@@ -192,16 +192,16 @@ private lemma process_immediate.join [cpi_equiv_prop ℍ ω] {conc : ℍ ↪ ℂ
       interaction_tensor.right_distrib (d • Ds),
       interaction_tensor.comm (d • Ds) (c • Ds)],
 
-  from calc  (c • Ds) ⊘ (d • Ds)
-           + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
+  calc  (c • Ds) ⊘ (d • Ds)
+      + (half • (c • Ds) ⊘ (c • Ds) + half • (d • Ds) ⊘ (d • Ds))
 
-           = (1 : ℂ) • (c • Ds) ⊘[conc] (d • Ds)
-           + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
-           : by simp only [one_smul]
+      = (1 : ℂ) • (c • Ds) ⊘[conc] (d • Ds)
+      + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
+      : by simp only [one_smul]
 
-       ... = (half + half) • (c • Ds) ⊘[conc] (d • Ds)
-           + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
-           : by rw [half_ring.one_is_two_halves, ← ehalf]
+  ... = (half + half) • (c • Ds) ⊘[conc] (d • Ds)
+      + (half • (c • Ds) ⊘[conc] (c • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
+      : by rw [half_ring.one_is_two_halves, ← ehalf]
 
        ... = half • (c • Ds) ⊘[conc] (c • Ds) + half • (c • Ds) ⊘[conc] (d • Ds)
            + (half • (c • Ds) ⊘[conc] (d • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
@@ -283,10 +283,10 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     generalize : process_potential M ℓ Q = q,
     generalize : process_potential M ℓ R = r,
 
-    from calc  p ⊘ q + (p + q) ⊘ r
-             = p ⊘[conc] q + p ⊘[conc] r + q ⊘ r : by rw [interaction_tensor.left_distrib, add_assoc]
-         ... = q ⊘[conc] r + p ⊘[conc] q + p ⊘[conc] r : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
-         ... = q ⊘[conc] r + p ⊘[conc] (q + r) : by rw [add_assoc, ← interaction_tensor.right_distrib]
+    calc  p ⊘ q + (p + q) ⊘ r
+        = p ⊘[conc] q + p ⊘[conc] r + q ⊘ r : by rw [interaction_tensor.left_distrib, add_assoc]
+    ... = q ⊘[conc] r + p ⊘[conc] q + p ⊘[conc] r : by simp only [add_comm, add_left_comm, interaction_tensor.comm]
+    ... = q ⊘[conc] r + p ⊘[conc] (q + r) : by rw [add_assoc, ← interaction_tensor.right_distrib]
   },
   case process.equiv.join : A c d {
     simp only [process_immediate, process_potential],

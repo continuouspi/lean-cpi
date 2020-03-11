@@ -133,14 +133,14 @@ lemma process_immediate.equiv2
       generalize : (c • Da) ⊘[conc.to_embed] (c • Db) = sab,
       generalize eSab : ½ • sab = sab2,
 
-      from calc  c • Pab + (sa + sab2 + (sab2 + sb))
-               = c • Pab + (sa + (sb + (sab2 + sab2))) : by simp only [add_comm, add_left_comm]
-           ... = c • Pab + (sa + (sb + sab)) : begin
-                  subst eSab,
-                  rw [← add_smul, ← half_ring.one_is_two_halves, one_smul],
-               end
-           ... = c • Pa + c • Pb + (sa + (sb + sab)) : by rw [this, smul_add]
-           ... = c • Pa + sa + (c • Pb + sb) + sab : by abel,
+      calc  c • Pab + (sa + sab2 + (sab2 + sb))
+          = c • Pab + (sa + (sb + (sab2 + sab2))) : by simp only [add_comm, add_left_comm]
+      ... = c • Pab + (sa + (sb + sab)) : begin
+              subst eSab,
+              rw [← add_smul, ← half_ring.one_is_two_halves, one_smul],
+            end
+      ... = c • Pa + c • Pb + (sa + (sb + sab)) : by rw [this, smul_add]
+      ... = c • Pa + sa + (c • Pb + sb) + sab : by abel,
     },
 
 
