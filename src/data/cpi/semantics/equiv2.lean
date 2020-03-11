@@ -2,7 +2,7 @@ import data.cpi.semantics.basic
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω] [add_monoid ℍ] [decidable_eq ℂ]
   {M : affinity ℍ}
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
   (conc : distrib_embedding ℍ ℂ (+) (+))
@@ -137,7 +137,7 @@ lemma process_immediate.equiv2
                = c • Pab + (sa + (sb + (sab2 + sab2))) : by simp only [add_comm, add_left_comm]
            ... = c • Pab + (sa + (sb + sab)) : begin
                   subst eSab,
-                  rw [← fin_fn.add_smul, ← half_ring.one_is_two_halves, one_smul],
+                  rw [← add_smul, ← half_ring.one_is_two_halves, one_smul],
                end
            ... = c • Pa + c • Pb + (sa + (sb + sab)) : by rw [this, smul_add]
            ... = c • Pa + sa + (c • Pb + sb) + sab : by abel,

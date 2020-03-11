@@ -1,8 +1,8 @@
-import data.finset
+import data.fintype
 
 /-- Map elements together and sum them. -/
 def multiset.sum_map {α β : Type} [add_comm_monoid β] (f : α → β) (xs : multiset α) : β
-  := multiset.fold (+) 0 (multiset.map (λ x, f x) xs)
+  := multiset.sum (multiset.map (λ x, f x) xs)
 
 /-- Applying a map over two finite sets xs ys, where every element of xs
     has a corresponding element in ys, which maps to the same value, results
@@ -95,8 +95,16 @@ lemma finset.map_iso {α₁ α₂ β: Type}
   { from rfl }
 end
 
+lemma fintype.map_iso {α₁ α₂ β: Type} [xs : fintype α₁] [ys : fintype α₂]
+    (f : α₁ → β) (g : α₂ → β) (iso : α₁ ≃ α₂)
+    (feq : ∀ x, f x = g (iso.to_fun x))
+  : multiset.map f (fintype.elems α₁).val = multiset.map g (fintype.elems α₂).val
+  := finset.map_iso f g iso feq (fintype.elems α₁) (fintype.elems α₂)
+    (λ x _, fintype.complete (iso.to_fun x))
+    (λ x _, fintype.complete (iso.inv_fun x))
+
 /-- finset.map_iso but for sum_map. -/
-lemma multiset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
+lemma finset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
     (f : α₁ → β) (g : α₂ → β) (iso : α₁ ≃ α₂)
     (feq : ∀ x, f x = g (iso.to_fun x))
     (xs : finset α₁) (ys : finset α₂)
@@ -104,6 +112,12 @@ lemma multiset.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β]
   → (∀ y, y ∈ ys → iso.inv_fun y ∈ xs)
   → multiset.sum_map f xs.val = multiset.sum_map g ys.val
 | mem mem' := congr_arg _ (finset.map_iso f g iso feq xs ys mem mem')
+
+lemma fintype.sum_map_iso {α₁ α₂ β: Type} [add_comm_monoid β] [xs : fintype α₁] [ys : fintype α₂]
+    (f : α₁ → β) (g : α₂ → β) (iso : α₁ ≃ α₂)
+    (feq : ∀ x, f x = g (iso.to_fun x))
+  : multiset.sum_map f (fintype.elems α₁).val = multiset.sum_map g (fintype.elems α₂).val
+  := congr_arg _ (fintype.map_iso f g iso feq)
 
 /-- A composition of filter and image on finsets. -/
 def finset.filter_image {α β : Type} [decidable_eq β] (f : α → option β) : finset α → finset β

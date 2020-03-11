@@ -116,45 +116,35 @@ instance concretion_wrap.decidable_eq {ℍ ω Γ} [cpi_equiv ℍ ω] :
                × (Σ' (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
 | ⟨ A, ⟨ a, x, F ⟩, e ⟩ ⟨ B, ⟨ b, y, G ⟩, f ⟩ := by apply_instance
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv ℍ ω]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv ℍ ω] [decidable_eq ℂ]
 
--- instance process_space.has_zero {ω Γ} : has_zero (process_space ω Γ)
---   := by { unfold process_space, apply_instance }
-instance process_space.add_comm_monoid {Γ}
-  : add_comm_monoid (process_space ℂ ℍ ω Γ)
-  := fin_fn.add_comm_monoid _ ℂ
-
-instance process_space.has_sub {Γ}
-  : has_sub (process_space ℂ ℍ ω Γ)
-  := fin_fn.has_sub _ ℂ
-
-instance process_space.distrib_mul_action {Γ}
-  : distrib_mul_action ℂ (process_space ℂ ℍ ω Γ)
-  := fin_fn.distrib_mul_action _ ℂ
+instance process_space.add_comm_monoid {Γ} : add_comm_group (process_space ℂ ℍ ω Γ) := fin_fn.add_comm_group _ ℂ
+instance process_space.semimodule {Γ} : semimodule ℂ (process_space ℂ ℍ ω Γ) := fin_fn.semimodule _ ℂ
 
 /-- Convert a species into a process space with a unit vector for each element
     of the prime decomposition.
 
     This is defined as ⟨A⟩ within the paper. -/
-def to_process_space {Γ} (A : species' ℍ ω Γ)
-  : process_space ℂ ℍ ω Γ
-  := multiset.sum_map fin_fn.mk_basis (cpi_equiv.prime_decompose A)
+def to_process_space {Γ} (A : species' ℍ ω Γ) : process_space ℂ ℍ ω Γ
+  := multiset.sum_map fin_fn.single (cpi_equiv.prime_decompose A) 1
 
 @[simp]
 lemma to_process_space.nil {Γ} : to_process_space ⟦nil⟧ = (0 : process_space ℂ ℍ ω Γ) := begin
-  unfold to_process_space multiset.sum_map,
+  unfold to_process_space,
   rw cpi_equiv.prime_decompose_nil,
-  simp only [multiset.map_zero, multiset.fold_zero],
+  simp only [multiset.sum_map, multiset.sum_zero, multiset.map_zero],
+  from rfl,
 end
 
 lemma to_process_space.prime {Γ} (A : prime_species' ℍ ω Γ)
   : (to_process_space (prime_species.unwrap A) : process_space ℂ ℍ ω Γ)
-  = fin_fn.mk_basis A := begin
-  unfold to_process_space multiset.sum_map,
+  = fin_fn.single A 1 := begin
+  unfold to_process_space,
   rw cpi_equiv.prime_decompose_prime,
-  simp only [
-    multiset.coe_map,  multiset.coe_fold_r, add_zero,
-    list.map_nil, list.foldr, list.foldr_nil, list.map],
+  -- Not the best way, but the easiest.
+  simp only [multiset.sum_map, list.sum_cons, multiset.coe_map, add_zero,
+    list.sum_nil, pi.add_apply, pi.zero_apply, list.map_nil, multiset.coe_sum,
+    list.map],
 end
 
 lemma to_process_space.parallel {Γ} (A B : species ℍ ω Γ)
@@ -162,11 +152,7 @@ lemma to_process_space.parallel {Γ} (A B : species ℍ ω Γ)
   = to_process_space ⟦ A ⟧ + to_process_space ⟦ B ⟧ := begin
   unfold to_process_space multiset.sum_map,
   rw cpi_equiv.prime_decompose_parallel A B,
-  simp only [multiset.map_add],
-
-  have h := multiset.fold_add (+) (0 : process_space ℂ ℍ ω Γ) 0,
-  simp only [add_zero] at h,
-  rw h,
+  simpa only [multiset.map_add, multiset.sum_add],
 end
 
 /-- The vector space (A, E, a)→ℍ relating transitions from A to E with label #a.
@@ -179,17 +165,8 @@ def interaction_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [cpi_e
       × name Γ)
       ℂ
 
-instance interaction_space.add_comm_monoid {Γ}
-  : add_comm_monoid (interaction_space ℂ ℍ ω Γ)
-  := fin_fn.add_comm_monoid _ ℂ
-
-instance interaction_space.has_sub {Γ}
-  : has_sub (interaction_space ℂ ℍ ω Γ)
-  := fin_fn.has_sub _ ℂ
-
-instance interaction_space.distrib_mul_action {Γ}
-  : distrib_mul_action ℂ (interaction_space ℂ ℍ ω Γ)
-  := fin_fn.distrib_mul_action _ ℂ
+instance interaction_space.add_comm_monoid {Γ} : add_comm_group (interaction_space ℂ ℍ ω Γ) := fin_fn.add_comm_group _ ℂ
+instance interaction_space.semimodule {Γ} : semimodule ℂ (interaction_space ℂ ℍ ω Γ) := fin_fn.semimodule _ ℂ
 
 /-- Convert a process into a process space. -/
 def process.to_space {Γ}
@@ -197,35 +174,9 @@ def process.to_space {Γ}
 | (c ◯ A) := c • to_process_space ⟦ A ⟧
 | (P |ₚ Q) := process.to_space P + process.to_space Q
 
-/-- Convert a list of prime species into a process-/
-def process.from_primes {Γ} (f : prime_species' ℍ ω Γ → ℂ)
-  : list (prime_species' ℍ ω Γ) → process' ℂ ℍ ω Γ
-| [] := ⟦ 0 ◯ nil ⟧
-| (A :: As) :=
-  let A' := quot.lift_on A (λ B, ⟦ f A ◯ B.val ⟧)
-              (λ A B r, quot.sound (process.equiv.ξ_species r))
-  in process.parallel.quot.mk A' (process.from_primes As)
-
-/-- Convert a multiset of prime species into a process. -/
-def process.from_prime_multiset {Γ} (f : prime_species' ℍ ω Γ → ℂ)
-  : multiset (prime_species' ℍ ω Γ) → process' ℂ ℍ ω Γ
-| Ps := quot.lift_on Ps (process.from_primes f) (λ P Q r, begin
-  induction r,
-  case list.perm.nil { from rfl },
-  case list.perm.trans : A B C _ _ ab bc { from trans ab bc },
-  case list.perm.skip : A As Bs _ ih { simp only [process.from_primes, ih] },
-  case list.perm.swap : A B As {
-    simp only [process.from_primes],
-    rcases quot.exists_rep A with ⟨ A, eq ⟩, subst eq,
-    rcases quot.exists_rep B with ⟨ B, eq ⟩, subst eq,
-    rcases quot.exists_rep (process.from_primes f As) with ⟨ As, eq ⟩, rw ← eq, clear eq,
-    from quot.sound process.equiv.parallel_symm₁,
-  },
-end)
-
 /-- Convert a process space into a process. -/
-def process.from_space {Γ} : process_space ℂ ℍ ω Γ → process' ℂ ℍ ω Γ
-| Ps := process.from_prime_multiset Ps.space Ps.defined.val
+def process.from_space {ℂ} [add_comm_monoid ℂ] {Γ} : process_space ℂ ℍ ω Γ → process' ℂ ℍ ω Γ
+| Ps := process.from_prime_multiset Ps.space Ps.support.val
 
 /-- Convert a class of equivalent processes into a process space. -/
 def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ
@@ -248,11 +199,11 @@ def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω
   },
   case process.equiv.parallel_symm { simp only [process.to_space, add_comm] },
   case process.equiv.parallel_assoc { simp only [process.to_space, add_assoc] },
-  case cpi.process.equiv.join : A c d { simp only [process.to_space, fin_fn.add_smul] },
+  case cpi.process.equiv.join : A c d { simp only [process.to_space, add_smul] },
 end
 
 axiom process.from_inverse {Γ} :
-  function.left_inverse process.to_space' (@process.from_space ℂ ℍ ω _ _ Γ)
+  function.left_inverse process.to_space' (@process.from_space ℍ ω _ ℂ _ Γ)
 
 /-- Show that process spaces can be embeeded into equivalence classes of processes. -/
 def process.space_embed {Γ} : process_space ℂ ℍ ω Γ ↪ process' ℂ ℍ ω Γ :=

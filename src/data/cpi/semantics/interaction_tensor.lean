@@ -2,7 +2,7 @@ import data.cpi.semantics.space
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ} [half_ring ℂ]
+variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ} [half_ring ℂ] [decidable_eq ℂ]
 
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
@@ -20,6 +20,7 @@ private def interaction_tensor_worker [cpi_equiv ℍ ω] (conc : ℍ ↪ ℂ)
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       have fg := to_process_space (cpi_equiv.pseudo_apply F G),
       from conc aff • (fg - to_process_space A - to_process_space B),
+      assumption,
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
@@ -44,7 +45,7 @@ private lemma interaction_tensor_worker.comm [cpi_equiv_prop ℍ ω]
       let h : bF = bF ∧ yF = yF := ⟨ rfl, rfl ⟩,
       let g : yF = yF ∧ bF = bF := ⟨ rfl, rfl ⟩,
       simp only [dif_pos h, dif_pos g, cpi_equiv_prop.pseudo_apply_symm],
-      simp only [fin_fn.sub_eq_add_neg, add_comm, add_left_comm],
+      simp only [sub_eq_add_neg, add_comm, add_left_comm],
     },
     {
       have h : ¬ (bG = yF ∧ yG = bF),

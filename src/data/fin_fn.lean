@@ -6,167 +6,133 @@ import algebra.pi_instances data.finset
     This is used to define a basic vector space, where every defined basis is
     known. -/
 @[nolint has_inhabited_instance]
-structure fin_fn (α : Type*) (β : Type*) [add_monoid β] :=
+structure fin_fn (α : Type*) (β : Type*) [has_zero β] :=
   (space : α → β)
-  (defined : finset α)
-  (defined_if : ∀ x, space x ≠ 0 → x ∈ defined)
+  (support : finset α)
+  (support_iff : ∀ x, space x ≠ 0 ↔ x ∈ support)
 
 local attribute [pp_using_anonymous_constructor] fin_fn
 local attribute [pp_using_anonymous_constructor] finset
 
 namespace fin_fn
+
+section helpers
+  variables {α : Type*} {β₁ : Type*} {β₂ : Type*} {β : Type*} [has_zero β₁] [has_zero β₂] [has_zero β]
+
+  /-- Map over a finite set, assuming the support set doesn't grow. -/
+  def on_finset [decidable_eq β] (s : finset α) (f : α → β) (hf : ∀a, f a ≠ 0 → a ∈ s) : fin_fn α β :=
+    ⟨ f,
+      s.filter (λa, f a ≠ 0),
+      λ x, ⟨ λ h, finset.mem_filter.mpr ⟨ hf x h, h ⟩, λ h, (finset.mem_filter.mp h).2 ⟩ ⟩
+
+  /-- Zip over two support sets, assuming the operation preserves 0. -/
+  def zip_with [decidable_eq α] [decidable_eq β₁] [decidable_eq β]
+    (f : β₁ → β₂ → β) (zero : f 0 0 = 0) (g₁ : fin_fn α β₁) (g₂ : fin_fn α β₂) : (fin_fn α β) :=
+    on_finset (g₁.support ∪ g₂.support) (λa, f (g₁.space a) (g₂.space a)) (λ a not_zero, begin
+      rw [finset.mem_union, (g₁.support_iff _).symm, (g₂.support_iff _).symm, ne, ← not_and_distrib],
+      rintro ⟨ h₁, h₂ ⟩, rw [h₁, h₂] at not_zero, from not_zero zero,
+    end)
+
+  /-- Function extensionality lifted to fin_fns. -/
+  @[ext]
+  lemma ext : ∀ {f g : fin_fn α β}, (∀ a, f.space a = g.space a) → f = g
+  | ⟨ f, sf, iff_f ⟩ ⟨ g, sg, iff_g ⟩ lift := begin
+    have : f = g := funext lift, subst this,
+    have : sf = sg := finset.ext' (λ a, (iff_f a).symm.trans (iff_g a)), subst this,
+  end
+
+  /-- Apply a 0-preserving function over the range of our fin_fn. -/
+  def map_range [decidable_eq β] (f : β₁ → β) (zero : f 0 = 0) (g : fin_fn α β₁) : fin_fn α β :=
+    on_finset g.support (f ∘ g.space) (λ a not_zero, begin
+      rw [(g.support_iff _).symm],
+      assume is_zero, rw [function.comp_app, is_zero] at not_zero, from not_zero zero,
+    end)
+
+  lemma unsupported_zero [decidable_eq β] {x : α} {f : fin_fn α β} : x ∉ f.support ↔ f.space x = 0
+    := ⟨ λ nmem, by_contradiction (λ h, nmem ((f.support_iff x).mp h)),
+         λ zero mem, (f.support_iff x).mpr mem zero ⟩
+end helpers
+
 section group_instances
   variables (α : Type*) (β : Type*)
 
-  instance [add_monoid β] : has_zero (fin_fn α β)
+  instance [has_zero β] : has_zero (fin_fn α β)
     := ⟨ { space := λ _, 0,
-          defined := finset.empty,
-          defined_if := λ x nZero, by contradiction } ⟩
+          support := finset.empty,
+          support_iff := λ x, ⟨ λ nZero, by contradiction, λ x, by cases x ⟩ } ⟩
 
-  instance [add_monoid β] [decidable_eq α] : has_add (fin_fn α β) :=
-    { add := λ a b,
-      { space := a.space + b.space,
-        defined := a.defined ∪ b.defined,
-        defined_if := λ x nZero, begin
-        have : a.space x + b.space x ≠ 0 := nZero,
-        suffices : a.space x ≠ 0 ∨ b.space x ≠ 0,
-          cases this with h h,
-          case or.inl { from finset.mem_union_left _ (a.defined_if x h) },
-          case or.inr { from finset.mem_union_right _ (b.defined_if x h) },
+  instance [add_monoid β] [decidable_eq α] [decidable_eq β] : has_add (fin_fn α β) :=
+    { add := zip_with(+) (add_zero 0) }
 
-        suffices : ¬(a.space x = 0 ∧ b.space x = 0),
-          from classical.not_and_distrib.mp this,
-
-        by_contradiction h, rcases h with ⟨ a0, b0 ⟩, rw [a0, b0] at this,
-        from absurd (zero_add (0 : β)) this,
-        end } }
-
-  instance [add_monoid β] [decidable_eq α] : add_monoid (fin_fn α β) :=
-    { add_assoc := λ a b c, begin
-        unfold_projs, simp only [],
-        refine ⟨ add_assoc a.space b.space c.space, _ ⟩,
-
-        have this := finset.union_assoc a.defined b.defined c.defined,
-        unfold_projs at this, simp only [] at this,
-        from this,
-      end,
-      zero_add := λ ⟨ space, defined, defined_if ⟩, begin
-        unfold_projs, simp only [],
-        from ⟨ zero_add _, finset.empty_union defined ⟩,
-      end,
-      add_zero := λ ⟨ space, defined, defined_if ⟩, begin
-        unfold_projs, simp only [],
-        from ⟨ add_zero _, finset.union_empty defined ⟩,
-      end,
+  instance [add_monoid β] [decidable_eq α] [decidable_eq β] : add_monoid (fin_fn α β) :=
+    { add_assoc := λ a b c, ext (λ x, add_assoc _ _ _),
+      zero_add := λ a, ext (λ x, zero_add _),
+      add_zero := λ a, ext (λ x, add_zero _),
       ..fin_fn.has_add α β,
       ..fin_fn.has_zero α β }
 
-  instance [add_comm_monoid β] [decidable_eq α]
+  instance [add_comm_monoid β] [decidable_eq α] [decidable_eq β]
     : add_comm_monoid (fin_fn α β) :=
-    { add_comm := λ a b, begin
-        unfold_projs, simp only [],
-        refine ⟨ add_comm a.space b.space, _ ⟩,
-
-        have this := finset.union_comm a.defined b.defined,
-        unfold_projs at this, simp only [] at this,
-        from this,
-      end,
+    { add_comm := λ a b, ext (λ x, add_comm _ _),
       ..fin_fn.add_monoid α β }
 
-  -- Technically not a group, as (a + -a) is 0, but has a "defined" set.
-  instance [add_group β] : has_neg (fin_fn α β) :=
-    { neg := λ a,
-      { space := -a.space,
-        defined := a.defined,
-        defined_if := λ x nZero, a.defined_if x (neg_ne_zero.mp nZero) } }
+  instance [add_group β] [decidable_eq β] : has_neg (fin_fn α β) :=
+    { neg := map_range has_neg.neg neg_zero }
 
-  instance [add_group β] [decidable_eq α] : has_sub (fin_fn α β)
-    := { sub := λ a b, a + -b }
+  instance [add_comm_group β] [decidable_eq α] [decidable_eq β] : add_comm_group (fin_fn α β) :=
+    { add_left_neg := λ f, ext (λ a, add_left_neg _),
+      ..fin_fn.add_comm_monoid α β,
+      ..fin_fn.has_neg α β  }
 
-  instance [semiring β]
+  instance [semiring β] [decidable_eq β]
     : has_scalar β (fin_fn α β)
-    := { smul := λ x a,
-         { space := λ y, a.space y * x,
-           defined := a.defined,
-           defined_if := λ y nZero,
-            a.defined_if y (ne_zero_of_mul_ne_zero_right nZero) } }
+    := { smul := λ a, map_range ((•) a) (smul_zero _) }
 
-  instance [comm_ring β]
+  instance [comm_ring β] [decidable_eq β]
     : mul_action β (fin_fn α β) :=
-    { one_smul := λ ⟨ space, defined, defined_if ⟩, begin
-        simp only [has_scalar.smul],
-        have : (λ (y : α), space y * 1) = space := funext(λ y, mul_one (space y)),
-        from ⟨ this, rfl ⟩
-      end,
-      mul_smul := λ a b ⟨ space, defined, defined_if ⟩, begin
-        simp only [has_scalar.smul],
-        have : ((λ (y : α), space y * (a * b)) = λ (y : α), space y * b * a)
-          := funext (λ y, calc  space y * (a * b)
-                              = space y * (b * a) : by rw mul_comm a b
-                          ... = space y * b * a : symm (mul_assoc (space y) b a)),
-        from ⟨ this, rfl ⟩
-      end,
+    { one_smul := λ f, ext (λ a, one_smul _ _),
+      mul_smul := λ x y f, ext (λ a, mul_smul _ _ _),
     ..fin_fn.has_scalar α β }
 
-  instance [comm_ring β] [decidable_eq α]
+  instance [comm_ring β] [decidable_eq α] [decidable_eq β]
     : distrib_mul_action β (fin_fn α β) :=
-    { smul_add := λ r x y, begin
-        unfold_projs, simp only [],
-        have : ((λ z, ((x.space + y.space) z) * r) = (λ z, (x.space z) * r) + λ z, (y.space z) * r)
-          := funext(λ z, right_distrib (x.space z) (y.space z) r),
-        from ⟨ this, rfl ⟩,
-      end,
-      smul_zero := λ r, begin
-        simp only [has_scalar.smul, add_monoid.zero, has_zero.zero],
-        have : (λ (y : α), fin_fn.space 0 y * r) = (λ _, 0) := funext (λ _, zero_mul r),
-        from ⟨ this, rfl ⟩,
-      end,
+    { smul_add := λ r x y, ext (λ a, smul_add _ _ _),
+      smul_zero := λ r, ext (λ a, smul_zero _),
       ..fin_fn.mul_action α β }
 
-  -- Like with groups, we cannot show semi_modules, as zero_smul is not true.
+  instance [comm_ring β] [decidable_eq α] [decidable_eq β]
+    : semimodule β (fin_fn α β) :=
+    { add_smul := λ r s f, ext (λ a, right_distrib _ _ _),
+      zero_smul := λ f, ext (λ a, zero_mul _),
+      ..fin_fn.distrib_mul_action α β,
+    }
 
 end group_instances
 
 variables {α : Type*} {β : Type*}
 
-/-- semimodule.add_smul, but without the semimodule instance.-/
-@[simp]
-lemma add_smul [decidable_eq α] [sr : semiring β] (r s : β) (x : fin_fn α β)
-  : (r + s) • x = r • x + s • x := begin
-  unfold_projs, simp only [],
-  have
-    : (λ y, x.space y * (r + s)) = (λ y, x.space y * r) + (λ y, x.space y * s)
-    := funext (λ y, left_distrib (x.space y) r s),
-  from ⟨ this, symm (finset.union_self x.defined) ⟩,
-end
-
-/-- add_group.sub_eq_add_neg but without the group instance. -/
-@[simp]
-lemma sub_eq_add_neg [add_group β] [decidable_eq α] (a b : fin_fn α β) : a - b = a + -b :=
-  rfl
-
 /-- Construct a fin_fn from a single value A. This returns a unit vector in the
     basis of 'A'. -/
-def mk_basis [add_monoid β] [has_one β] [eq : decidable_eq α] (A : α) : fin_fn α β :=
-  { space := λ B, decidable.cases_on (eq B A) (λ _, 0) (λ _, 1),
-      defined := finset.singleton A,
-      defined_if := λ B nZero, begin
-        cases (eq B A),
-        case decidable.is_false { by contradiction },
-        case decidable.is_true { from finset.mem_singleton.mpr h }
-      end }
-
-/-- 'mk_basis', with an explicit decidable_eq instance. Useful for using
-    classical equality. -/
-def mk_basis' [add_monoid β] [has_one β] (eq : decidable_eq α) (A : α) : fin_fn α β :=
-  mk_basis A
+def single [add_monoid β] [decidable_eq α] [decidable_eq β] (A : α) (b : β): fin_fn α β :=
+  { space := λ B, if A = B then b else 0,
+    support := if 0 = b then ∅ else finset.singleton A,
+    support_iff := λ B, begin
+      by_cases is_zero : 0 = b; by_cases is_eq : A = B; simp only [is_zero, is_eq, if_pos, if_false],
+      { from ⟨ λ x, by contradiction, false.elim ⟩ },
+      { from ⟨ λ x, by contradiction, false.elim ⟩ },
+      { from ⟨ λ _, finset.mem_singleton.mpr rfl, λ _, ne.symm is_zero ⟩ },
+      { from ⟨ λ x, by contradiction, λ mem, absurd (finset.mem_singleton.mp mem).symm is_eq ⟩ },
+    end }
 
 /-- Map every basis in the fin_fn to another fin_fn, accumulating them together. -/
-def bind {γ : Type} [decidable_eq γ] [semiring β] : fin_fn α β → (α → fin_fn γ β) → fin_fn γ β
-| X f := finset.fold (+) 0 (λ x, X.space x • (f x)) X.defined
+def bind {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] : fin_fn α β → (α → fin_fn γ β) → fin_fn γ β
+| X f := finset.sum X.support (λ x, X.space x • (f x))
 
-lemma bind_zero {γ : Type} [decidable_eq γ] [semiring β] (f : α → fin_fn γ β) :
+lemma bind_zero {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] (f : α → fin_fn γ β) :
   bind 0 f = 0 := rfl
+
+lemma empty_zero [has_zero β] [decidable_eq β] : ∀ (f : fin_fn α β), f.support = ∅ → f = 0
+| ⟨ f, _, iff ⟩ ⟨ _ ⟩ := ext (λ x, by_contradiction (iff x).mp)
 
 private lemma finset.exists_insert_of_mem {α : Type*} [decidable_eq α] :
   ∀ {s : finset α} {a : α}
@@ -194,127 +160,76 @@ private lemma finset.not_mem_insert [add_monoid β] [decidable_eq α]
   from xif z this (yimp z ymem),
 end
 
-lemma bind_distrib {γ : Type} [decidable_eq α] [decidable_eq γ] [semiring β] :
+lemma bind_distrib {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
   ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
   , bind (x + y) f = bind x f + bind y f
-| ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
-  show finset.fold (+) 0 (λ z, (fx z + fy z) • f z) (xs ∪ ys)
-     = finset.fold (+) 0 (λ z, fx z • f z) xs
-     + finset.fold (+) 0 (λ z, fy z • f z) ys,
+-- | ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
+--   -- have : ∀ a, (x + y).space a = x.space a + y.space a := λ x, rfl,
+--   simp only [bind],
+--   unfold_projs,
+--   unfold zip_with on_finset,
+| x y f := begin
+  show finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
+        (λ a, (x.space a + y.space a) • f a)
+     = finset.sum x.support (λ a, x.space a • f a) + finset.sum y.support (λ a, y.space a • f a),
 
-  have xif' : ∀ z, z ∉ xs → z ∈ ys → fx z = 0
-    := λ z notMem _, classical.by_contradiction (notMem ∘ xif z),
-  have yif' : ∀ z, z ∉ ys → z ∈ xs → fy z = 0
-    := λ z notMem _, classical.by_contradiction (notMem ∘ yif z),
-  clear xif yif,
+  have : finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
+           (λ a, (x.space a + y.space a) • f a)
+       = finset.sum (x.support ∪ y.support) (λ a, (x.space a + y.space a) • f a)
+       := finset.sum_subset (finset.filter_subset (x.support ∪ y.support)) (λ a mem not_mem, begin
+      suffices : x.space a + y.space a = 0, simp only [this, zero_smul],
 
-  induction xs using finset.induction_on with x xs xnmem ih generalizing ys,
-  {
-    -- If x is empty, we effectively show that ∀ y ∈ ys, fx y = 0. We have to
-    -- manually unroll ys though, due to show xif'/yif' are implemented.
-    simp only [finset.empty_union, finset.fold_empty, zero_add],
-    clear yif',
+      by_contradiction not_zero,
+      have h := finset.mem_sdiff.mpr ⟨ mem, not_mem ⟩,
+      rw ← finset.filter_not at h,
+      from (finset.mem_filter.mp h).2 not_zero,
+    end),
+  rw this,
 
-    show finset.fold has_add.add 0 (λ z, (fx z + fy z) • f z) ys
-       = finset.fold has_add.add 0 (λ z, fy z • f z) ys,
-    induction ys using finset.induction_on with y ys ynmem ih,
-    { simp only [finset.fold_empty] },
-    {
-      have : fx y = 0
-        := xif' y (finset.not_mem_empty y) (finset.mem_insert_self y ys),
-      simp only [finset.fold_insert ynmem, ‹fx y = 0›, zero_add],
+  rw finset.sum_subset (finset.subset_union_left x.support y.support) (λ a mem not_x, begin
+    show (λ a, x.space a • f a) a = 0,
+    simp only [unsupported_zero.mp not_x, zero_smul],
+  end),
+  rw finset.sum_subset (finset.subset_union_right x.support y.support) (λ a mem not_y, begin
+    show (λ a, y.space a • f a) a = 0,
+    simp only [unsupported_zero.mp not_y, zero_smul],
+  end),
 
-      have : ∀ z, z ∉ ∅ → z ∈ ys → fx z = 0
-        := λ z xnmem ymem, xif' z xnmem (finset.mem_insert_of_mem ymem),
-      rw ih this,
-    }
-  },
-  {
-    by_cases ymem : (x ∈ ys),
-    {
-      -- If x ∈ ys, then we remove it from ys and recurse using ys - {x}.
-      rcases finset.exists_insert_of_mem ymem with ⟨ ys, eq, ynmem ⟩, subst eq, clear ymem,
-      rw ← finset.insert_union_distrib,
-      have : x ∉ xs ∪ ys, simp only [xnmem, ynmem, not_false_iff, finset.mem_union, or_self],
-      simp only [finset.fold_insert xnmem, finset.fold_insert ynmem, finset.fold_insert this],
-
-      rw ih ys
-        (finset.not_mem_insert ynmem (λ _, finset.mem_insert_of_mem) xif')
-        (finset.not_mem_insert xnmem (λ _, finset.mem_insert_of_mem) yif'),
-      simp only [add_assoc, add_smul, add_comm, add_left_comm],
-    },
-    {
-      -- If it's not, then we just recurse using ys.
-      have : x ∉ (xs ∪ ys), simp only [xnmem, ymem, not_false_iff, finset.mem_union, or_self],
-      simp only [finset.insert_union, finset.fold_insert this, finset.fold_insert xnmem],
-
-      rw ih ys
-        (finset.not_mem_insert ymem (λ _ mem, mem) xif')
-        (λ z ynmem' xmem, yif' z ynmem' (finset.mem_insert_of_mem xmem)),
-
-      have : fy x = 0 := yif' x ymem (finset.mem_insert_self x xs),
-      simp only [‹fy x = 0›, add_zero, add_comm, add_left_comm],
-    }
-  }
+  simp only [add_smul, finset.sum_add_distrib],
 end
 
 /-- `bind`, lifted to two `fin_fn`s. -/
-def bind₂ {γ η : Type} [decidable_eq η] [semiring β]
+def bind₂ {γ η : Type} [decidable_eq η] [decidable_eq β] [semiring β]
   : fin_fn α β → fin_fn γ β → (α → γ → fin_fn η β) → fin_fn η β
 | x y f := bind x (λ a, bind y (f a))
 
-/-- It doesn't matter which order we do our bind in! -/
-lemma bind₂_swap {α β γ η : Type} [decidable_eq α] [decidable_eq γ] [decidable_eq η] [comm_ring β] :
-  ∀ (x : fin_fn α β) (y : fin_fn γ β) (f : (α → γ → fin_fn η β))
-  , bind₂ x y f = bind₂ y x (λ x y, f y x)
-| ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
-  show finset.fold has_add.add 0 (λ x, fx x • finset.fold has_add.add 0 (λ y, fy y • f x y) ys) xs
-     = finset.fold has_add.add 0 (λ y, fy y • finset.fold has_add.add 0 (λ x, fx x • f x y) xs) ys,
-  clear xif yif,
-
-  induction xs using finset.induction_on with x xs xnmem ih,
-  {
-    simp only [finset.fold_empty, smul_zero],
-    show (0 : fin_fn η β) = finset.fold has_add.add 0 (λ y, 0) ys,
-    induction ys using finset.induction_on with y ys ynmem ih,
-    { simp only [finset.fold_empty] },
-    { simp only [finset.fold_insert ynmem, symm ih, zero_add] },
-  },
-  {
-    simp only [finset.fold_insert xnmem],
-    rw ih, clear ih,
-
-    induction ys using finset.induction_on with y ys ynmem ih,
-    { simp only [finset.fold_empty, smul_zero, zero_add] },
-    {
-      simp only [finset.fold_insert ynmem],
-      rw ← ih, clear ih,
-
-      generalize : finset.fold (+) 0 (λ x, fx x • f x y) xs = XS,
-      generalize ey : finset.fold (+) 0 (λ y, fy y • f x y) ys = YS,
-      suffices
-        : fx x • (fy y • f x y + YS) + fy y • XS
-        = fy y • (fx x • f x y + XS) + fx x • YS,
-      { rw [← add_assoc, ← add_assoc, this] },
-
-      simp only [smul_add],
-      rw [← mul_smul (fx x), mul_comm (fx x), mul_smul (fy y)],
-      simp only [add_comm, add_left_comm],
-    }
-  }
-end
-
-lemma bind₂_zero {γ η : Type} [decidable_eq η] [semiring β] (f : α → γ → fin_fn η β) :
+lemma bind₂_zero {γ η : Type} [decidable_eq η] [decidable_eq β] [semiring β]  (f : α → γ → fin_fn η β) :
   bind₂ 0 0 f = 0 := rfl
 
-lemma bind₂_zero_right {γ η : Type} [decidable_eq η] [semiring β]
+lemma bind₂_zero_right {γ η : Type} [decidable_eq η] [decidable_eq β] [semiring β]
   (x : fin_fn γ β) (f : α → γ → fin_fn η β) :
   bind₂ 0 x f = 0 := rfl
 
-lemma bind₂_zero_left {α β γ η : Type} [decidable_eq α] [decidable_eq γ] [decidable_eq η] [comm_ring β]
+/-- It doesn't matter which order we do our bind in! -/
+lemma bind₂_swap {α β γ η : Type*} [decidable_eq η] [decidable_eq β] [comm_ring β] :
+  ∀ (x : fin_fn α β) (y : fin_fn γ β) (f : (α → γ → fin_fn η β))
+  , bind₂ x y f = bind₂ y x (λ x y, f y x)
+| x y f := begin
+  show finset.sum x.support (λ a, x.space a • finset.sum y.support (λ b, y.space b • f a b))
+     = finset.sum y.support (λ a, y.space a • finset.sum x.support (λ b, x.space b • f b a)),
+
+  have : ∀ a b, y.space a • x.space b • f b a = x.space b • y.space a • f b a
+    := λ a b, smul_comm (y.space a) _ _,
+  simp only [finset.smul_sum, this],
+
+  simp only [finset.sum_eq_multiset_sum],
+  from multiset.sum_map_sum_map x.support.val y.support.val,
+end
+
+lemma bind₂_zero_left {α β γ η : Type} [decidable_eq β] [decidable_eq η] [comm_ring β]
   (x : fin_fn α β) (f : α → γ → fin_fn η β) :
   bind₂ x 0 f = 0 := by { rw (bind₂_swap x 0 f), from rfl }
 
 end fin_fn
 
-#lint -
+#lint-

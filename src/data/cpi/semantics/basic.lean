@@ -3,7 +3,7 @@ import tactic.abel algebra.distrib_embedding
 
 namespace cpi
 
-variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ]
+variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [decidable_eq ℂ]
   {M : affinity ℍ}
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
 
@@ -11,7 +11,7 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ]
 def potential_interaction_space [cpi_equiv ℍ ω] {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
   : transition.transition_from ℓ A
   → interaction_space ℂ ℍ ω Γ
-| ⟨ _, # a , @production.concretion _ _ _ b y G, tr ⟩ := fin_fn.mk_basis ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩
+| ⟨ _, # a , @production.concretion _ _ _ b y G, tr ⟩ := fin_fn.single ⟨ ⟦ A ⟧, ⟨ b, y, ⟦ G ⟧ ⟩, a ⟩ 1
 | ⟨ _, τ@'_, E, tr ⟩ := 0
 | ⟨ _, τ⟨_⟩, E, tr ⟩ := 0
 
@@ -20,7 +20,7 @@ lemma potential_interaction_space.equiv [cpi_equiv ℍ ω]
   ∀ {k} {α : label ℍ Γ k} {E E' : production ℍ ω Γ k}
     {t : A [ℓ, α]⟶ E} {t' : B [ℓ, α]⟶ E'}
   , A ≈ B → E ≈ E'
-  → @potential_interaction_space ℂ ℍ ω _ _ Γ ℓ _ (transition.transition_from.mk t)
+  → @potential_interaction_space ℂ ℍ ω _ _ _ Γ ℓ _ (transition.transition_from.mk t)
   = potential_interaction_space (transition.transition_from.mk t')
 | _ (# a) (@production.concretion _ _ _ b y E) (production.concretion E') t t' eqA (production.equiv.concretion eqE) := begin
   unfold transition.transition_from.mk potential_interaction_space,
@@ -95,8 +95,7 @@ lemma process_potential.nil_zero [cpi_equiv ℍ ω]
 
   -- We have that there are no possible transitions, and thus the sum is 0.
   have : As = 0 := multiset.eq_zero_of_forall_not_mem (λ ⟨ k, α, E, t ⟩, by cases t),
-  simp only [‹ As = 0 ›, multiset.sum_map, multiset.fold_zero, multiset.map_zero,
-             smul_zero],
+  simp only [‹ As = 0 ›, multiset.sum_map, multiset.sum_zero, multiset.map_zero, smul_zero],
 end
 
 /-- The vector space of immediate actions of a process (dP/dt)-/
@@ -126,7 +125,7 @@ lemma process_immediate.nil_zero {conc : ℍ ↪ ℂ} [cpi_equiv ℍ ω]
 
   -- We have that there are no possible transitions, and thus the sum is 0.
   have : As = 0 := multiset.eq_zero_of_forall_not_mem (λ ⟨ k, α, E, t ⟩, by cases t),
-  simp only [‹ As = 0 ›, multiset.sum_map, multiset.fold_zero, multiset.map_zero,
+  simp only [‹ As = 0 ›, multiset.sum_map, multiset.sum_zero, multiset.map_zero,
              interaction_tensor.zero_left, smul_zero, add_zero],
 end
 
@@ -142,12 +141,9 @@ lemma process_potential.equiv [cpi_equiv_prop ℍ ω]
   case process.equiv.ξ_species : c A B eq {
     simp only [process_potential],
 
-    generalize : transition.enumerate ℓ A = As,
-    generalize : transition.enumerate ℓ B = Bs,
-
     suffices
-      : multiset.sum_map potential_interaction_space As.elems.val
-      = multiset.sum_map potential_interaction_space Bs.elems.val,
+      : multiset.sum_map potential_interaction_space (fintype.elems (transition.transition_from ℓ A)).val
+      = multiset.sum_map potential_interaction_space (fintype.elems (transition.transition_from ℓ B)).val,
       from congr_arg (has_scalar.smul _) this,
 
     cases cpi_equiv_prop.transition_iso ℓ eq with iso,
@@ -155,11 +151,7 @@ lemma process_potential.equiv [cpi_equiv_prop ℍ ω]
     suffices : ∀ x
       , potential_interaction_space x
       = potential_interaction_space (isoF.to_fun x),
-      from multiset.sum_map_iso
-        potential_interaction_space potential_interaction_space isoF this
-        As.elems Bs.elems
-        (λ x _, @fintype.complete _ Bs (isoF.to_fun x))
-        (λ x _, @fintype.complete _ As (isoF.inv_fun x)),
+      from fintype.sum_map_iso potential_interaction_space potential_interaction_space isoF this,
 
     rintros ⟨ k, α, E, t ⟩,
     simp only [
@@ -185,7 +177,7 @@ lemma process_potential.equiv [cpi_equiv_prop ℍ ω]
   },
   case cpi.process.equiv.parallel_symm { simp only [process_potential, add_comm] },
   case process.equiv.parallel_assoc { simp only [process_potential, add_assoc] },
-  case process.equiv.join : A c d { simp only [process_potential, fin_fn.add_smul] },
+  case process.equiv.join : A c d { simp only [process_potential, add_smul] },
 end
 
 private lemma process_immediate.join [cpi_equiv_prop ℍ ω] {conc : ℍ ↪ ℂ} (c d : ℂ)
@@ -214,7 +206,7 @@ private lemma process_immediate.join [cpi_equiv_prop ℍ ω] {conc : ℍ ↪ ℂ
        ... = half • (c • Ds) ⊘[conc] (c • Ds) + half • (c • Ds) ⊘[conc] (d • Ds)
            + (half • (c • Ds) ⊘[conc] (d • Ds) + half • (d • Ds) ⊘[conc] (d • Ds))
            : begin
-             simp only [fin_fn.add_smul],
+             simp only [add_smul],
              generalize : half • (c • Ds) ⊘[conc] (d • Ds) = cd,
              generalize : half • (c • Ds) ⊘[conc] (c • Ds) = cc,
              generalize : half • (d • Ds) ⊘[conc] (d • Ds) = dd,
@@ -242,11 +234,8 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
   case process.equiv.ξ_species : c A B eq {
     simp only [process_immediate],
 
-    generalize : transition.enumerate ℓ A = As,
-    generalize : transition.enumerate ℓ B = Bs,
-
-    suffices : multiset.sum_map (immediate_process_space conc.to_embed) As.elems.val
-             = multiset.sum_map (immediate_process_space conc.to_embed) Bs.elems.val,
+    suffices : multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ A)).val
+             = multiset.sum_map (immediate_process_space conc.to_embed) (fintype.elems (transition.transition_from ℓ B)).val,
     { have eql : process_potential M ℓ (c ◯ A) = process_potential M ℓ (c ◯ B)
         := process_potential.equiv M ℓ (process.equiv.ξ_species eq),
       rw [this, eql] },
@@ -256,11 +245,7 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     suffices : ∀ x
       , immediate_process_space conc.to_embed x
       = immediate_process_space conc.to_embed (isoF.to_fun x),
-      from multiset.sum_map_iso
-        (immediate_process_space _) (immediate_process_space _) isoF this
-        As.elems Bs.elems
-        (λ x _, @fintype.complete _ Bs (isoF.to_fun x))
-        (λ x _, @fintype.complete _ As (isoF.inv_fun x)),
+      from fintype.sum_map_iso (immediate_process_space _) (immediate_process_space _) isoF this,
 
     rintros ⟨ k, α, E, t ⟩,
     simp only [
@@ -312,7 +297,7 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     suffices
       : (c • Ds) ⊘[conc.to_embed] (d • Ds) + ((½ : ℂ) • ((c • Ds) ⊘[conc.to_embed] (c • Ds)) + (½ : ℂ) • (d • Ds) ⊘[conc.to_embed] (d • Ds))
       = (½ : ℂ) • ((c • Ds + d • Ds) ⊘[conc.to_embed] (c • Ds + d • Ds)),
-      { simp only [add_assoc, add_comm, fin_fn.add_smul, add_left_comm, this] },
+      { simp only [add_assoc, add_comm, add_smul, add_left_comm, this] },
 
     from process_immediate.join c d Ds Ps,
   }

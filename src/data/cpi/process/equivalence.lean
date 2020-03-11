@@ -123,6 +123,35 @@ def process' (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid 
 def process'2 (ℂ ℍ : Type) (ω Γ : context) [has_add ℂ] [∀ {Γ}, setoid (species ℍ ω Γ)]
   := quotient (@process.equiv2.setoid ℂ ℍ ω Γ _ _)
 
+section prime
+  variables {ℂ ℍ : Type} {ω Γ : context} [∀ Γ, setoid (species ℍ ω Γ)]
+
+  /-- Convert a list of prime species into a process-/
+  def process.from_primes [add_monoid ℂ] {Γ} (f : prime_species' ℍ ω Γ → ℂ)
+    : list (prime_species' ℍ ω Γ) → process' ℂ ℍ ω Γ
+  | [] := ⟦ 0 ◯ nil ⟧
+  | (A :: As) :=
+    let A' := quot.lift_on A (λ B, ⟦ f A ◯ B.val ⟧)
+                (λ A B r, quot.sound (process.equiv.ξ_species r))
+    in process.parallel.quot.mk A' (process.from_primes As)
+
+  /-- Convert a multiset of prime species into a process. -/
+  def process.from_prime_multiset [add_monoid ℂ] {Γ} (f : prime_species' ℍ ω Γ → ℂ)
+    : multiset (prime_species' ℍ ω Γ) → process' ℂ ℍ ω Γ
+  | Ps := quot.lift_on Ps (process.from_primes f) (λ P Q r, begin
+    induction r,
+    case list.perm.nil { from rfl },
+    case list.perm.trans : A B C _ _ ab bc { from trans ab bc },
+    case list.perm.skip : A As Bs _ ih { simp only [process.from_primes, ih] },
+    case list.perm.swap : A B As {
+      simp only [process.from_primes],
+      rcases quot.exists_rep A with ⟨ A, eq ⟩, subst eq,
+      rcases quot.exists_rep B with ⟨ B, eq ⟩, subst eq,
+      rcases quot.exists_rep (process.from_primes f As) with ⟨ As, eq ⟩, rw ← eq, clear eq,
+      from quot.sound process.equiv.parallel_symm₁,
+    },
+  end)
+end prime
 end cpi
 
 #lint-
