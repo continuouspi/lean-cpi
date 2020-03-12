@@ -185,6 +185,12 @@ lemma interaction_tensor.parallel₂ [cpi_equiv_prop ℍ ω]
   rw [this, to_process_space.parallel], abel,
 end)
 
+instance interaction_tensor.monoid_hom_left [cpi_equiv_prop ℍ ω]
+    (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
+  : is_add_monoid_hom (interaction_tensor conc ξ)
+  := { map_add := interaction_tensor.right_distrib ξ,
+       map_zero := interaction_tensor.zero_left ξ }
+
 end cpi
 
 #lint-
