@@ -48,6 +48,18 @@ class cpi_equiv_prop (ℍ : Type) (ω : context) extends cpi_equiv ℍ ω :=
   ( pseudo_apply_symm {Γ} {a b : ℕ} (F : concretion' ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
     : pseudo_apply F G = pseudo_apply G F )
 
+  /- More intuitively stated as (F|A)∘G ≈ (F∘G)|A, but this is annoying to do
+     given our abstraction. -/
+  ( pseudo₁ {Γ} {a b : ℕ}
+    (A : species ℍ ω Γ) (F : concretion ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
+    : prime_decompose (pseudo_apply ⟦F |₁ A⟧ G)
+    = prime_decompose (pseudo_apply ⟦ F ⟧ G ) + prime_decompose ⟦ A ⟧)
+
+  ( pseudo₂ {Γ} {a b : ℕ}
+    (A : species ℍ ω Γ) (F : concretion ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
+    : prime_decompose (pseudo_apply ⟦A |₂ F⟧ G)
+    = prime_decompose ⟦ A ⟧ + prime_decompose (pseudo_apply ⟦ F ⟧ G ) )
+
 instance cpi_equiv.to_species (ℍ : Type) (ω Γ : context) [r : cpi_equiv ℍ ω]
   : setoid (species ℍ ω Γ)
   := cpi_equiv.species_equiv Γ

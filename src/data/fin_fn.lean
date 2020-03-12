@@ -167,6 +167,29 @@ lemma bind_distrib {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ
   simp only [add_smul, finset.sum_add_distrib],
 end
 
+lemma bind_smul {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
+  ∀ (c : β) (x : fin_fn α β) (f : α → fin_fn γ β)
+  , c • bind x f = bind (c • x) f
+| c x f := begin
+  simp only [bind],
+
+  have : (c • x).support ⊆ x.support := finset.filter_subset _,
+  rw finset.sum_subset this (λ a mem not_mem, begin
+    show (λ a, (c • x).space a • f a) a = 0,
+    simp only [],
+    rw [unsupported_zero.mp not_mem, zero_smul],
+  end), simp only [], clear this,
+
+  -- Then follow the same proof as prod_pow.
+  induction x.support using finset.induction_on with a f not_mem ih,
+  { simp only [finset.sum_empty, smul_zero] },
+  {
+    simp only [finset.sum_insert not_mem],
+    rw [smul_add, ← mul_smul, ih],
+    from rfl,
+  },
+end
+
 /-- `bind`, lifted to two `fin_fn`s. -/
 def bind₂ {γ η : Type} [decidable_eq η] [decidable_eq β] [semiring β]
   : fin_fn α β → fin_fn γ β → (α → γ → fin_fn η β) → fin_fn η β
@@ -198,6 +221,17 @@ end
 lemma bind₂_zero_left {α β γ η : Type} [decidable_eq β] [decidable_eq η] [comm_ring β]
   (x : fin_fn α β) (f : α → γ → fin_fn η β) :
   bind₂ x 0 f = 0 := by { rw (bind₂_swap x 0 f), from rfl }
+
+@[simp]
+lemma bind_single {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
+  ∀ (a : α) (b : β) (f : α → fin_fn γ β)
+  , bind (single a b) f = b • f a
+| a b f := begin
+  simp only [bind, single],
+  by_cases is_zero : 0 = b; simp only [is_zero, if_pos, if_false],
+  { subst is_zero, simp only [finset.sum_empty, zero_smul] },
+  { simp only [finset.sum_singleton, eq.refl a, if_pos] },
+end
 
 end fin_fn
 
