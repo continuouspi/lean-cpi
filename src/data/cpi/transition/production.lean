@@ -10,22 +10,6 @@ inductive production (ℍ : Type) (ω : context) (Γ : context) : kind → Type
 | species (A : species ℍ ω Γ) : production kind.species
 | concretion {b y} (F : concretion ℍ ω Γ b y) : production kind.concretion
 
-@[reducible]
-instance production.lift_species {Γ}
-  : has_coe (species ℍ ω Γ) (production ℍ ω Γ kind.species) := ⟨ production.species ⟩
-
-@[reducible]
-instance production.lift_concretion {Γ} {b y}
-  : has_coe (concretion ℍ ω Γ b y) (production ℍ ω Γ kind.concretion) := ⟨ production.concretion ⟩
-
-/-- Map over a production, transforming either the concretion or species inside. -/
-def production.map
-    {Γ Δ} (s : species ℍ ω Γ → species ℍ ω Δ)
-    (c : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y)
-  : ∀ {k}, production ℍ ω Γ k → production ℍ ω Δ k
-| ._ (production.species A) := s A
-| ._ (production.concretion F) := c F
-
 /-- Rename a production. This just wraps renaming for species and concretions. -/
 def production.rename
   {Γ Δ} (ρ : name Γ → name Δ)
@@ -49,8 +33,10 @@ lemma production.rename_id
     concretions. -/
 inductive production.equiv [∀ Γ, setoid (species ℍ ω Γ)] [∀ Γ b y, setoid (concretion ℍ ω Γ b y)] {Γ} :
   ∀ {k : kind}, production ℍ ω Γ k → production ℍ ω Γ k → Prop
-| species {A B : species ℍ ω Γ}                 : A ≈ B → @production.equiv kind.species A B
-| concretion {b y} {F G : concretion ℍ ω Γ b y} : F ≈ G → @production.equiv kind.concretion F G
+| species {A B : species ℍ ω Γ}
+  : A ≈ B → production.equiv (production.species A) (production.species B)
+| concretion {b y} {F G : concretion ℍ ω Γ b y}
+  : F ≈ G → production.equiv (production.concretion F) (production.concretion G)
 
 namespace production
   variables [∀ Γ, setoid (cpi.species ℍ ω Γ)] [∀ Γ b y, setoid (cpi.concretion ℍ ω Γ b y)]
@@ -111,52 +97,7 @@ lemma production.cast_c.eq :
   , production.concretion G = production.concretion (production.cast_c eq)
 | Γ a b x y F G (production.equiv.concretion eq) := rfl
 
-lemma production.equiv.map {Γ Δ} :
-  ∀ {k : kind}
-    {s : species ℍ ω Γ → species ℍ ω Δ}
-    {c : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
-
-    {E F : production ℍ ω Γ k}
-  , (∀ {A B : species ℍ ω Γ}, A ≈ B → s A ≈ s B)
-  → (∀ {b y} {F G : concretion ℍ ω Γ b y}, F ≈ G → c F ≈ c G)
-  → E ≈ F
-  → production.map @s @c E ≈ production.map @s @c F
-| ._ s c ._ ._ ms mc (production.equiv.species eq) := production.equiv.species (ms eq)
-| ._ s c ._ ._ ms mc (production.equiv.concretion eq) := production.equiv.concretion (mc eq)
-
-lemma production.equiv.map_over {Γ Δ} :
-  ∀ {k : kind}
-    {s s' : species ℍ ω Γ → species ℍ ω Δ}
-    {c c' : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y}
-
-    (ms : ∀ (A : species ℍ ω Γ), s A ≈ s' A)
-    (mc : ∀ {b y} (F : concretion ℍ ω Γ b y), c F ≈ c' F)
-    (E : production ℍ ω Γ k)
-  , production.map @s @c E ≈ production.map @s' @c' E
-| ._ s s' c c' ms mc (production.species A) := production.equiv.species (ms A)
-| ._ s s' c c' ms mc (production.concretion F) := production.equiv.concretion (mc F)
 end equivalence
-
-section
-  open_locale congruence
-
-  lemma production.equiv.parallel_nil {Γ} :
-    ∀ {k : kind} (E : production ℍ ω Γ k)
-    , production.map (λ x, x |ₛ nil) (λ _ _ x, x |₁ nil) E ≈ E
-  | ._ (production.species _) := production.equiv.species species.equiv.parallel_nil₁
-  | ._ (production.concretion _) := production.equiv.concretion concretion.equiv.parallel_nil
-end
-
-@[simp]
-lemma production.map_compose {Γ Δ η} {k : kind}
-    (s  : species ℍ ω Γ → species ℍ ω Δ)
-    (s' : species ℍ ω Δ → species ℍ ω η)
-    (c  : ∀ {b y}, concretion ℍ ω Γ b y → concretion ℍ ω Δ b y)
-    (c' : ∀ {b y}, concretion ℍ ω Δ b y → concretion ℍ ω η b y)
-    (E : production ℍ ω Γ k)
-  : production.map s' @c' (production.map s @c E)
-  = production.map (λ x, s' (s x)) (λ _ _ x, c' (c x)) E
-:= by { cases E; repeat { simp only [production.map], unfold_coes } }
 
 end cpi
 

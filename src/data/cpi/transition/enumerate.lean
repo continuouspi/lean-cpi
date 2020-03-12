@@ -30,7 +30,7 @@ noncomputable def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
     complete := λ ⟨ k, α, E, t ⟩, by cases t }
 | (species.whole.cons (a#(b; y)) A As) :=
   { elems :=
-      insert (transition_from.mk (choice₁ a b y A As))
+      insert (transition_from.mk (choice₁ a b rfl y A As))
              (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate_choices As).elems)),
     complete := λ x, begin
       rcases x with ⟨ k, α, E, t ⟩,
@@ -41,7 +41,10 @@ noncomputable def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
         have this := finset.mem_map_of_mem (ξ_choice.embed ℓ _ A As) this,
         from finset.mem_insert_of_mem this,
       },
-      case choice₁ { from finset.mem_insert_self _ _ },
+      case choice₁ {
+        subst t_b_len,
+        from finset.mem_insert_self _ _
+      },
     end }
 | (species.whole.cons (τ@k) A As) :=
   { elems :=
@@ -74,7 +77,7 @@ private def com₂.wrap {Γ} {ℓ : lookup ℍ ω Γ}
     (M : affinity ℍ) {A B : species ℍ ω (context.extend M.arity Γ)}
   :
   ∀ (a b : name (context.extend M.arity Γ))
-  , A [lookup.rename name.extend ℓ, τ⟨ a, b ⟩]⟶ B
+  , A [lookup.rename name.extend ℓ, τ⟨ a, b ⟩]⟶ (production.species B)
   → option (transition_from ℓ (ν(M) A))
 | (name.zero a) (name.zero b) t :=
   if h : option.is_some (M.f a b) then some (transition_from.mk (com₂ M h t))
@@ -130,9 +133,7 @@ noncomputable constant enumerate :
   ∀ {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
   , fintype (transition_from ℓ A)
 /-
-| Γ ℓ nil :=
-  { elems := finset.empty,
-    complete := λ ⟨ k, α, E, t ⟩, by cases t }
+| Γ ℓ nil := ⟨ finset.empty, (λ ⟨ k, α, E, t ⟩, by cases t) ⟩
 | Γ ℓ (apply D as) :=
   { elems := finset.image (defn.from ℓ D as)
       (enumerate_choices (lookup.rename name.extend ℓ) (ℓ _ D)).elems,

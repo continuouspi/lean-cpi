@@ -87,7 +87,7 @@ example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
   Σ# ( whole.cons (x#) (apply S ∅)
      ∘ whole.cons (y#) (apply P₁ ∅ |ₛ apply P₂ ∅)
      $ whole.empty )))
-:= transition.choice₁ _ _ _ _ _
+:= transition.choice₁ _ _ _ _ _ _
 
 -- P₁ [τ@k_degrade]⟶ 0
 example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
@@ -114,14 +114,14 @@ example : E'_ [ℓ, #e]⟶ (production.concretion
     simp [E_, u, r],
     from transition.choice₁
       (name.extend (name.extend e))
-      (u :: r :: list.nil)
+      (u :: r :: list.nil) rfl
       0 (rename (name.ext (name.ext name.extend))
           (name.extend t# ⬝ ν(M) whole.apply E (u :: r :: t :: ∅))) whole.empty,
   },
 
   have : E'_ [ℓ, _]⟶ _,
   {
-    refine transition.ν₁ M _,
+    refine transition.ν₁_concretion M _,
 
     show (whole.apply E (u :: r :: t :: ∅))
       [lookup.rename name.extend ℓ, label.rename name.extend (# e)]⟶ _,

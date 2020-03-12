@@ -137,11 +137,6 @@ lemma empty_zero [has_zero β] [decidable_eq β] : ∀ (f : fin_fn α β), f.sup
 lemma bind_distrib {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
   ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
   , bind (x + y) f = bind x f + bind y f
--- | ⟨ fx, xs, xif ⟩ ⟨ fy, ys, yif ⟩ f := begin
---   -- have : ∀ a, (x + y).space a = x.space a + y.space a := λ x, rfl,
---   simp only [bind],
---   unfold_projs,
---   unfold zip_with on_finset,
 | x y f := begin
   show finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
         (λ a, (x.space a + y.space a) • f a)
