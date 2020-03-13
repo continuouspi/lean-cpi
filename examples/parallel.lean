@@ -1,12 +1,11 @@
 import data.cpi.semantics.basic
-import data.cpi.semantics.with_exact data.cpi.semantics.with_normalise
+-- import data.cpi.semantics.with_exact
+import data.cpi.semantics.with_normalise
 
 open cpi
 open cpi.species
 
--- Switch to "normalise" to use normalisation instead of equivalence.add_key_equivalence
--- Only supports immediate vector spaces, as concretions are broken.
-open_locale exact
+open_locale normalise
 
 def aff : affinity ℚ :=
   { arity := 2,
@@ -90,9 +89,7 @@ def AB.transitions : fintype (transition.transition_from ℓ AB) :=
 
     end }
 
-#check true
-
-def conc := (function.embedding.refl ℚ)
+def conc := function.embedding.refl ℚ
 
 /-- ∂(c•(A|B)) -/
 def potential_species : interaction_space ℚ ℚ ω Γ
@@ -132,4 +129,4 @@ def immediate_B : process_space ℚ ℚ ω Γ
 def immediate_proc : process_space ℚ ℚ ω Γ
   := immediate_A + immediate_B + (potential_A ⊘[conc] potential_B)
 
-#eval potential_species
+#eval immediate_proc
