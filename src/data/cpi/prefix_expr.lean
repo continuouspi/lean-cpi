@@ -47,12 +47,19 @@ notation a `#` := prefix_expr.communicate a [] 0
 notation `τ@`:max k:max := prefix_expr.spontanious k
 
 namespace prefix_expr
-    /-- A wrapper for prefixed expressions, which hides the extension function.
+  /-- Convert a prefix expression to a string. Can use `repr` normally. -/
+  protected def to_string [has_repr ℍ] {Γ} : ∀ {f}, prefix_expr ℍ Γ f → string
+  | ._ (a #( b; y)) := repr a ++ "#(" ++ repr b ++ ";" ++ repr y ++ ")"
+  | ._ (τ@ k) := "τ@" ++ repr k
 
-        This is suitable for comparing prefixes. -/
-    @[nolint has_inhabited_instance]
-    inductive wrap (ℍ : Type) : context → Type
-    | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
+  instance [has_repr ℍ] {Γ f} : has_repr (prefix_expr ℍ Γ f) := ⟨ prefix_expr.to_string ⟩
+
+  /-- A wrapper for prefixed expressions, which hides the extension function.
+
+      This is suitable for comparing prefixes. -/
+  @[nolint has_inhabited_instance]
+  inductive wrap (ℍ : Type) : context → Type
+  | intro {} {Γ} {f} (π : prefix_expr ℍ Γ f) : wrap Γ
 
   section free
     /-- Determine if any variable with a given level occurs within this prefix.

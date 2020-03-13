@@ -10,6 +10,9 @@ inductive production (ℍ : Type) (ω : context) (Γ : context) : kind → Type
 | species (A : species ℍ ω Γ) : production kind.species
 | concretion {b y} (F : concretion ℍ ω Γ b y) : production kind.concretion
 
+instance production.has_repr [has_repr ℍ] {Γ k} : has_repr (production ℍ ω Γ k) :=
+  ⟨ λ x, by from production.rec_on x repr (λ _ _ x, repr x), ⟩
+
 /-- Rename a production. This just wraps renaming for species and concretions. -/
 def production.rename
   {Γ Δ} (ρ : name Γ → name Δ)

@@ -56,6 +56,9 @@ end helpers
 section group_instances
   variables (α : Type*) (β : Type*)
 
+  instance [has_repr α] [has_repr β] [has_zero β] : has_repr (fin_fn α β) :=
+    ⟨ λ x, string.intercalate "\n" ((x.support.val.map (λ a, repr (x.space a) ++ " • " ++ repr a)).sort (≤)) ⟩
+
   instance [has_zero β] : has_zero (fin_fn α β)
     := ⟨ { space := λ _, 0,
           support := finset.empty,

@@ -6,7 +6,7 @@
 
    [1]: https://leanprover.github.io/theorem_proving_in_lean/axioms_and_computation.html#quotients-/
 
-import tactic.lint tactic.basic data.quot logic.function
+import tactic.lint tactic.basic data.quot logic.function data.string.basic
 
 universe u
 
@@ -16,6 +16,9 @@ namespace upair
   /-- A pair of items, both of the same type. -/
   @[nolint has_inhabited_instance]
   protected structure pair (α : Type u) := (fst snd : α)
+
+  instance pair.has_repr (α : Type u) [has_repr α] : has_repr (upair.pair α)
+    := ⟨ λ x, repr x.1 ++ " , " ++ repr x.2 ⟩
 
   /-- Two pairs are equivalent if they are equal or equal when swapped. -/
   protected def equiv : pair α → pair α → Prop
@@ -54,6 +57,14 @@ namespace upair
 
   instance {α : Type u} [decidable_eq α] : decidable_eq (upair α)
     := quotient.decidable_eq
+
+  instance {α : Type u} [has_repr α] : has_repr (upair α) := ⟨ λ x,
+    quot.lift_on x (λ x, min (repr x) (repr { pair . fst := x.2, snd := x.1}))
+      (λ ⟨ a, b ⟩ ⟨ a', b' ⟩ r, begin
+        simp only [],
+        rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+        from rfl, from min_comm _ _,
+      end)⟩
 
   protected lemma eq {α : Type} (a b : α) : upair.mk a b = upair.mk b a
     := quot.sound (or.inr ⟨rfl, rfl⟩)

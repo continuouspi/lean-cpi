@@ -32,6 +32,14 @@ notation `τ@'`:max k:max  := label.spontanious k
 notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity (upair.mk a b)
 notation `τ⟨ `:max p ` ⟩`:max := label.of_affinity p
 
+/-- Convert a label to a string. Can use `repr` normally. -/
+protected def label.to_string [has_repr ℍ] : ∀ {k}, label ℍ ω k → string
+| ._ (# a) := "#" ++ repr a
+| ._ (τ@' k) := "τ@" ++ repr k
+| ._ (τ⟨ p ⟩) := "τ⟨ " ++ repr p ++ " ⟩"
+
+instance label.has_repr [has_repr ℍ] {k} : has_repr (label ℍ ω k) := ⟨ label.to_string ⟩
+
 /-- Rename all names within a label. -/
 def label.rename {Γ Δ} (ρ : name Γ → name Δ) : ∀ {k}, label ℍ Γ k → label ℍ Δ k
 | ._ #a := # (ρ a)

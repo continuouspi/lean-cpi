@@ -376,6 +376,10 @@ namespace normalise
     ⟨ equiv, ⟨ @equiv.refl ℍ ω Γ, @equiv.symm ℍ ω Γ, @equiv.trans ℍ ω Γ ⟩ ⟩
 
   localized "attribute [instance] cpi.species.normalise.setoid" in normalise
+
+  instance species'.has_repr [has_repr ℍ] {Γ} : has_repr (species' ℍ ω Γ)
+    := ⟨ λ x, quot.lift_on x (λ x, repr (normalise x))
+          (λ a b r, by { simp only [], from congr_arg repr r }) ⟩
 end normalise
 
 end species

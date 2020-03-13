@@ -74,6 +74,19 @@ def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.app
 
 infixr ` ⬝ ` := choices.mk_one
 
+/-- Convert a species to a string. Can use `repr` normally. -/
+protected def to_string [has_repr ℍ] : ∀ {k Γ}, whole ℍ ω k Γ → string
+| k ._ nil := "0"
+| k ._ (apply D as) := "D(?)"
+| k ._ (Σ# As) := "Σ#[" ++ to_string As ++ "]"
+| k ._ (A' |ₛ B') := "(" ++ to_string A' ++ " | " ++ to_string B' ++ ")"
+| k ._ (ν(M) a) := "(ν ?)(" ++ to_string a ++ ")"
+| k ._ whole.empty := "∅"
+| k ._ (whole.cons π A' whole.empty) := repr π ++ "." ++ to_string A'
+| k ._ (whole.cons π A' (whole.cons π' B' As)) := repr π ++ "." ++ to_string A' ++ " + " ++ to_string (whole.cons π' B' As)
+
+instance [has_repr ℍ] {Γ} : has_repr (species ℍ ω Γ) := ⟨ species.to_string ⟩
+
 section free
   /-- Determine if any variable with a given level occurs within this species. -/
   def free_in {Γ} {k} (l : level Γ) (A : whole ℍ ω k Γ) : Prop := begin

@@ -29,6 +29,15 @@ variables {ℍ : Type} {ω : context}
 
 namespace concretion
 
+/-- Convert a concretion to a string. Can use `repr` normally. -/
+protected def to_string [has_repr ℍ]: ∀ {Γ} {b y} , concretion ℍ ω Γ b y → string
+| ._ ._ ._ (concretion.apply bs y A') := "(" ++ repr bs.val ++ ";" ++ repr y ++ ")" ++ repr A'
+| ._ ._ ._ (F |₁ A') := "(" ++ to_string F ++ " | " ++ repr A' ++ ")"
+| ._ ._ ._ (A' |₂ F) := "(" ++ repr A' ++ " | " ++ to_string F ++ ")"
+| ._ ._ ._ (ν'(M) A') := "(ν ?)(" ++ to_string A' ++ ")"
+
+instance [has_repr ℍ] {b y} {Γ} : has_repr (concretion ℍ ω b y Γ) := ⟨ concretion.to_string ⟩
+
 section free
   /-- Determine whether a level occurs within a concretion. -/
   def free_in : ∀ {Γ} {b y} (l : level Γ) (F : concretion ℍ ω Γ b y), Prop

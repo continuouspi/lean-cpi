@@ -276,6 +276,13 @@ def prime_decompose' {Γ} : species' ℍ ω Γ → multiset (prime_species' ℍ 
   from equiv.normalise_to equi
 end
 
+lemma prime_decompose.nil {Γ} : prime_decompose (@nil ℍ ω Γ) = [] := begin
+  simp only [prime_decompose],
+  rcases h : normalise_to nil with ⟨ xs, eql, atom ⟩,
+  simp only [normalise_to] at h, cases h, clear h,
+  from rfl,
+end
+
 lemma normalise_to.parallel {Γ} (A B : species ℍ ω Γ)
   : (normalise_to (A |ₛ B)).fst = (normalise_to A).fst ++ (normalise_to B).fst := begin
   unfold normalise_to,
@@ -309,6 +316,11 @@ lemma prime_decompose.parallel {Γ} (A B : species ℍ ω Γ)
     from ⟨ rfl, ih _ _ _ rfl ⟩,
   }
 end
+
+lemma prime_decompose'.nil {Γ} : prime_decompose' ⟦ @nil ℍ ω Γ ⟧ = [] := quot.sound(begin
+  simp only [prime_decompose.nil],
+  from refl _,
+end)
 
 lemma prime_decompose'.parallel {Γ} (A B : species ℍ ω Γ)
   : prime_decompose' ⟦A |ₛ B⟧ = prime_decompose' ⟦ A ⟧ + prime_decompose' ⟦ B ⟧

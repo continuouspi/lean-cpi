@@ -45,6 +45,9 @@ def prime_species' (ℍ : Type) (ω Γ : context) [r : setoid (species ℍ ω Γ
 def prime_species.unwrap : prime_species' ℍ ω Γ → species' ℍ ω Γ
 | A := quot.lift_on A (λ B, ⟦ B.val ⟧) (λ _ _ eq, quot.sound eq)
 
+instance prime_species'.has_repr [has_repr (species' ℍ ω Γ)] : has_repr (prime_species' ℍ ω Γ)
+  := ⟨ λ x, repr (prime_species.unwrap x) ⟩
+
 lemma prime_species.unwrap.inj :
   ∀ (A B : prime_species' ℍ ω Γ), prime_species.unwrap A = prime_species.unwrap B
   → A = B

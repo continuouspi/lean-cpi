@@ -99,12 +99,6 @@ def cpi_equiv_prop.transition_from_iso {ℍ : Type} {ω Γ : context} [r : cpi_e
       rw (iso k α).1.right_inv p
     end }
 
-/-- A vector-space representation of processes, mapping prime species into their
-    concentrations. -/
-@[nolint has_inhabited_instance]
-def process_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [cpi_equiv ℍ ω]
-  := fin_fn (prime_species' ℍ ω Γ) ℂ
-
 instance species'.decidable_eq {ℍ ω Γ} [r : cpi_equiv ℍ ω] : decidable_eq (species' ℍ ω Γ)
   := @quotient.decidable_eq _ _ (cpi_equiv.decide_species Γ)
 
@@ -128,10 +122,18 @@ instance concretion_wrap.decidable_eq {ℍ ω Γ} [cpi_equiv ℍ ω] :
                × (Σ' (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
 | ⟨ A, ⟨ a, x, F ⟩, e ⟩ ⟨ B, ⟨ b, y, G ⟩, f ⟩ := by apply_instance
 
+/-- A vector-space representation of processes, mapping prime species into their
+    concentrations. -/
+@[nolint has_inhabited_instance]
+def process_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [cpi_equiv ℍ ω]
+  := fin_fn (prime_species' ℍ ω Γ) ℂ
+
 variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv ℍ ω] [decidable_eq ℂ]
 
 instance process_space.add_comm_monoid {Γ} : add_comm_group (process_space ℂ ℍ ω Γ) := fin_fn.add_comm_group _ ℂ
 instance process_space.semimodule {Γ} : semimodule ℂ (process_space ℂ ℍ ω Γ) := fin_fn.semimodule _ ℂ
+instance process_space.has_repr {ℂ} [add_monoid ℂ] [has_repr ℂ] {Γ} [has_repr (species' ℍ ω Γ)]
+  : has_repr (process_space ℂ ℍ ω Γ) := fin_fn.has_repr _ _
 
 /-- Convert a species into a process space with a unit vector for each element
     of the prime decomposition.

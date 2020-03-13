@@ -192,7 +192,7 @@ namespace transition
 
 /-- A transition from a specific species, to any production. -/
 @[nolint has_inhabited_instance]
-def transition_from {ω Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) : Type
+def transition_from {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) : Type
   := (Σ' k (α : label ℍ Γ k) E, A [ℓ, α]⟶ E)
 
 /-- Construct a new transition_from, wrapping a transition. -/
@@ -209,6 +209,10 @@ def transition_from.mk_with
     {Γ} (ℓ : lookup ℍ ω Γ) {A : species ℍ ω Γ} {k} {α : label ℍ Γ k} {E} (t : A [ℓ, α]⟶ E)
   : transition_from ℓ A
   := ⟨ k, α, E, t ⟩
+
+instance transition_from.has_repr [has_repr ℍ] {Γ} {ℓ : lookup ℍ ω Γ} {A : species ℍ ω Γ}
+  : has_repr (transition.transition_from ℓ A)
+  := ⟨ λ ⟨ k, α, E, t ⟩, repr A ++ " [" ++ repr α ++ "]⟶ " ++ repr E ⟩
 
 end transition
 
