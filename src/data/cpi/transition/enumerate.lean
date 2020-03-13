@@ -1,10 +1,9 @@
-import data.cpi.transition.basic
+import data.cpi.transition.basic data.multiset2
 
 namespace cpi
 namespace transition
 
 variables {ℍ : Type} {ω : context}
-open_locale congruence
 
 /-- ξ_choice acts as an embedding. This is effectively ξ_choice.inj but
     lifted to transitions. -/
@@ -15,52 +14,97 @@ def ξ_choice.embed
   := { to_fun := λ t, transition_from.mk (ξ_choice t.2.2.2),
        inj := λ ⟨ k, α, E, t ⟩ ⟨ k', α', E', t' ⟩ eq, by { cases eq, from rfl} }
 
-/-- Temporary proof of equality of transitions. We'll show this one day. -/
-noncomputable def transition_eq {ℍ} {ω} {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) :
-  decidable_eq (transition_from ℓ A) := classical.dec_eq _
+-- /-- Temporary proof of equality of transitions. We'll show this one day. -/
+-- noncomputable def transition_eq {ℍ} {ω} {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) :
+--   decidable_eq (transition_from ℓ A) := classical.dec_eq _
 
-local attribute [instance] transition_eq
+-- local attribute [instance] transition_eq
+
+private def enumerate_choice_communicate_ts {Γ} (ℓ : lookup ℍ ω Γ) :
+  ∀ (a :  name Γ) (b : list (name Γ)) (y : ℕ)
+    (A : species ℍ ω (context.extend y Γ))
+    {As : species.choices ℍ ω Γ}
+  , fintype (transition_from ℓ (Σ# As))
+  → finset (transition_from ℓ (Σ# (whole.cons (a#(b;y)) A As)))
+| a b y A As child :=
+  finset.insert_nmem'
+    (transition_from.mk (choice₁ a b rfl y A As))
+    (finset.map (ξ_choice.embed ℓ _ A As) child.elems)
+    (λ mem, begin
+      rcases finset.mem_map.mp mem with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩,
+
+      unfold_coes at eql,
+      simp only [ξ_choice.embed, transition_from.mk] at eql,
+      unfold_projs at eql,
+      cases eql,
+    end)
+
+private def enumerate_choice_communicate {Γ} (ℓ : lookup ℍ ω Γ) :
+  ∀ (a :  name Γ) (b : list (name Γ)) (y : ℕ)
+    (A : species ℍ ω (context.extend y Γ))
+    {As : species.choices ℍ ω Γ}
+  , fintype (transition_from ℓ (Σ# As))
+  → fintype (transition_from ℓ (Σ# (whole.cons (a#(b;y)) A As)))
+| a b y A As child :=
+  { elems := enumerate_choice_communicate_ts ℓ a b y A child,
+    complete := λ x, begin
+      rcases x with ⟨ k, α, E, t ⟩,
+      cases t,
+      case ξ_choice {
+        have : transition_from.mk t_a ∈ child.elems := @fintype.complete _ child _,
+        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ (a#(b;y)) A As) this,
+        from finset.mem_insert_nmem_of_mem this _,
+      },
+      case choice₁ {
+        subst t_b_len,
+        from finset.mem_insert_nmem_self _
+      },
+    end }
+
+
+private def enumerate_choice_spontanious_ts {Γ} (ℓ : lookup ℍ ω Γ) :
+  ∀ (k : ℍ) (A : species ℍ ω Γ) {As : species.choices ℍ ω Γ}
+  , fintype (transition_from ℓ (Σ# As))
+  → finset (transition_from ℓ (Σ# (whole.cons (τ@k) A As)))
+| k A As child :=
+  finset.insert_nmem'
+    (transition_from.mk (choice₂ k A As))
+    (finset.map (ξ_choice.embed ℓ _ A As) child.elems)
+    (λ mem, begin
+      rcases finset.mem_map.mp mem with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩,
+
+      unfold_coes at eql,
+      simp only [ξ_choice.embed, transition_from.mk] at eql,
+      unfold_projs at eql,
+      cases eql,
+    end)
+
+private def enumerate_choice_spontanious {Γ} (ℓ : lookup ℍ ω Γ) :
+  ∀ (k : ℍ) (A : species ℍ ω Γ) {As : species.choices ℍ ω Γ}
+  , fintype (transition_from ℓ (Σ# As))
+  → fintype (transition_from ℓ (Σ# (whole.cons (τ@k) A As)))
+| k A As child :=
+  { elems := enumerate_choice_spontanious_ts ℓ k A child,
+    complete := λ x, begin
+      rcases x with ⟨ k', α, E, t ⟩,
+      cases t,
+      case ξ_choice {
+        have : transition_from.mk t_a ∈ child.elems := @fintype.complete _ child _,
+        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ (τ@k) A As) this,
+        from finset.mem_insert_nmem_of_mem this _,
+      },
+      case choice₂ { from finset.mem_insert_nmem_self _ },
+    end }
 
 /-- Show that the available transitions from a choices species is finite and
     thus enumerable.-/
-noncomputable def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
+def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
   ∀ (As : species.choices ℍ ω Γ), fintype (transition_from ℓ (Σ# As))
 | species.whole.empty :=
   { elems := finset.empty,
     complete := λ ⟨ k, α, E, t ⟩, by cases t }
-| (species.whole.cons (a#(b; y)) A As) :=
-  { elems :=
-      insert (transition_from.mk (choice₁ a b rfl y A As))
-             (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate_choices As).elems)),
-    complete := λ x, begin
-      rcases x with ⟨ k, α, E, t ⟩,
-      cases t,
-      case ξ_choice {
-        have : transition_from.mk t_a ∈ (enumerate_choices As).elems
-          := @fintype.complete _ (enumerate_choices As) _,
-        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ _ A As) this,
-        from finset.mem_insert_of_mem this,
-      },
-      case choice₁ {
-        subst t_b_len,
-        from finset.mem_insert_self _ _
-      },
-    end }
-| (species.whole.cons (τ@k) A As) :=
-  { elems :=
-      insert (transition_from.mk (choice₂ k A As))
-             (finset.map (ξ_choice.embed ℓ _ A As) ((enumerate_choices As).elems)),
-    complete := λ x, begin
-      rcases x with ⟨ k, α, E, t ⟩,
-      cases t,
-      case ξ_choice {
-        have : transition_from.mk t_a ∈ (enumerate_choices As).elems
-          := @fintype.complete _ (enumerate_choices As) _,
-        have this := finset.mem_map_of_mem (ξ_choice.embed ℓ _ A As) this,
-        from finset.mem_insert_of_mem this,
-      },
-      case choice₂ { from finset.mem_insert_self _ _ },
-    end }
+| (species.whole.cons (a#(b; y)) A As) := enumerate_choice_communicate ℓ a b y A (enumerate_choices As)
+| (species.whole.cons (τ@k) A As) := enumerate_choice_spontanious ℓ k A (enumerate_choices As)
 
 /-- defn lifted to transition_from.
 

@@ -34,32 +34,8 @@ def b : name Γ := name.zero ⟨ 1, lt_add_one 1 ⟩
 @[pattern] def B : species ℚ ω Γ := b # ⬝ nil
 @[pattern] def AB : species ℚ ω Γ := A |ₛ B
 
-def A.transitions : fintype (transition.transition_from ℓ A) :=
-  { elems := finset.singleton (⟨ _, # a, _, transition.choice₁ a list.nil rfl 0 _ _ ⟩),
-    complete := λ ⟨ k, α, E, t ⟩, begin
-      cases t,
-      case transition.ξ_choice : t { cases t },
-      subst t_b_len,
-      from finset.mem_singleton_self _,
-    end }
-
-
-def B.transitions : fintype (transition.transition_from ℓ B) :=
-  { elems := finset.singleton (⟨ _, # b, _, transition.choice₁ b list.nil rfl 0 _ _ ⟩),
-    complete := λ ⟨ k, α, E, t ⟩, begin
-      cases t,
-      case transition.ξ_choice : t { cases t },
-      subst t_b_len,
-      from finset.mem_singleton_self _,
-    end }
-
-
-def finset.insert_nmem {α : Type*} : ∀ {xs : finset α} {a : α}, a ∉ xs → finset α
-| xs a nmem := ⟨ a :: xs.val, multiset.nodup_cons_of_nodup nmem xs.nodup ⟩
-
-def finset.insert_nmem' {α : Type*} (a : α) (xs : finset α) : a ∉ xs → finset α
-  := finset.insert_nmem
-
+def A.transitions : fintype (transition.transition_from ℓ A) := transition.enumerate_choices ℓ _
+def B.transitions : fintype (transition.transition_from ℓ B) := transition.enumerate_choices ℓ _
 
 def AB.transition_set : finset (transition.transition_from ℓ AB) :=
 finset.insert_nmem'
@@ -127,6 +103,8 @@ def immediate_species : process_space ℚ ℚ ω Γ
   := finset.sum AB.transitions.elems (immediate_process_space conc)
    + (½ : ℚ) • (potential_species ⊘[conc] potential_species)
 
+#eval immediate_species
+
 /- -------------------------------------------- -/
 
 /-- ∂(c•A) -/
@@ -137,7 +115,7 @@ def potential_A : interaction_space ℚ ℚ ω Γ
 def potential_B : interaction_space ℚ ℚ ω Γ
   := finset.sum B.transitions.elems potential_interaction_space
 
-/-- ∂(c•A || c•B)) -/
+/-- ∂(c•A || c•B) -/
 def potential_proc : interaction_space ℚ ℚ ω Γ := potential_A + potential_B
 
 /-- d(c•A)/dt -/
@@ -150,9 +128,8 @@ def immediate_B : process_space ℚ ℚ ω Γ
   := finset.sum B.transitions.elems (immediate_process_space conc)
    + (½ : ℚ) • (potential_B ⊘[conc] potential_B)
 
-/-- d(c•A)/dt -/
+/-- d(c•A || c•B)/dt -/
 def immediate_proc : process_space ℚ ℚ ω Γ
   := immediate_A + immediate_B + (potential_A ⊘[conc] potential_B)
 
-#eval immediate_species
-#eval immediate_proc
+#eval potential_species
