@@ -2,6 +2,24 @@ import data.cpi.semantics.basic
 
 namespace cpi
 
+/-
+ The proof that "exenteded process equivalence (i.e. the additional c∘(A|B) ≡⁺ c∘A|c∘B rule).
+ This is effectively split into three parts:
+
+  - Firstly, we show an ismomorphism between transitions from (A|B), and
+    transitions from A, from B, and the (com₁ intersection of the two).
+
+    As part of this, we show that the two sets have equivalence semantics.
+
+  - We then show that finset.sum f (all A|B) = finset.sum f (all A + all B)
+    (or some variation of) where f is the function to compute the
+    interaction/process space.
+
+  - These lemmas are plugged into the join case for induction over
+    `process.equiv2` - the res of those proofs is largely the same as what is
+    found in the main equivalence.
+-/
+
 variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω] [add_monoid ℍ] [decidable_eq ℂ]
   {M : affinity ℍ}
   {ℓ : lookup ℍ ω (context.extend M.arity context.nil)}
@@ -44,6 +62,14 @@ private def par_of.potential_interaction_space {A B : species ℍ ω (context.ex
   := sum.elim
       (sum.elim potential_interaction_space potential_interaction_space)
       (potential_interaction_space ∘ com₁_of.to_transition)
+
+/-- `immediate_process_space` lifted to par_of. -/
+@[pattern]
+private def par_of.immediate_process_space {A B : species ℍ ω (context.extend M.arity context.nil)}
+  : par_of ℓ A B → process_space ℂ ℍ ω (context.extend M.arity context.nil)
+  := sum.elim
+      (sum.elim (immediate_process_space conc.to_embed) (immediate_process_space conc.to_embed))
+      (immediate_process_space conc.to_embed ∘ com₁_of.to_transition)
 
 private def par_of.of_transition {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ} :
   ∀ {k} {α : label ℍ Γ k} {E}, (A |ₛ B) [ℓ, α]⟶ E → par_of ℓ A B
@@ -323,10 +349,12 @@ lemma process_immediate.equiv2
 end
 
 private lemma par_of.immediate_eq {A B : species ℍ ω (context.extend M.arity context.nil)} :
-  ∀ (x : par_of ℓ A B)
-  , immediate_process_space conc.to_embed (par_of.to_transition x)
+  ∀ (t : transition.transition_from ℓ (A |ₛ B))
+  , immediate_process_space conc.to_embed t
   = (sum.elim (sum.elim (immediate_process_space conc.to_embed) (immediate_process_space conc.to_embed))
-          ((immediate_process_space conc.to_embed) ∘ com₁_of.to_transition)) x
+          ((immediate_process_space conc.to_embed) ∘ com₁_of.to_transition)) (par_of.of_transition_from t)
+  := sorry
+/-
 | (sum.inl (sum.inl ⟨ k, α, E, t ⟩)) := begin
   cases E,
   case production.concretion : b y E { cases α, from rfl },
@@ -362,6 +390,57 @@ end
   }
 end
 | (sum.inr t) := rfl
+-/
+
+lemma process_immediate.split'
+
+  (A B : species ℍ ω (context.extend M.arity context.nil))
+: finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) (immediate_process_space conc.to_embed)
+= finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed)
++ finset.sum (fintype.elems (transition.transition_from ℓ B)) (immediate_process_space conc.to_embed)
+:=
+  calc  finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) (immediate_process_space conc.to_embed)
+
+      = finset.sum
+          (finset.image sum.inl
+              (finset.image sum.inl (fintype.elems (transition.transition_from ℓ A)) ∪
+                  finset.image sum.inr (fintype.elems (transition.transition_from ℓ B))) ∪
+            finset.image sum.inr (fintype.elems (com₁_of ℓ A B)))
+          (λ (t : (transition.transition_from ℓ A ⊕ transition.transition_from ℓ B) ⊕ com₁_of ℓ A B),
+            sum.elim (sum.elim (immediate_process_space conc.to_embed) (immediate_process_space conc.to_embed))
+                (immediate_process_space conc.to_embed ∘ com₁_of.to_transition) t)
+      : finset.sum_iso
+          (λ t, immediate_process_space conc.to_embed t)
+          (λ t, par_of.immediate_process_space conc t)
+          (par_of.iso ℓ A B)
+          (λ t, par_of.immediate_eq conc t)
+          (fintype.elems _)
+          ( finset.image sum.inl
+              ( finset.image sum.inl (fintype.elems (transition.transition_from ℓ A))
+              ∪ finset.image sum.inr (fintype.elems (transition.transition_from ℓ B)) )
+            ∪ finset.image sum.inr (fintype.elems (com₁_of ℓ A B)) )
+          (λ x _, par_of.complete ℓ A B _)
+          (λ x _, fintype.complete _)
+
+  ... = finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed)
+      + finset.sum (fintype.elems (transition.transition_from ℓ B)) (immediate_process_space conc.to_embed)
+      + finset.sum (fintype.elems (com₁_of ℓ A B))
+          (immediate_process_space conc.to_embed ∘ com₁_of.to_transition)
+        : by rw [ ← finset.sum_sum_elim, ← finset.sum_sum_elim]
+
+  ... = finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed)
+      + finset.sum (fintype.elems (transition.transition_from ℓ B)) (immediate_process_space conc.to_embed)
+        : begin
+          have : finset.sum (fintype.elems (com₁_of ℓ A B)) (immediate_process_space conc.to_embed ∘ com₁_of.to_transition)
+               = (0 : process_space ℂ ℍ ω _)
+              := finset.sum_eq_zero (λ t _, begin
+                rcases t with ⟨ x, y, a, b, F, G, tf, tg ⟩,
+                simp only [function.comp, com₁_of.to_transition, immediate_process_space],
+
+                sorry,
+              end),
+          rw [this, add_zero],
+        end
 
 end cpi
 

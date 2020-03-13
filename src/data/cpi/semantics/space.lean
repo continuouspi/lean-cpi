@@ -181,6 +181,15 @@ def interaction_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [cpi_e
 instance interaction_space.add_comm_monoid {Γ} : add_comm_group (interaction_space ℂ ℍ ω Γ) := fin_fn.add_comm_group _ ℂ
 instance interaction_space.semimodule {Γ} : semimodule ℂ (interaction_space ℂ ℍ ω Γ) := fin_fn.semimodule _ ℂ
 
+instance interaction_space.has_repr {ℂ} [add_monoid ℂ] [has_repr ℂ] {Γ}
+  [has_repr (species' ℍ ω Γ)] [∀ b y, has_repr (concretion' ℍ ω Γ b y)]
+  : has_repr (interaction_space ℂ ℍ ω Γ) := @fin_fn.has_repr
+    ( species' ℍ ω Γ
+      × (Σ' (b y), concretion' ℍ ω Γ b y)
+      × name Γ) ℂ
+    ⟨ λ ⟨ A, ⟨ _, _, F ⟩, a ⟩, "[" ++ repr A ++ "], [" ++ repr F ++ "], " ++ repr a ⟩
+    _ _
+
 /-- Convert a process into a process space. -/
 def process.to_space {Γ}
   : process ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ

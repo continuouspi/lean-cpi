@@ -439,6 +439,27 @@ namespace parallel
     },
     repeat { intros, from true.intro },
   end
+
+  /-- to_list should contian no parallel elements. -/
+  lemma to_list_nonparallel : ∀ {Γ} (A B₁ B₂  : species ℍ ω Γ), (B₁ |ₛ B₂) ∉ to_list A
+  | Γ nil B₁ B₂ mem := by { unfold to_list at mem, cases mem }
+  | Γ (A |ₛ B) B₁ B₂ mem := begin
+    unfold to_list at mem,
+    cases list.mem_append.mp mem;
+    from to_list_nonparallel _ B₁ B₂ h,
+  end
+  | Γ (apply D as) B₁ B₂ mem := begin
+    unfold to_list at mem, cases mem,
+    contradiction, from mem,
+  end
+  | Γ (Σ# As) B₁ B₂ mem := begin
+    unfold to_list at mem, cases mem,
+    contradiction, from mem,
+  end
+  | Γ (ν(M) A) B₁ B₂ mem := begin
+    unfold to_list at mem, cases mem,
+    contradiction, from mem,
+  end
 end parallel
 
 end species
