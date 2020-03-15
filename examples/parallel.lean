@@ -35,59 +35,8 @@ def b : name Γ := name.zero ⟨ 1, lt_add_one 1 ⟩
 
 def A.transitions : fintype (transition.transition_from ℓ A) := transition.enumerate_choices ℓ _
 def B.transitions : fintype (transition.transition_from ℓ B) := transition.enumerate_choices ℓ _
-
-def AB.transition_set : finset (transition.transition_from ℓ AB) :=
-finset.insert_nmem'
-  ⟨ _, #a, _, transition.parL_concretion B (transition.choice₁ a list.nil rfl 0 _ _) ⟩
-  (finset.insert_nmem'
-    ⟨ _, #b, _, transition.parR_concretion A (transition.choice₁ b list.nil rfl 0 _ _) ⟩
-    (finset.singleton ⟨ _, τ⟨ a, b ⟩, _,
-      transition.com₁
-      (transition.choice₁ a list.nil rfl 0 _ _)
-      (transition.choice₁ b list.nil rfl 0 _ _) ⟩)
-    (finset.not_mem_singleton.mpr (λ x, by cases x))
-  ) (λ mem, begin
-    simp only [finset.insert_nmem', finset.insert_nmem, finset.mem_def] at mem,
-    cases multiset.mem_cons.mp mem,
-    case or.inl { cases h },
-    cases finset.mem_singleton.mp h,
-  end)
-
-def AB.transitions : fintype (transition.transition_from ℓ AB) :=
-  { elems := AB.transition_set,
-    complete := λ ⟨ k, α, E, t ⟩, begin
-      cases t,
-      case transition.parL_species : α E t { cases t, cases t_a },
-      case transition.parR_species : α E t { cases t, cases t_a },
-
-      case transition.parL_concretion : α b y E t {
-        cases t,
-        case transition.ξ_choice : t { cases t },
-        subst t_b_len,
-
-        simp only [AB.transition_set, finset.insert_nmem', finset.insert_nmem, finset.mem_def],
-        from multiset.mem_cons_self _ _,
-      },
-
-      case transition.parR_concretion : α b y E t {
-        cases t,
-        case transition.ξ_choice : t { cases t },
-        subst t_b_len,
-
-        simp only [AB.transition_set, finset.insert_nmem', finset.insert_nmem, finset.mem_def],
-        from multiset.mem_cons_of_mem (multiset.mem_cons_self _ _),
-      },
-
-      case transition.com₁ : x y a b F G tf tg {
-        simp only [AB.transition_set, finset.insert_nmem', finset.insert_nmem, finset.mem_def],
-        refine multiset.mem_cons_of_mem (multiset.mem_cons_of_mem (finset.mem_singleton.mpr _)),
-
-        cases tf, case transition.ξ_choice : t { cases t }, subst tf_b_len,
-        cases tg, case transition.ξ_choice : t { cases t }, cases tg_b_len,
-        from rfl,
-      },
-
-    end }
+def AB.transitions : fintype (transition.transition_from ℓ AB)
+  := transition.enumerate_parallel A.transitions B.transitions
 
 def conc := function.embedding.refl ℚ
 

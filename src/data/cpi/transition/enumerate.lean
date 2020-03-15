@@ -202,7 +202,7 @@ def com₁.of_compatible {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
 | ⟨ ⟨ ⟨ _, l, @production.concretion _ _ _ a x F, t ⟩,
      ⟨ _, l', @production.concretion _ _ _ b y G, t' ⟩ ⟩, p ⟩ := begin
   cases l with _ a, cases l' with _ b, rcases p with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-  refine ⟨ _, _, _, com₁ t t' ⟩,
+  refine ⟨ _, _, _, com₁ rfl t t' ⟩,
 end
 | ⟨ ⟨ ⟨ _, l, production.concretion F, t ⟩, ⟨ _, l', production.species G, t' ⟩ ⟩, p ⟩ := false.elim p
 | ⟨ ⟨ ⟨ _, l, production.species F, t ⟩, ⟨ _, l', production.concretion G, t' ⟩ ⟩, p ⟩ := false.elim p
@@ -213,12 +213,48 @@ end
     psuedo_apply F G = pseudo_apply F' G' -> F = F' ∧ G = G' -/
 axiom com₁.of_compatible.inj {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
   : function.injective (com₁.of_compatible ℓ A B)
+/-
+| ⟨ ⟨ ⟨ k₁, α₁, E₁, t₁ ⟩, ⟨ k₁', α₁', E₁', t₁' ⟩ ⟩, is₁ ⟩
+  ⟨ ⟨ ⟨ k₂, α₂, E₂, t₂ ⟩, ⟨ k₂', α₂', E₂', t₂' ⟩ ⟩, is₂ ⟩ eql := begin
+  cases E₁; cases E₁'; try { unfold com₁.is_compatible at is₁, contradiction },
+  rcases is₁ with ⟨ l, r ⟩, subst l, subst r, cases α₁, cases α₁',
+
+  cases E₂; cases E₂'; try { unfold com₁.is_compatible at is₂, contradiction },
+  rcases is₂ with ⟨ l, r ⟩, subst l, subst r, cases α₂, cases α₂',
+
+  simp only [com₁.of_compatible] at eql,
+end
+-/
 
 /-- Convert a compatible pair of transitions to a com₁ transition. -/
 def com₁.embed {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
   : com₁.compatible ℓ A B ↪ transition.transition_from ℓ (A |ₛ B)
   := ⟨ com₁.of_compatible ℓ A B, com₁.of_compatible.inj A B ⟩
-/-
+
+private lemma com₁.impossible_l {Γ}
+    (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ) {b y}
+    {F : concretion ℍ ω Γ b y} {G : concretion ℍ ω Γ y b}
+  : ∀ {a₁ a₂} {C FG : species ℍ ω Γ}
+      (t : A [ℓ, τ⟨ a₁, a₂ ⟩]⟶ (production.species C))
+      (t₁ : A [ℓ, #a₁]⟶ (production.concretion F))
+      (t₂ : B [ℓ, #a₂]⟶ (production.concretion G))
+      (h : FG = concretion.pseudo_apply F G)
+    , (C |ₛ B) = FG
+    → ¬ (parL_species B t == com₁ h t₁ t₂)
+| a₁ a₂ C FG t t₁ t₂ h cfg eql := by { subst cfg, cases (eq_of_heq eql) }
+
+private lemma com₁.impossible_r {Γ}
+    (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ) {b y}
+    {F : concretion ℍ ω Γ b y} {G : concretion ℍ ω Γ y b}
+  : ∀ {a₁ a₂} {C FG : species ℍ ω Γ}
+      (t : B [ℓ, τ⟨ a₁, a₂ ⟩]⟶ (production.species C))
+      (t₁ : A [ℓ, #a₁]⟶ (production.concretion F))
+      (t₂ : B [ℓ, #a₂]⟶ (production.concretion G))
+      (h : FG = concretion.pseudo_apply F G)
+    , (A |ₛ C) = FG
+    → ¬ (parR_species A t == com₁ h t₁ t₂)
+| a₁ a₂ C FG t t₁ t₂ h cfg eql := by { subst cfg, cases (eq_of_heq eql) }
+
 private def enumerate_parallel_ts {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
   : fintype (transition.transition_from ℓ A)
   → fintype (transition.transition_from ℓ B)
@@ -232,27 +268,97 @@ private def enumerate_parallel_ts {Γ} {ℓ : lookup ℍ ω Γ} (A B : species �
       (As.elems.map (parL.embed A B))
       (Bs.elems.map (parR.embed A B))
       (λ x memL memR, begin
-        sorry
-        -- rcases finset.mem_map.mp memL with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩, clear mem,
-        -- unfold_coes at eql, simp only [parL.embed] at eql, subst eql,
+        rcases finset.mem_map.mp memL with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩, clear mem,
+        unfold_coes at eql, simp only [parL.embed] at eql, subst eql,
 
-        -- rcases finset.mem_map.mp memR with ⟨ ⟨ k', α', E', t' ⟩, mem, eql ⟩, clear mem,
-        -- unfold_coes at eql, simp only [parR.embed] at eql,
+        rcases finset.mem_map.mp memR with ⟨ ⟨ k', α', E', t' ⟩, mem, eql ⟩, clear mem,
+        unfold_coes at eql, simp only [parR.embed] at eql,
 
-        -- cases E; cases E'; simp only [parL, parR] at eql; cases eql,
+        cases E; cases E'; simp only [parL, parR] at eql; cases eql,
       end))
     (λ x memL memR, begin
-      rcases finset.mem_map.mp memL with ⟨ ⟨ ⟨ ⟨ k₁, α₁, E₁, t₁ ⟩, ⟨ k₂, α₂, E₂, t₂ ⟩ ⟩, d ⟩, mem, eql ⟩, clear mem,
+      rcases finset.mem_map.mp memL with ⟨ ⟨ ⟨ ⟨ k₁, α₁, E₁, t₁ ⟩, ⟨ k₂, α₂, E₂, t₂ ⟩ ⟩, d ⟩, mem, eql ⟩, clear memL mem,
       unfold_coes at eql, simp only [com₁.embed] at eql,
       cases E₁; cases E₂; try { simpa only [com₁.is_compatible] using d },
       rcases d with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩, cases α₁, cases α₂,
       simp only [com₁.of_compatible] at eql, subst eql,
 
-      -- subst eql,
+      cases finset.mem_union_disjoint.mp memR,
+      case or.inl {
+        rcases finset.mem_map.mp h with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩, clear mem memR,
+        unfold_coes at eql, simp only [parL.embed] at eql,
+        cases E,
+        case production.species {
+          rcases psigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
+          rcases psigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
+          rcases psigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
 
-      -- rcases finset.mem_map.mp memR with ⟨ ⟨ k', α', E', t' ⟩, mem, eql ⟩, clear mem,
+          from com₁.impossible_l ℓ A B t t₁ t₂ rfl (production.species.inj eqlE) eqlT,
+        },
+        case production.concretion { cases (psigma.mk.inj eql).1 },
+      },
+      case or.inr {
+        rcases finset.mem_map.mp h with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩, clear mem memR,
+        unfold_coes at eql, simp only [parR.embed] at eql,
+        cases E,
+        case production.species {
+          rcases psigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
+          rcases psigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
+          rcases psigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
+
+          from com₁.impossible_r ℓ A B t t₁ t₂ rfl (production.species.inj eqlE) eqlT,
+        },
+        case production.concretion { cases (psigma.mk.inj eql).1 },
+      },
     end)
--/
+
+private lemma enumate_parallel_compute_l
+    {Γ ℓ} {A B : species ℍ ω Γ} {l : label ℍ Γ kind.species} {E}
+    (As : fintype (transition_from ℓ A)) (Bs : fintype (transition_from ℓ B))
+    (t : transition A ℓ l (production.species E))
+  : transition_from.mk (parL_species B t) ∈ enumerate_parallel_ts A B As Bs :=
+  let h := @fintype.complete _ As (transition_from.mk t) in
+  let g := finset.mem_map_of_mem (parL.embed A B) h in
+  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inl g)))
+
+private lemma enumate_parallel_compute_r_species
+    {Γ ℓ} {A B : species ℍ ω Γ} {l : label ℍ Γ kind.species} {E}
+    (As : fintype (transition_from ℓ A)) (Bs : fintype (transition_from ℓ B))
+    (t : transition B ℓ l (production.species E))
+  : transition_from.mk (parR_species A t) ∈ enumerate_parallel_ts A B As Bs :=
+  let h := @fintype.complete _ Bs (transition_from.mk t) in
+  let g := finset.mem_map_of_mem (parR.embed A B) h in
+  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inr g)))
+
+private lemma enumerate_parallel_complete {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
+    (As : fintype (transition.transition_from ℓ A)) (Bs : fintype (transition.transition_from ℓ B))
+  : ∀ x, x ∈ enumerate_parallel_ts A B As Bs
+| ⟨ k, α, E, parL_species _ t ⟩ := enumate_parallel_compute_l  As Bs t
+| ⟨ k, α, E, parL_concretion _ t ⟩ :=
+  let h := @fintype.complete _ As (transition_from.mk t) in
+  let g := finset.mem_map_of_mem (parL.embed A B) h in
+  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inl g)))
+| ⟨ k, α, E, parR_species _ t ⟩ := enumate_parallel_compute_r_species As Bs t
+| ⟨ k, α, E, parR_concretion _ t ⟩ :=
+  let h := @fintype.complete _ Bs (transition_from.mk t) in
+  let g := finset.mem_map_of_mem (parR.embed A B) h in
+  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inr g)))
+| ⟨ k, α, E, com₁ eql tf tg ⟩ := begin
+  subst eql,
+  let t : com₁.compatible ℓ A B
+    := ⟨ ( transition_from.mk tf, transition_from.mk tg ), ⟨ rfl, rfl ⟩ ⟩,
+  have h
+    := finset.mem_subtype.mpr
+      (finset.mem_product.mpr ⟨ @fintype.complete _ As t.val.1, @fintype.complete _ Bs t.val.2 ⟩),
+  from finset.mem_union_disjoint.mpr (or.inl (finset.mem_map_of_mem (com₁.embed ℓ A B) h)),
+end
+
+/-- The set of all transitions from a parallel composition of species -/
+def enumerate_parallel {Γ} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ}
+  : fintype (transition.transition_from ℓ A)
+  → fintype (transition.transition_from ℓ B)
+  → fintype (transition.transition_from ℓ (A |ₛ B))
+| As Bs := ⟨ enumerate_parallel_ts A B As Bs, enumerate_parallel_complete A B As Bs ⟩
 
 private def com₂.wrap {Γ} {ℓ : lookup ℍ ω Γ}
     (M : affinity ℍ) {A B : species ℍ ω (context.extend M.arity Γ)}
@@ -270,21 +376,13 @@ private def com₂.wrap {Γ} {ℓ : lookup ℍ ω Γ}
 
 /-- Show that the available transitions from a species is finite and thus
     enumerable.-/
-noncomputable constant enumerate :
+constant enumerate :
   ∀ {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
   , fintype (transition_from ℓ A)
 /-
-| Γ ℓ nil := ⟨ finset.empty, (λ ⟨ k, α, E, t ⟩, by cases t) ⟩
-| Γ ℓ (apply D as) :=
-  { elems := finset.image (defn.from ℓ D as)
-      (enumerate_choices (lookup.rename name.extend ℓ) (ℓ _ D)).elems,
-    complete := λ x, begin
-      rcases x with ⟨ k, α, E, t ⟩, cases t with α E t,
-      have : transition_from.mk t_a ∈ (enumerate_choices _ (ℓ _ D)).elems
-          := @fintype.complete _ (enumerate_choices _ (ℓ _ D)) _,
-      from finset.mem_image_of_mem (defn.from ℓ D as) this,
-    end }
-| Γ ℓ (A |ₛ B) := {!!}
+| Γ ℓ nil := enumerate_nil
+| Γ ℓ (apply D as) := enumerate_apply ℓ D as
+| Γ ℓ (A |ₛ B) := enumerate_parallel (enumerate ℓ A) (enumerate ℓ B)
 | Γ ℓ (Σ# As) := enumerate_choices ℓ As
 | Γ ℓ (ν(M) A) := {!!}
 -/
