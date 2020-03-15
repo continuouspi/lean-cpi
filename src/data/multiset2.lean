@@ -36,4 +36,14 @@ lemma finset.mem_insert_nmem_self {α : Type*} {a : α} {s : finset α} (nmem : 
 lemma finset.mem_insert_nmem_of_mem {α : Type*} {a b : α} {s : finset α} (h : a ∈ s) (nmem : b ∉ s)
   : a ∈ finset.insert_nmem nmem := multiset.mem_cons_of_mem h
 
-#lint -
+/-- Build a union of two disjoint finite sets -/
+def finset.union_disjoint {α : Type*} (xs ys : finset α)
+  : multiset.disjoint xs.val ys.val → finset α
+| disj := ⟨ xs.val + ys.val, (multiset.nodup_add_of_nodup xs.nodup ys.nodup).mpr disj ⟩
+
+lemma finset.mem_union_disjoint {α : Type*} {a : α} {xs ys : finset α}
+    {h : multiset.disjoint xs.val ys.val}
+  : a ∈ finset.union_disjoint xs ys h ↔ a ∈ xs ∨ a ∈ ys
+  := multiset.mem_add
+
+#lint-

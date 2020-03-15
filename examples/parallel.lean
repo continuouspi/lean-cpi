@@ -129,4 +129,4 @@ def immediate_B : process_space ℚ ℚ ω Γ
 def immediate_proc : process_space ℚ ℚ ω Γ
   := immediate_A + immediate_B + (potential_A ⊘[conc] potential_B)
 
-#eval immediate_proc
+#eval potential_B

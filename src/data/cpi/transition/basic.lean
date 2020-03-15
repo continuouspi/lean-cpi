@@ -74,16 +74,12 @@ inductive transition :
   → transition (ν(M) A) ℓ l (production.concretion (ν'(M) E))
 
 | defn
-    {Γ k n} {α : label ℍ (context.extend n Γ) k}
-    (ℓ : ∀ n, reference n ω → species.choices ℍ ω (context.extend n Γ))
-    {E}
+    {Γ k n} {α : label ℍ Γ k} (ℓ : lookup ℍ ω Γ)
     (D : reference n ω) (as : vector (name Γ) n)
-  : transition (Σ# (ℓ n D)) (lookup.rename name.extend ℓ) α E
-  → transition
-      (species.apply D as)
-      ℓ
-      (label.rename (name.mk_apply as) α)
-      (production.rename (name.mk_apply as) E)
+    (B : species.choices ℍ ω Γ) {E}
+  : (B = species.rename (name.mk_apply as) (ℓ n D))
+  → transition (Σ# B) ℓ α E
+  → transition (species.apply D as) ℓ α E
 
 notation A ` [`:max ℓ `, ` α `]⟶ ` E:max := transition A ℓ α E
 
@@ -127,16 +123,18 @@ namespace transition
       from com₂ M k t',
     },
 
-    case defn : Γ n k l f E D as t ih {
+    case defn : Γ n k α ℓ D as B E eql t ih {
       simp only [species.rename.invoke],
-      rw [label.rename_compose, name.mk_apply_rename, ← label.rename_compose],
-      rw [production.rename_compose, name.mk_apply_rename, ← production.rename_compose],
 
-      have t' := ih _ (name.ext ρ),
+      have t' := ih _ ρ,
       simp only [species.rename.choice] at t',
-      rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
 
-      from defn (lookup.rename ρ f) D _ t',
+      suffices : cpi.species.rename ρ B = cpi.species.rename (name.mk_apply (vector.map ρ as)) (lookup.rename ρ ℓ k D),
+        from defn (lookup.rename ρ ℓ) D (vector.map ρ as) _ this t',
+
+      simp only [lookup.rename],
+      rw [species.rename_compose, ← name.mk_apply_rename, ← species.rename_compose (name.mk_apply as) ρ],
+      from congr_arg (species.rename ρ) eql,
     },
 
     case parL_species : Γ ℓ A B l E t ih {

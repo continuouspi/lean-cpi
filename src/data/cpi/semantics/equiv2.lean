@@ -35,10 +35,13 @@ private def com₁_of {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ) :=
 private noncomputable def com₁_of.decidable_eq {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ) :
   decidable_eq (com₁_of ℓ A B) := classical.dec_eq _
 
-/-- For instance just introduce this as an axiom. Would be good to do in the future. -/
+/-- Just introduce this as an axiom. Would be good to do in the future, if we
+    ever get actual transition enumerating -/
 private constant com₁_of.fintype {Γ : context} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
   : fintype (com₁_of ℓ A B)
 
+private noncomputable def transition.transition_eq {ℍ} {ω} {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) :
+  decidable_eq (transition.transition_from ℓ A) := classical.dec_eq _
 local attribute [instance] transition.transition_eq com₁_of.decidable_eq com₁_of.fintype
 
 private def com₁_of.to_transition {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ}
@@ -83,19 +86,9 @@ private def par_of.of_transition_from {Γ : context} {ℓ : lookup ℍ ω Γ} {A
   transition.transition_from ℓ (A |ₛ B) → par_of ℓ A B
 | ⟨ _, _, _, t ⟩ := par_of.of_transition t
 
-private def par_of.parL {Γ : context} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
-  : transition.transition_from ℓ A → transition.transition_from ℓ (A |ₛ B)
-| ⟨ _, α, production.species E, t ⟩ := ⟨ _, α, _, transition.parL_species B t ⟩
-| ⟨ _, α, production.concretion E, t ⟩ := ⟨ _, α, _, transition.parL_concretion B t ⟩
-
-private def par_of.parR {Γ : context} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
-  : transition.transition_from ℓ B → transition.transition_from ℓ (A |ₛ B)
-| ⟨ _, α, production.species E, t ⟩ := ⟨ _, α, _, transition.parR_species A t ⟩
-| ⟨ _, α, production.concretion E, t ⟩ := ⟨ _, α, _, transition.parR_concretion A t ⟩
-
 private def par_of.to_transition {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ} :
   par_of ℓ A B → transition.transition_from ℓ (A |ₛ B)
-  := sum.elim (sum.elim (par_of.parL A B) (par_of.parR A B)) com₁_of.to_transition
+  := sum.elim (sum.elim (transition.parL A B) (transition.parR A B)) com₁_of.to_transition
 
 private def par_of.iso {Γ : context} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
   : transition.transition_from ℓ (A |ₛ B) ≃ par_of ℓ A B :=
@@ -104,13 +97,13 @@ private def par_of.iso {Γ : context} (ℓ : lookup ℍ ω Γ) (A B : species �
     left_inv := λ x, begin
       rcases x with ⟨ k, α, E, t ⟩,
       cases t;
-      simp only [par_of.of_transition_from, par_of.of_transition, par_of.to_transition, sum.elim, par_of.parL, par_of.parR],
+      simp only [par_of.of_transition_from, par_of.of_transition, par_of.to_transition, sum.elim, transition.parL, transition.parR],
       from rfl,
     end,
     right_inv := λ x, begin
       rcases x with ⟨ ⟨ k, α, ⟨ E | E ⟩, t ⟩ | ⟨ k, α, ⟨ E | E ⟩, t ⟩ ⟩ | ⟨ x, y, a, b, F, G, tf, tg ⟩;
       simp only [par_of.of_transition, par_of.of_transition_from, par_of.to_transition,
-                 com₁_of.to_transition, par_of.parL, par_of.parR, sum.elim],
+                 com₁_of.to_transition, transition.parL, transition.parR, sum.elim],
     end }
 
 private lemma par_of.complete {Γ : context} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
@@ -151,6 +144,46 @@ private lemma par_of.potential_eq
     from interaction_tensor.parallel₂ A B F a 1 ξ,
   }
 end
+
+
+private lemma par_of.immediate_eq {A B : species ℍ ω (context.extend M.arity context.nil)} :
+  ∀ (t : transition.transition_from ℓ (A |ₛ B))
+  , immediate_process_space conc.to_embed t
+  = (sum.elim (sum.elim (immediate_process_space conc.to_embed) (immediate_process_space conc.to_embed))
+          ((immediate_process_space conc.to_embed) ∘ com₁_of.to_transition)) (par_of.of_transition_from t)
+| (⟨ k, α, E, @transition.parL_species _ _ _ _ _ B _ C t ⟩) := begin
+  simp only [par_of.of_transition, par_of.of_transition_from, sum.elim],
+
+  have proc_eq : to_process_space ⟦C |ₛ B⟧ - to_process_space ⟦A |ₛ B⟧
+               = to_process_space ⟦C⟧ - to_process_space ⟦A⟧,
+  {
+    calc  (to_process_space ⟦C |ₛ B⟧ : process_space ℂ ℍ ω _) - to_process_space ⟦A |ₛ B⟧
+        = to_process_space ⟦C⟧ + to_process_space ⟦B⟧ - (to_process_space ⟦A⟧ + to_process_space ⟦B⟧)
+          : by rw [to_process_space.parallel C B, to_process_space.parallel A B]
+    ... = to_process_space ⟦C⟧ - to_process_space ⟦A⟧ : by abel
+  },
+
+  cases α; { simp only [immediate_process_space], rw proc_eq },
+end
+| (⟨ k, α, E, @transition.parL_concretion _ _ _ _ _ _ _ F _ C t ⟩)
+  := by { cases α, from rfl }
+| (⟨ k, α, E, @transition.parR_species _ _ _ _ _ B _ C t ⟩) := begin
+  simp only [par_of.of_transition, par_of.of_transition_from, sum.elim],
+
+  have proc_eq : to_process_space ⟦A |ₛ C⟧ - to_process_space ⟦A |ₛ B⟧
+               = to_process_space ⟦C⟧ - to_process_space ⟦B⟧,
+  {
+    calc  (to_process_space ⟦A |ₛ C⟧ : process_space ℂ ℍ ω _) - to_process_space ⟦A |ₛ B⟧
+        = to_process_space ⟦A⟧ + to_process_space ⟦C⟧ - (to_process_space ⟦A⟧ + to_process_space ⟦B⟧)
+          : by rw [to_process_space.parallel A C, to_process_space.parallel A B]
+    ... = to_process_space ⟦C⟧ - to_process_space ⟦B⟧ : by abel
+  },
+
+  cases α; { simp only [immediate_process_space], rw proc_eq },
+end
+| (⟨ k, α, E, @transition.parR_concretion _ _ _ _ _ _ _ F _ C t ⟩)
+  := by { cases α, from rfl }
+| (⟨ k, α, E, transition.com₁ tf tg ⟩) := rfl
 
 lemma process_potential.split
   (A B : species ℍ ω (context.extend (M.arity) context.nil))
@@ -348,52 +381,7 @@ lemma process_immediate.equiv2
   }
 end
 
-private lemma par_of.immediate_eq {A B : species ℍ ω (context.extend M.arity context.nil)} :
-  ∀ (t : transition.transition_from ℓ (A |ₛ B))
-  , immediate_process_space conc.to_embed t
-  = (sum.elim (sum.elim (immediate_process_space conc.to_embed) (immediate_process_space conc.to_embed))
-          ((immediate_process_space conc.to_embed) ∘ com₁_of.to_transition)) (par_of.of_transition_from t)
-  := sorry
-/-
-| (sum.inl (sum.inl ⟨ k, α, E, t ⟩)) := begin
-  cases E,
-  case production.concretion : b y E { cases α, from rfl },
-  case production.species : C {
-    simp only [par_of.to_transition, sum.elim, par_of.parL],
-    have proc_eq : to_process_space ⟦C |ₛ B⟧ - to_process_space ⟦A |ₛ B⟧
-                 = to_process_space ⟦C⟧ - to_process_space ⟦A⟧,
-    {
-      calc  (to_process_space ⟦C |ₛ B⟧ : process_space ℂ ℍ ω _) - to_process_space ⟦A |ₛ B⟧
-          = to_process_space ⟦C⟧ + to_process_space ⟦B⟧ - (to_process_space ⟦A⟧ + to_process_space ⟦B⟧)
-            : by rw [to_process_space.parallel C B, to_process_space.parallel A B]
-      ... = to_process_space ⟦C⟧ - to_process_space ⟦A⟧ : by abel
-    },
-
-    cases α; simp only [immediate_process_space, proc_eq],
-  }
-end
-| (sum.inl (sum.inr ⟨ k, α, E, t ⟩)) := begin
-  cases E,
-  case production.concretion : b y E { cases α, from rfl },
-  case production.species : C {
-    simp only [par_of.to_transition, sum.elim, par_of.parR],
-    have proc_eq : to_process_space ⟦A |ₛ C⟧ - to_process_space ⟦A |ₛ B⟧
-      = to_process_space ⟦C⟧ - to_process_space ⟦B⟧,
-    {
-      calc  (to_process_space ⟦A |ₛ C⟧ : process_space ℂ ℍ ω _) - to_process_space ⟦A |ₛ B⟧
-          = to_process_space ⟦A⟧ + to_process_space ⟦C⟧ - (to_process_space ⟦A⟧ + to_process_space ⟦B⟧)
-            : by rw [to_process_space.parallel A C, to_process_space.parallel A B]
-      ... = to_process_space ⟦C⟧ - to_process_space ⟦B⟧ : by abel
-    },
-
-    cases α; simp only [immediate_process_space, proc_eq],
-  }
-end
-| (sum.inr t) := rfl
--/
-
 lemma process_immediate.split'
-
   (A B : species ℍ ω (context.extend M.arity context.nil))
 : finset.sum (fintype.elems (transition.transition_from ℓ (A |ₛ B))) (immediate_process_space conc.to_embed)
 = finset.sum (fintype.elems (transition.transition_from ℓ A)) (immediate_process_space conc.to_embed)

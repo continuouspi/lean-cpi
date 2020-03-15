@@ -77,7 +77,8 @@ infixr ` ⬝ ` := choices.mk_one
 /-- Convert a species to a string. Can use `repr` normally. -/
 protected def to_string [has_repr ℍ] : ∀ {k Γ}, whole ℍ ω k Γ → string
 | k ._ nil := "0"
-| k ._ (apply D as) := "D(?)"
+| k ._ (apply D as) := repr D ++ "(" ++ repr as.val ++ ")"
+| k ._ (Σ# (whole.cons π A' whole.empty)) := to_string (whole.cons π A' whole.empty)
 | k ._ (Σ# As) := "Σ#[" ++ to_string As ++ "]"
 | k ._ (A' |ₛ B') := "(" ++ to_string A' ++ " | " ++ to_string B' ++ ")"
 | k ._ (ν(M) a) := "(ν ?)(" ++ to_string a ++ ")"

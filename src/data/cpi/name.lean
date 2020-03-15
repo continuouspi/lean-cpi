@@ -67,6 +67,14 @@ inductive level : context → Type
 | zero   {Γ} {n} : level (context.extend n Γ)
 | extend {Γ} {n} : level Γ → level (context.extend n Γ)
 
+
+/-- Get the variable level/depth. This doesn't have much use aside for pretty-printing. -/
+protected def reference.level : ∀ {Γ n}, reference Γ n → ℕ
+| Γ n (reference.zero _) := 0
+| Γ n (reference.extend r) := 1 + reference.level r
+
+instance {Γ n} : has_repr (reference Γ n) := ⟨ λ x, repr (reference.level x) ⟩
+
 namespace name
   /-- Get the variable index. This doesn't have much use aside for pretty-printing. -/
   protected def idx : ∀ {Γ}, name Γ → ℕ

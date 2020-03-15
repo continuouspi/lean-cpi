@@ -49,6 +49,9 @@ notation `τ@`:max k:max := prefix_expr.spontanious k
 namespace prefix_expr
   /-- Convert a prefix expression to a string. Can use `repr` normally. -/
   protected def to_string [has_repr ℍ] {Γ} : ∀ {f}, prefix_expr ℍ Γ f → string
+  | ._ (a #( []; 0)) := repr a ++ "#"
+  | ._ (a #( b; 0)) := repr a ++ "#<  " ++ repr b ++ "⟩"
+  | ._ (a #( []; y)) := repr a ++ "#(" ++ repr y ++ ")"
   | ._ (a #( b; y)) := repr a ++ "#(" ++ repr b ++ ";" ++ repr y ++ ")"
   | ._ (τ@ k) := "τ@" ++ repr k
 
