@@ -5,25 +5,38 @@ open cpi.species
 
 section
 
-parameters (k_bind k_degrade : ℝ)
+def k_bind : ℚ := 1/3
+def k_degrade : ℚ := 1/5
+def k_unbind : ℚ := 1/2
+def k_react : ℚ := 1/4
 
-def aff : affinity ℝ :=
-  { arity := 2,
+def aff : affinity ℚ :=
+  { arity := 2, -- x, y
     f := λ x y,
-      if h : (x = 0 ∧ y = 1) ∨ (y = 0 ∧ x = 1) then
-        some k_bind
-      else
-        none,
+      if (x = 0 ∧ y = 1) ∨ (y = 0 ∧ x = 1) then some k_bind
+      else none,
     symm := λ x y, begin
       by_cases x = 0 ∧ y = 1 ∨ y = 0 ∧ x = 1,
-      simp only [dif_pos h, dif_pos (or.swap h)],
-      simp only [dif_neg h, dif_neg (h ∘ or.swap)],
+      simp only [if_pos h, if_pos (or.swap h)],
+      simp only [if_neg h, if_neg (h ∘ or.swap)],
     end }
 
-def M : affinity ℝ :=
-  { arity := 3,
-    f := sorry,
-    symm := sorry }
+def M : affinity ℚ :=
+  { arity := 3, -- u, r, t
+    f := λ x y,
+      if (x = 0 ∧ y = 2) ∨ (y = 0 ∧ x = 2) then some k_unbind -- u - t
+      else if (x = 1 ∧ y = 2) ∨ (y = 1 ∧ x = 2) then some k_react -- r - t
+      else none,
+    symm := λ x y, begin
+      by_cases (x = 0 ∧ y = 2) ∨ (y = 0 ∧ x = 2),
+      simp only [if_pos h, if_pos (or.swap h)],
+      simp only [if_neg h, if_neg (h ∘ or.swap)],
+      clear h,
+
+      by_cases  (x = 1 ∧ y = 2) ∨ (y = 1 ∧ x = 2),
+      simp only [if_pos h, if_pos (or.swap h)],
+      simp only [if_neg h, if_neg (h ∘ or.swap)],
+    end }
 
 def ω : context := context.extend 0 (context.extend M.arity (context.extend 0 (context.extend 0 context.nil)))
 def Γ : context := context.extend aff.arity context.nil
@@ -49,33 +62,33 @@ local notation a ` ⬝' ` b := whole.cons a b whole.empty
 instance vector.has_empty {α : Type} : has_emptyc (vector α 0) := { emptyc := vector.nil }
 
 -- S = s(x, y). (x. S + y. (P|P'))
-def Sₛ_ : species ℝ ω Γ :=
+def Sₛ_ : species ℚ ω Γ :=
   s #( 2 ) ⬝ Σ# ( whole.cons (x #) (apply S ∅)
                 $ whole.cons (y #) (apply P₁ ∅ |ₛ apply P₂ ∅)
                 $ whole.empty )
 
-def S_ : choices ℝ ω Γ :=
+def S_ : choices ℚ ω Γ :=
   s #( 2 ) ⬝' Σ# ( whole.cons (x #) (apply S ∅)
                  ∘ whole.cons (y #) (apply P₁ ∅ |ₛ apply P₂ ∅)
                  $ whole.empty )
 
 -- E = ν(u, r, t : M) . e⟨u, r⟩. t. E)
-def Eₛ_ : species ℝ ω Γ :=
+def Eₛ_ : species ℚ ω Γ :=
   ν(M) (name.extend e #⟨ [u, r] ⟩) ⬝ (name.extend t # ⬝ apply Eₛ ∅)
 
-def E_ : choices ℝ ω (context.extend M.arity Γ) :=
+def E_ : choices ℚ ω (context.extend M.arity Γ) :=
   (name.extend e #⟨ [u, r] ⟩) ⬝' (name.extend t # ⬝ ν(M) apply E (u :: r :: t :: ∅))
 
-def S'_ : species ℝ ω Γ := Σ# S_
-def E'_ : species ℝ ω Γ := ν(M) apply E (u :: r :: t :: ∅)
+def S'_ : species ℚ ω Γ := Σ# S_
+def E'_ : species ℚ ω Γ := ν(M) apply E (u :: r :: t :: ∅)
 
 -- P = P' = τ@k_degrade. 0
-def Pₛ_ : species ℝ ω Γ := τ@k_degrade ⬝ nil
+def Pₛ_ : species ℚ ω Γ := τ@k_degrade ⬝ nil
 
-def P_ : choices ℝ ω Γ := τ@k_degrade ⬝' nil
-def P'_ : species ℝ ω Γ := Σ# P_
+def P_ : choices ℚ ω Γ := τ@k_degrade ⬝' nil
+def P'_ : species ℚ ω Γ := Σ# P_
 
-def ℓ : lookup ℝ ω Γ
+def ℓ : lookup ℚ ω Γ
 | _ S := species.rename name.extend S_
 | _ E := E_
 | _ P₁ := species.rename name.extend P_
@@ -93,47 +106,9 @@ example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
 example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
   := transition.choice₂ k_degrade whole.nil whole.empty
 
--- set_option pp.notation false
-example : E'_ [ℓ, #e]⟶ (production.concretion
-  (ν'(M)
-    #(vector.map (name.mk_apply (u :: r :: t :: ∅)) (u :: r :: vector.nil) ; 0)
-    rename (name.ext (name.mk_apply (u :: r :: t :: ∅)))
-    (rename (name.ext (name.ext name.extend))
-      (name.extend t#(0) ⬝ ν(M) whole.apply E (u :: r :: t :: ∅)))))
-:= begin
+def S'_.transitions : fintype (transition.transition_from ℓ S'_) := transition.enumerate_choices ℓ _
+def P'_.transitions : fintype (transition.transition_from ℓ P'_) := transition.enumerate_choices ℓ _
 
-  have :
-    (Σ# (rename (name.ext (@name.extend _ M.arity)) E_))
-      [ (lookup.rename name.extend ∘ lookup.rename name.extend $ ℓ)
-      , # (name.extend (name.extend e))
-      ]⟶
-      (production.concretion
-        (#((u :: r :: vector.nil) ; 0) (rename (name.ext (name.ext name.extend))
-          (name.extend t# ⬝ ν(M) whole.apply E (u :: r :: t :: ∅))))),
-  {
-    simp [E_, u, r],
-    from transition.choice₁
-      (name.extend (name.extend e))
-      (u :: r :: list.nil) rfl
-      0 (rename (name.ext (name.ext name.extend))
-          (name.extend t# ⬝ ν(M) whole.apply E (u :: r :: t :: ∅))) whole.empty,
-  },
+#eval S'_.transitions.elems
 
-  have : E'_ [ℓ, _]⟶ _,
-  {
-    refine transition.ν₁_concretion M _,
-
-    show (whole.apply E (u :: r :: t :: ∅))
-      [lookup.rename name.extend ℓ, label.rename name.extend (# e)]⟶ _,
-    have h := transition.defn (lookup.rename name.extend ℓ) E (u :: r :: t :: ∅) _,
-
-    show (Σ# lookup.rename name.extend ℓ (M.arity) E)
-      [lookup.rename name.extend (lookup.rename name.extend ℓ), _]⟶ _,
-    from this,
-
-    simp [name.mk_apply, label.rename, production.rename, concretion.rename] at h,
-    from h,
-  },
-  from this,
-end
 end
