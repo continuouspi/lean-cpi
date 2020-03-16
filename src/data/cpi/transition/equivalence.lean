@@ -15,25 +15,32 @@ private def no_rename_zero :
       (λ ⟨ a₂, b₂ ⟩ eq, by { cases quotient.exact eq; cases h; contradiction })
       (λ _ _ _, rfl)
 
+private def on_parallel_assoc₁_left {Γ ℓ} {A B C : species ℍ ω Γ} :
+  ∀ {α : label ℍ Γ kind.species} {E : species ℍ ω Γ}
+  , (A |ₛ B) [ℓ, α]⟶ (production.species E)
+  → Σ' E' (eq : production.species (E |ₛ C) ≈ E')
+    , (A |ₛ B |ₛ C) [ℓ, α]⟶ E'
+| α E (@com₁ _ _ _ _ x y _ _ a b F G _ _ rfl rfl tf tg) :=
+  ⟨ _, production.equiv.species (symm (concretion.pseudo_apply.on_parallel₁ _ _ C)),
+   com₁ rfl rfl tf (parL_concretion C tg) ⟩
+| α E (parL_species C t) :=
+  ⟨ _, production.equiv.species parallel_assoc₁, parL_species _ t ⟩
+| α E (parR_species _ t) :=
+  ⟨ _, production.equiv.species equiv.parallel_assoc₁, parR_species _ (parL_species _ t) ⟩
+
 private def on_parallel_assoc₁ {Γ ℓ} {A B C : species ℍ ω Γ} :
   ∀ {k} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
   , ((A |ₛ B) |ₛ C) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E'), (A |ₛ B |ₛ C) [ℓ, α]⟶ E'
-| k α E (@com₁ _ _ _ _ x y _ _ a b _ G _ rfl (parL_concretion D tf) tg) :=
+| k α E (@com₁ _ _ _ _ x y _ _ a b _ G _ _ rfl rfl (parL_concretion D tf) tg) :=
   ⟨ _, production.equiv.species (concretion.pseudo_apply.parallel_shift _ B G),
-   com₁ rfl tf (parR_concretion _ tg) ⟩
-| k α E (@com₁ _ _ _ _ x y _ _ a b _ G _ rfl (parR_concretion D tf) tg) :=
+   com₁ rfl rfl tf (parR_concretion _ tg) ⟩
+| k α E (@com₁ _ _ _ _ x y _ _ a b _ G _ _ rfl rfl (parR_concretion D tf) tg) :=
   ⟨ _, production.equiv.species (concretion.pseudo_apply.on_parallel₂' A _ G),
-   parR_species A (com₁ rfl tf tg) ⟩
-| k α E (parL_species _ (@com₁ _ _ _ _ x y _ _ a b F G _ rfl tf tg)) :=
-  ⟨ _, production.equiv.species (symm (concretion.pseudo_apply.on_parallel₁ _ _ C)),
-   com₁ rfl tf (parL_concretion C tg) ⟩
-| k α E (parL_species B (parL_species C t)) :=
-  ⟨ _, production.equiv.species parallel_assoc₁, parL_species _ t ⟩
+   parR_species A (com₁ rfl rfl tf tg) ⟩
+| k α E (parL_species _ t) := on_parallel_assoc₁_left t
 | k α E (parL_concretion B (parL_concretion C t)) :=
   ⟨ _, production.equiv.concretion concretion.equiv.parallel_assoc₁, parL_concretion _ t ⟩
-| k α E (parL_species C (parR_species _ t)) :=
-  ⟨ _, production.equiv.species equiv.parallel_assoc₁, parR_species _ (parL_species _ t) ⟩
 | k α E (parL_concretion C (parR_concretion D t)) :=
   ⟨ _, production.equiv.concretion concretion.equiv.parallel_assoc₂, parR_concretion _ (parL_concretion _ t) ⟩
 | k α E (parR_species D t) :=
@@ -45,9 +52,9 @@ private def on_parallel_symm {Γ ℓ} {A B : species ℍ ω Γ} :
   ∀ {k} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
   , (A |ₛ B) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E'), (B |ₛ A) [ℓ, α]⟶ E'
-| ._ ._ ._ (@com₁ _ _ _ _ x y _ _ a b F G _ rfl tf tg) := begin
+| ._ ._ ._ (@com₁ _ _ _ _ x y _ _ a b F G _ _ rfl rfl tf tg) := begin
     rw upair.eq a b,
-    from ⟨ _, production.equiv.species (concretion.pseudo_apply.symm F G), com₁ rfl tg tf ⟩
+    from ⟨ _, production.equiv.species (concretion.pseudo_apply.symm F G), com₁ rfl rfl tg tf ⟩
   end
 | k α ._ (parL_species _ t) := ⟨ _, production.equiv.species parallel_symm, parR_species B t ⟩
 | k α ._ (parL_concretion _ t) := ⟨ _, production.equiv.concretion concretion.equiv.parallel_symm, parR_concretion B t ⟩

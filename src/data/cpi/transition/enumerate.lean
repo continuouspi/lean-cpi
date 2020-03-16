@@ -202,18 +202,40 @@ def com₁.of_compatible {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
 | ⟨ ⟨ ⟨ _, l, @production.concretion _ _ _ a x F, t ⟩,
      ⟨ _, l', @production.concretion _ _ _ b y G, t' ⟩ ⟩, p ⟩ := begin
   cases l with _ a, cases l' with _ b, rcases p with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-  refine ⟨ _, _, _, com₁ rfl t t' ⟩,
+  refine ⟨ _, _, _, com₁ rfl rfl t t' ⟩,
 end
 | ⟨ ⟨ ⟨ _, l, production.concretion F, t ⟩, ⟨ _, l', production.species G, t' ⟩ ⟩, p ⟩ := false.elim p
 | ⟨ ⟨ ⟨ _, l, production.species F, t ⟩, ⟨ _, l', production.concretion G, t' ⟩ ⟩, p ⟩ := false.elim p
 | ⟨ ⟨ ⟨ _, l, production.species F, t ⟩, ⟨ _, l', production.species G, t' ⟩ ⟩, p ⟩ := false.elim p
 
-/-- Look it is, trust me. But it's also nigh-on-impossible to prove, as it
-    requires us to show
-    psuedo_apply F G = pseudo_apply F' G' -> F = F' ∧ G = G' -/
-axiom com₁.of_compatible.inj {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
+/-- We need a separate lemma to show com₁.of_compatible - we need to
+    generalise several variables, otherwise the case splits do not go through.
+-/
+private lemma com₁.of_compatible.inj_help {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ) :
+  ∀ {a x} {a₁ b₁} {F₁ : concretion ℍ ω Γ a x} {G₁ : concretion ℍ ω Γ x a}
+    {b y} {a₂ b₂} {F₂ : concretion ℍ ω Γ b y} {G₂ : concretion ℍ ω Γ y b}
+    {FG₁ FG₂ : species ℍ ω Γ} {α₁ α₂ : label ℍ Γ kind.species}
+    (eFG₁ : FG₁ = concretion.pseudo_apply F₁ G₁)
+    (eFG₂ : FG₂ = concretion.pseudo_apply F₂ G₂)
+    (eα₁ : α₁ = τ⟨ a₁, b₁ ⟩) (eα₂ : α₂ = τ⟨ a₂, b₂ ⟩)
+    (tf₁ : A [ℓ, #a₁]⟶ (production.concretion F₁)) (tg₁ : B [ℓ, #b₁]⟶ (production.concretion G₁))
+    (tf₂ : A [ℓ, #a₂]⟶ (production.concretion F₂)) (tg₂ : B [ℓ, #b₂]⟶ (production.concretion G₂))
+  , (τ⟨ a₁, b₁ ⟩ = (τ⟨ a₂, b₂ ⟩ : label ℍ Γ _))
+  → psigma.mk (production.species FG₁) (com₁ eFG₁ eα₁ tf₁ tg₁)
+  == psigma.mk (production.species FG₂) (com₁ eFG₂ eα₂ tf₂ tg₂)
+  → a = b ∧ x = y ∧ a₁ = a₂ ∧ b₁ = b₂ ∧ F₁ == F₂ ∧ G₁ == G₂ ∧ tf₁ == tf₂ ∧ tg₁ == tg₂
+| a x a₁ b₁ F₁ G₁ b y a₂ b₂ F₂ G₂ FG₁ FG₂ α₁ α₂ eFG₁ eFG₂ eα₁ eα₂
+  tf₁ tg₁ tf₂ tg₂ eqα eqT := begin
+  have : α₁ = α₂ := trans eα₁ (trans eqα eα₂.symm), subst this,
+  rcases psigma.mk.inj (eq_of_heq eqT) with ⟨ eqFG, eqT ⟩,
+  have : FG₁ = FG₂ := production.species.inj eqFG, subst this,
+
+  rcases com₁.inj (eq_of_heq eqT) with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, F, G, tf, tg ⟩,
+  from ⟨ rfl, rfl, rfl, rfl, F, G, tf, tg ⟩,
+end
+
+private lemma com₁.of_compatible.inj {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
   : function.injective (com₁.of_compatible ℓ A B)
-/-
 | ⟨ ⟨ ⟨ k₁, α₁, E₁, t₁ ⟩, ⟨ k₁', α₁', E₁', t₁' ⟩ ⟩, is₁ ⟩
   ⟨ ⟨ ⟨ k₂, α₂, E₂, t₂ ⟩, ⟨ k₂', α₂', E₂', t₂' ⟩ ⟩, is₂ ⟩ eql := begin
   cases E₁; cases E₁'; try { unfold com₁.is_compatible at is₁, contradiction },
@@ -223,8 +245,12 @@ axiom com₁.of_compatible.inj {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ 
   rcases is₂ with ⟨ l, r ⟩, subst l, subst r, cases α₂, cases α₂',
 
   simp only [com₁.of_compatible] at eql,
+
+  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ eqα, eqT ⟩,
+  rcases com₁.of_compatible.inj_help A B rfl rfl rfl rfl t₁ t₁' t₂ t₂' eqα eqT
+    with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+  from rfl,
 end
--/
 
 /-- Convert a compatible pair of transitions to a com₁ transition. -/
 def com₁.embed {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ)
@@ -240,7 +266,7 @@ private lemma com₁.impossible_l {Γ}
       (t₂ : B [ℓ, #a₂]⟶ (production.concretion G))
       (h : FG = concretion.pseudo_apply F G)
     , (C |ₛ B) = FG
-    → ¬ (parL_species B t == com₁ h t₁ t₂)
+    → ¬ (parL_species B t == com₁ h rfl t₁ t₂)
 | a₁ a₂ C FG t t₁ t₂ h cfg eql := by { subst cfg, cases (eq_of_heq eql) }
 
 private lemma com₁.impossible_r {Γ}
@@ -252,7 +278,7 @@ private lemma com₁.impossible_r {Γ}
       (t₂ : B [ℓ, #a₂]⟶ (production.concretion G))
       (h : FG = concretion.pseudo_apply F G)
     , (A |ₛ C) = FG
-    → ¬ (parR_species A t == com₁ h t₁ t₂)
+    → ¬ (parR_species A t == com₁ h rfl t₁ t₂)
 | a₁ a₂ C FG t t₁ t₂ h cfg eql := by { subst cfg, cases (eq_of_heq eql) }
 
 private def enumerate_parallel_ts {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
@@ -343,8 +369,8 @@ private lemma enumerate_parallel_complete {Γ} {ℓ : lookup ℍ ω Γ} (A B : s
   let h := @fintype.complete _ Bs (transition_from.mk t) in
   let g := finset.mem_map_of_mem (parR.embed A B) h in
   finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inr g)))
-| ⟨ k, α, E, com₁ eql tf tg ⟩ := begin
-  subst eql,
+| ⟨ k, α, E, com₁ eqFG eqα tf tg ⟩ := begin
+  subst eqFG, subst eqα,
   let t : com₁.compatible ℓ A B
     := ⟨ ( transition_from.mk tf, transition_from.mk tg ), ⟨ rfl, rfl ⟩ ⟩,
   have h

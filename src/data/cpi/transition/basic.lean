@@ -38,12 +38,13 @@ inductive transition :
 | com₁
     {Γ ℓ x y} {A B : species ℍ ω Γ} {a b : name Γ}
     {F : concretion ℍ ω Γ x y} {G : concretion ℍ ω Γ y x}
-    {FG : species ℍ ω Γ}
+    {FG : species ℍ ω Γ} {α : label ℍ Γ kind.species}
 
   : FG = concretion.pseudo_apply F G
+  → α = τ⟨ a, b ⟩
   → transition A ℓ (#a) (production.concretion F)
   → transition B ℓ (#b) (production.concretion G)
-  → transition (A |ₛ B) ℓ τ⟨ a, b ⟩ (production.species FG)
+  → transition (A |ₛ B) ℓ α (production.species FG)
 
 | com₂
     {Γ ℓ} (M : affinity ℍ) {a b : fin M.arity}
@@ -112,11 +113,11 @@ namespace transition
       from choice₂ k _ _,
     },
 
-    case com₁ : Γ ℓ x y A B a b F G C eql tf tg ihf ihg {
-      subst eql,
+    case com₁ : Γ ℓ x y A B a b F G C α eqlFG eqlα tf tg ihf ihg {
+      subst eqlα, subst eqlFG,
       simp only [species.rename.parallel, production.rename, label.rename, concretion.pseudo_apply.rename],
       have tf' := ihf _ ρ, have tg' := ihg _ ρ,
-      from com₁ rfl tf' tg',
+      from com₁ rfl rfl tf' tg',
     },
 
     case com₂ : Γ ℓ M a b A B k t ih {
