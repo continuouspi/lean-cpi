@@ -46,7 +46,7 @@ local attribute [instance] transition.transition_eq com₁_of.decidable_eq com�
 
 private def com₁_of.to_transition {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ}
   : com₁_of ℓ A B → transition.transition_from ℓ (A |ₛ B)
-| ⟨ x, y, a, b, F, G, tf, tg ⟩ := ⟨ _, _, _, transition.com₁ tf tg ⟩
+| ⟨ x, y, a, b, F, G, tf, tg ⟩ := ⟨ _, _, _, transition.com₁ rfl tf tg ⟩
 
 private lemma com₁_of.interaction_zero {Γ} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ} :
   ∀ (t : com₁_of ℓ A B)
@@ -80,7 +80,7 @@ private def par_of.of_transition {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : 
 | _ _ _ (transition.parL_concretion _ t) := sum.inl (sum.inl ⟨ _, _, _, t ⟩)
 | _ _ _ (transition.parR_species _ t) := sum.inl (sum.inr ⟨ _, _, _, t ⟩)
 | _ _ _ (transition.parR_concretion _ t) := sum.inl (sum.inr ⟨ _, _, _, t ⟩)
-| _ _ _ (transition.com₁ tf tg) := sum.inr ⟨ _, _, _, _, _, _, tf, tg ⟩
+| _ _ _ (transition.com₁ rfl tf tg) := sum.inr ⟨ _, _, _, _, _, _, tf, tg ⟩
 
 private def par_of.of_transition_from {Γ : context} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ} :
   transition.transition_from ℓ (A |ₛ B) → par_of ℓ A B
@@ -98,6 +98,7 @@ private def par_of.iso {Γ : context} (ℓ : lookup ℍ ω Γ) (A B : species �
       rcases x with ⟨ k, α, E, t ⟩,
       cases t;
       simp only [par_of.of_transition_from, par_of.of_transition, par_of.to_transition, sum.elim, transition.parL, transition.parR],
+      cases t_a_1,
       from rfl,
     end,
     right_inv := λ x, begin
@@ -142,7 +143,8 @@ private lemma par_of.potential_eq
   case transition.parR_concretion : α b y F {
     cases α with _ a, simp only [potential_interaction_space],
     from interaction_tensor.parallel₂ A B F a 1 ξ,
-  }
+  },
+  case transition.com₁ : b y x y F G FG eql { subst eql, from rfl },
 end
 
 
@@ -183,7 +185,7 @@ end
 end
 | (⟨ k, α, E, @transition.parR_concretion _ _ _ _ _ _ _ F _ C t ⟩)
   := by { cases α, from rfl }
-| (⟨ k, α, E, transition.com₁ tf tg ⟩) := rfl
+| (⟨ k, α, E, transition.com₁ rfl tf tg ⟩) := rfl
 
 lemma process_potential.split
   (A B : species ℍ ω (context.extend (M.arity) context.nil))
