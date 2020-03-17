@@ -1,9 +1,9 @@
-import data.cpi.transition data.real.basic
+import data.cpi.semantics.with_normalise data.cpi.semantics.basic
 
 open cpi
 open cpi.species
 
-section
+open_locale normalise
 
 def k_bind : ℚ := 1/3
 def k_degrade : ℚ := 1/5
@@ -106,9 +106,6 @@ example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
 example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
   := transition.choice₂ k_degrade whole.nil whole.empty
 
-def S'_.transitions : fintype (transition.transition_from ℓ S'_) := transition.enumerate_choices ℓ _
-def P'_.transitions : fintype (transition.transition_from ℓ P'_) := transition.enumerate_choices ℓ _
+def conc := function.embedding.refl ℚ
 
-#eval S'_.transitions.elems
-
-end
+#eval (process_immediate aff ℓ conc ((1 : ℚ) ◯ E'_ |ₚ 1 ◯ S'_ ))

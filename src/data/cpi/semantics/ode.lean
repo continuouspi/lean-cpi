@@ -26,7 +26,7 @@ inductive all_species
   → all_species
 
 /-- Get all species in the transition graph for a finset of prime species. -/
-noncomputable def all_species.finset (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+def all_species.finset (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : ℕ → finset (prime_species' ℍ ω (context.extend M.arity context.nil)) → all_species M ℓ
 | 0 As := all_species.incomplete As
 | (nat.succ n) As :=
@@ -34,7 +34,7 @@ noncomputable def all_species.finset (M : affinity ℍ) (ℓ : lookup ℍ ω (co
   if eq : As' ⊆ As then all_species.complete As eq else all_species.finset n (As ∪ As')
 
 /--  Get all species in the transition graph for a process. -/
-noncomputable def all_species.process (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
+def all_species.process (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : ℕ → process ℍ ℍ ω (context.extend M.arity context.nil) → all_species M ℓ
 | fuel P := all_species.finset M ℓ fuel (process.to_space P).support
 

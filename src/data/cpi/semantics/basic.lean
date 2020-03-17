@@ -76,7 +76,7 @@ end
 end
 
 /-- The vector space of potential interactions of a process (∂P). -/
-noncomputable def process_potential [cpi_equiv ℍ ω]
+def process_potential [cpi_equiv ℍ ω]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
   : process ℂ ℍ ω (context.extend M.arity context.nil)
   → interaction_space ℂ ℍ ω (context.extend M.arity context.nil)
@@ -96,7 +96,7 @@ lemma process_potential.nil_zero [cpi_equiv ℍ ω]
 end
 
 /-- The vector space of immediate actions of a process (dP/dt)-/
-noncomputable def process_immediate [cpi_equiv ℍ ω]
+def process_immediate [cpi_equiv ℍ ω]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil)) (conc : ℍ ↪ ℂ)
   : process ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
@@ -293,7 +293,7 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
 end
 
 /-- dP/dt lifted to quotients. -/
-noncomputable def process_immediate.quot [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
+def process_immediate.quot [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
     (conc : distrib_embedding ℍ ℂ (+) (+))
   : process' ℂ ℍ ω (context.extend M.arity context.nil)
@@ -302,7 +302,7 @@ noncomputable def process_immediate.quot [cpi_equiv_prop ℍ ω] [add_monoid ℍ
     (λ P Q, process_immediate.equiv M ℓ conc)
 
 /-- dP/dt lifted to process spaces. -/
-noncomputable def process_immediate.space [cpi_equiv_prop ℍ ω] [half_ring ℍ]
+def process_immediate.space [cpi_equiv_prop ℍ ω] [half_ring ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
     (conc : distrib_embedding ℍ ℂ (+) (+))
   : process_space ℂ ℍ ω (context.extend M.arity context.nil)

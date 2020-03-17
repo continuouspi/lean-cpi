@@ -49,10 +49,10 @@ inductive transition :
 | com₂
     {Γ ℓ} (M : affinity ℍ) {a b : fin M.arity}
     {A B : species ℍ ω (context.extend M.arity Γ)}
-
-    (k : option.is_some (M.f a b))
-  : transition A (lookup.rename name.extend ℓ) τ⟨ name.zero a, name.zero b ⟩ (production.species B)
-  → transition (ν(M) A) ℓ τ@'(option.get k) (production.species (ν(M) B))
+    (k : ℍ)
+  : M.f a b = some k
+  → transition A (lookup.rename name.extend ℓ) τ⟨ name.zero a, name.zero b ⟩ (production.species B)
+  → transition (ν(M) A) ℓ τ@'k (production.species (ν(M) B))
 
 | parL_species
     {Γ ℓ A} B {l : label ℍ Γ kind.species} {E}
@@ -120,11 +120,11 @@ namespace transition
       from com₁ rfl rfl tf' tg',
     },
 
-    case com₂ : Γ ℓ M a b A B k t ih {
+    case com₂ : Γ ℓ M a b A B k eqK t ih {
       simp only [species.rename.restriction, production.rename],
       have t' := ih _ (name.ext ρ),
       rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
-      from com₂ M k t',
+      from com₂ M k eqK t',
     },
 
     case defn : Γ n k α ℓ D as B E eql t ih {
