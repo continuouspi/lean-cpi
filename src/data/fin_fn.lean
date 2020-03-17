@@ -51,13 +51,16 @@ section helpers
   lemma unsupported_zero [decidable_eq β] {x : α} {f : fin_fn α β} : x ∉ f.support ↔ f.space x = 0
     := ⟨ λ nmem, by_contradiction (λ h, nmem ((f.support_iff x).mp h)),
          λ zero mem, (f.support_iff x).mpr mem zero ⟩
+
+  /-- Convert this fin_fn to a string, using a specific separator (such as "+"). -/
+  protected def to_string [has_repr α] [has_repr β] : string → fin_fn α β → string
+  | sep x := string.intercalate sep ((x.support.val.map (λ a, repr (x.space a) ++ " • " ++ repr a)).sort (≤))
 end helpers
 
 section group_instances
   variables (α : Type*) (β : Type*)
 
-  instance [has_repr α] [has_repr β] [has_zero β] : has_repr (fin_fn α β) :=
-    ⟨ λ x, string.intercalate "\n" ((x.support.val.map (λ a, repr (x.space a) ++ " • " ++ repr a)).sort (≤)) ⟩
+  instance [has_repr α] [has_repr β] [has_zero β] : has_repr (fin_fn α β) := ⟨ fin_fn.to_string "+" ⟩
 
   instance [has_zero β] : has_zero (fin_fn α β)
     := ⟨ { space := λ _, 0,

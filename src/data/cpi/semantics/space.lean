@@ -133,7 +133,7 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv ℍ ω] [de
 instance process_space.add_comm_monoid {Γ} : add_comm_group (process_space ℂ ℍ ω Γ) := fin_fn.add_comm_group _ ℂ
 instance process_space.semimodule {Γ} : semimodule ℂ (process_space ℂ ℍ ω Γ) := fin_fn.semimodule _ ℂ
 instance process_space.has_repr {ℂ} [add_monoid ℂ] [has_repr ℂ] {Γ} [has_repr (species' ℍ ω Γ)]
-  : has_repr (process_space ℂ ℍ ω Γ) := fin_fn.has_repr _ _
+  : has_repr (process_space ℂ ℍ ω Γ) := ⟨ fin_fn.to_string "\n" ⟩
 
 /-- Convert a species into a process space with a unit vector for each element
     of the prime decomposition.
@@ -183,12 +183,12 @@ instance interaction_space.semimodule {Γ} : semimodule ℂ (interaction_space �
 
 instance interaction_space.has_repr {ℂ} [add_monoid ℂ] [has_repr ℂ] {Γ}
   [has_repr (species' ℍ ω Γ)] [∀ b y, has_repr (concretion' ℍ ω Γ b y)]
-  : has_repr (interaction_space ℂ ℍ ω Γ) := @fin_fn.has_repr
+  : has_repr (interaction_space ℂ ℍ ω Γ) := ⟨ @fin_fn.to_string
     ( species' ℍ ω Γ
       × (Σ' (b y), concretion' ℍ ω Γ b y)
-      × name Γ) ℂ
+      × name Γ) ℂ _
     ⟨ λ ⟨ A, ⟨ _, _, F ⟩, a ⟩, "[" ++ repr A ++ "], [" ++ repr F ++ "], " ++ repr a ⟩
-    _ _
+    _ "\n" ⟩
 
 /-- Convert a process into a process space. -/
 def process.to_space {Γ}
