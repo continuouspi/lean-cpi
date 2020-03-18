@@ -108,4 +108,4 @@ example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
 
 def conc := function.embedding.refl ℚ
 
-#eval (process_immediate aff ℓ conc ((1 : ℚ) ◯ E'_ |ₚ 1 ◯ S'_ ))
+#eval (process_immediate aff ℓ conc ((2 : ℚ) ◯ E'_ |ₚ 2 ◯ S'_ ))

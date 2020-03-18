@@ -52,6 +52,27 @@ section helpers
     := ⟨ λ nmem, by_contradiction (λ h, nmem ((f.support_iff x).mp h)),
          λ zero mem, (f.support_iff x).mpr mem zero ⟩
 
+  /-- Function extensionality lifted to fin_fns. -/
+  lemma ext' [decidable_eq β] : ∀ {f g : fin_fn α β}, f.support = g.support → (∀ a ∈ f.support, f.space a = g.space a) → f = g
+  | ⟨ f, sf, iff_f ⟩ ⟨ g, _, iff_g ⟩ eql lift := begin
+    simp only [] at eql, subst eql,
+    suffices : ∀ a, f a = g a, from ext this,
+
+    assume a,
+    cases classical.prop_decidable (a ∈ sf),
+    case is_true { from lift a h },
+    case is_false {
+      have : f a = 0,
+      { have : a ∉ (fin_fn.mk f sf iff_f).support := h,
+        from (unsupported_zero.mp this) },
+      have : g a = 0,
+      { have : a ∉ (fin_fn.mk g sf iff_g).support := h,
+        from (unsupported_zero.mp this) },
+
+      rw [‹f a = 0›, ‹g a = 0›],
+    }
+  end
+
   /-- Convert this fin_fn to a string, using a specific separator (such as "+"). -/
   protected def to_string [has_repr α] [has_repr β] : string → fin_fn α β → string
   | sep x := string.intercalate sep ((x.support.val.map (λ a, repr (x.space a) ++ " • " ++ repr a)).sort (≤))
@@ -113,13 +134,27 @@ section group_instances
       ..fin_fn.distrib_mul_action α β,
     }
 
+  instance [has_zero β] [decidable_eq α] [decidable_eq β] : decidable_eq (fin_fn α β)
+  | ⟨ a_f, a_space, a_iff ⟩ ⟨ b_f, b_space, b_iff ⟩ :=
+    if eq_space : a_space = b_space then
+      if eq_f : ∀ a ∈ a_space, a_f a = b_f a then
+        is_true (ext' eq_space eq_f)
+      else is_false (λ x, begin
+        have h := (fin_fn.mk.inj x).1, subst h,
+        from eq_f (λ x mem, rfl),
+      end)
+    else is_false (λ x, eq_space (fin_fn.mk.inj x).2)
+
+  instance [add_monoid β] [decidable_eq α] [decidable_eq β] (a : α) : is_add_monoid_hom (λ f : fin_fn α β, f.space a)
+    := { map_add := λ a b, rfl, map_zero := rfl }
+
 end group_instances
 
 variables {α : Type*} {β : Type*}
 
 /-- Construct a fin_fn from a single value A. This returns a unit vector in the
     basis of 'A'. -/
-def single [add_monoid β] [decidable_eq α] [decidable_eq β] (A : α) (b : β): fin_fn α β :=
+def single [has_zero β] [decidable_eq α] [decidable_eq β] (A : α) (b : β): fin_fn α β :=
   { space := λ B, if A = B then b else 0,
     support := if 0 = b then ∅ else finset.singleton A,
     support_iff := λ B, begin
@@ -130,12 +165,34 @@ def single [add_monoid β] [decidable_eq α] [decidable_eq β] (A : α) (b : β)
       { from ⟨ λ x, by contradiction, λ mem, absurd (finset.mem_singleton.mp mem).symm is_eq ⟩ },
     end }
 
-/-- Map every basis in the fin_fn to another fin_fn, accumulating them together. -/
-def bind {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] : fin_fn α β → (α → fin_fn γ β) → fin_fn γ β
-| X f := finset.sum X.support (λ x, X.space x • (f x))
+@[simp]
+lemma single_zero [has_zero β] [decidable_eq α] [decidable_eq β] (a : α) : single a (0 : β) = 0
+  := by { simp only [single, if_pos, if_t_t], from rfl }
 
-lemma bind_zero {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] (f : α → fin_fn γ β) :
-  bind 0 f = 0 := rfl
+/-- `sum f g` is the sum of `g a (f a)` over the support of `f`. -/
+def sum {γ : Type*} [has_zero β] [add_comm_monoid γ] (f : fin_fn α β) (g : α → β → γ) : γ
+  := f.support.sum (λa, g a (f.space a))
+
+lemma sum_single_index {γ : Type*} [add_comm_monoid γ] [comm_ring β] [decidable_eq α] [decidable_eq β]
+  (a : α) (b : β) (f : α → β → γ) (zero : ∀ x, f x 0 = 0): (single a b).sum f = f a b := begin
+  by_cases 0 = b; simp only [sum, single, if_pos, if_false, h],
+  { simp only [finset.sum_empty, h.symm, zero] },
+  { simp only [finset.sum_singleton, if_pos] },
+end
+
+@[simp]
+lemma sum_zero {γ : Type*} [has_zero β] [add_comm_monoid γ] (f : α → β → γ) : sum 0 f = 0 := rfl
+
+@[simp]
+lemma sum_const_zero {γ : Type*} [has_zero β] [add_comm_monoid γ] (f : fin_fn α β): sum f (λ _ _, (0 : γ)) = 0
+  := finset.sum_const_zero
+
+/-- Map every basis in the fin_fn to another fin_fn, accumulating them together. -/
+def bind {γ : Type*} [decidable_eq γ] [decidable_eq β] [semiring β] (f : fin_fn α β) (g : α → fin_fn γ β) : fin_fn γ β
+  := sum f (λ x c, c • g x)
+
+@[simp]
+lemma bind_zero {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] (f : α → fin_fn γ β) : bind 0 f = 0 := sum_zero _
 
 lemma empty_zero [has_zero β] [decidable_eq β] : ∀ (f : fin_fn α β), f.support = ∅ → f = 0
 | ⟨ f, _, iff ⟩ ⟨ _ ⟩ := ext (λ x, by_contradiction (iff x).mp)
@@ -177,7 +234,7 @@ lemma bind_smul {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [
   ∀ (c : β) (x : fin_fn α β) (f : α → fin_fn γ β)
   , c • bind x f = bind (c • x) f
 | c x f := begin
-  simp only [bind],
+  simp only [bind, sum],
 
   have : (c • x).support ⊆ x.support := finset.filter_subset _,
   rw finset.sum_subset this (λ a mem not_mem, begin
@@ -232,12 +289,7 @@ lemma bind₂_zero_left {α β γ η : Type} [decidable_eq β] [decidable_eq η]
 lemma bind_single {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
   ∀ (a : α) (b : β) (f : α → fin_fn γ β)
   , bind (single a b) f = b • f a
-| a b f := begin
-  simp only [bind, single],
-  by_cases is_zero : 0 = b; simp only [is_zero, if_pos, if_false],
-  { subst is_zero, simp only [finset.sum_empty, zero_smul] },
-  { simp only [finset.sum_singleton, eq.refl a, if_pos] },
-end
+| a b f := sum_single_index a b _ (λ x, zero_smul _ _)
 
 end fin_fn
 

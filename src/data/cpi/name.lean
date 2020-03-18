@@ -212,8 +212,10 @@ namespace name
     /-- Extending then renaming with an extended function, is equivalent to
         renaming then extending. -/
     lemma ext_extend {Γ Δ} {n : ℕ} (ρ : name Γ → name Δ)
-      : (ext ρ ∘ extend) = (@extend Δ n ∘ ρ)
-      := funext (λ x, rfl)
+      : (ext ρ ∘ extend) = (@extend Δ n ∘ ρ) := funext (λ x, rfl)
+
+    lemma ext_zero {Γ Δ} {n : ℕ} (ρ : name Γ → name Δ)
+      : (ext ρ ∘ zero) = (@zero Δ n) := funext (λ x, rfl)
 
     /-- Rewrite one ext_with to another.
 

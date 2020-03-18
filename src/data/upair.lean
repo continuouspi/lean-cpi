@@ -52,34 +52,74 @@ end upair
 def upair (α : Type u) : Type u := quotient (@upair.setoid α)
 
 namespace upair
-  /-- Construct a new unordered pair. -/
-  protected def mk {α : Type u} (a b : α) : upair α := ⟦ ⟨ a, b ⟩ ⟧
+  variables {α : Type*} {β : Type*}
 
-  instance {α : Type u} [decidable_eq α] : decidable_eq (upair α)
-    := quotient.decidable_eq
+  /-- Construct a new unordered pair. -/
+  protected def mk (a b : α) : upair α := ⟦ ⟨ a, b ⟩ ⟧
+
+  protected lemma mk.comm (a b : α) : upair.mk a b = upair.mk b a
+    := quot.sound (or.inr ⟨ rfl, rfl ⟩)
+
+  instance [decidable_eq α] : decidable_eq (upair α) := quotient.decidable_eq
+
+  /-- Apply a symmetric function to the contents of this pair. -/
+  protected def lift (f : α → α → β)
+    : (∀ a b, f a b = f b a) → upair α → β
+  | comm p := quot.lift_on p (λ p, f p.fst p.snd) (λ ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ r, begin
+    rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+    from rfl, from comm _ _,
+  end)
+
+  /-- Apply a symmetric function to the contents of this pair. Just `upair.lift`, but in a more type-inference friendly
+      order-/
+  protected def lift_on (q : upair α) (f : α → α → β) (h : ∀ a b, f a b = f b a) : β
+    := upair.lift f h q
 
   instance {α : Type u} [has_repr α] : has_repr (upair α) := ⟨ λ x,
-    quot.lift_on x (λ x, min (repr x) (repr { pair . fst := x.2, snd := x.1}))
-      (λ ⟨ a, b ⟩ ⟨ a', b' ⟩ r, begin
-        simp only [],
-        rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-        from rfl, from min_comm _ _,
-      end)⟩
+    upair.lift_on x (λ x y, min (repr (pair.mk x y)) (repr (pair.mk y x))) (λ x y, min_comm _ _)⟩
+
+  protected lemma lift.inj (f : α → α → β) (h : (∀ a b, f a b = f b a))
+      (inj : ∀ ⦃a b a' b'⦄, f a b = f a' b' → pair.mk a b ≈ pair.mk a' b')
+    : function.injective (upair.lift f h)
+  | p q eql := begin
+    rcases quot.exists_rep p with ⟨ ⟨ a₁, b₁ ⟩, e ⟩, subst e,
+    rcases quot.exists_rep q with ⟨ ⟨ a₂, b₂ ⟩, e ⟩, subst e,
+    from quot.sound (inj eql),
+  end
+
+  /-- A bit like `lift_on`, but polymorphic in the return type. -/
+  @[reducible, elab_as_eliminator]
+  protected def rec_on {β : upair α → Sort*} (q : upair α) (f : ∀ a b, β (upair.mk a b))
+    (c : ∀ (a b : α), f a b == f b a) : β q
+  := quotient.hrec_on q (λ ⟨ a, b ⟩, f a b) (λ ⟨ a₁, b₁ ⟩ ⟨ a₂, b₂ ⟩ r, begin
+    show f a₁ b₁ == f a₂ b₂,
+    rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+    from heq.rfl, from c a₁ b₁,
+  end)
+
+  protected lemma rec_on_mk {β : upair α → Sort*} {a b : α} (f : ∀ a b, β (upair.mk a b))
+      (c : ∀ (a b : α), f a b == f b a)
+    : @upair.rec_on α β (upair.mk a b) f c = f a b
+    := rfl
+
+  protected lemma rec_on.inj {β : upair α → Sort*} {f : ∀ a b, β (upair.mk a b)}
+      (c : ∀ (a b : α), f a b == f b a)
+      (inj : ∀ ⦃a b a' b'⦄, f a b == f a' b' → pair.mk a b ≈ pair.mk a' b')
+  : ∀ p q
+  , @upair.rec_on α β p f c == @upair.rec_on α β q f c
+  → p = q
+  | p q eql := begin
+    rcases quot.exists_rep p with ⟨ ⟨ a₁, b₁ ⟩, e ⟩, subst e,
+    rcases quot.exists_rep q with ⟨ ⟨ a₂, b₂ ⟩, e ⟩, subst e,
+    from quot.sound (inj eql),
+  end
 
   protected lemma eq {α : Type} (a b : α) : upair.mk a b = upair.mk b a
     := quot.sound (or.inr ⟨rfl, rfl⟩)
 
-  private def pair_map {α β : Type u} (f : α → β) : pair α → pair β
-  | ⟨ a, b ⟩ := ⟨ f a, f b ⟩
-
-  private def pair_map_eq {α β : Type u} (f : α → β) :
-    ∀ {a b : pair α}, a ≈ b → pair_map f a ≈ pair_map f b
-  | ⟨ a, b ⟩ ⟨ _, _ ⟩ (or.inl ⟨ rfl, rfl ⟩) := or.inl ⟨ rfl, rfl ⟩
-  | ⟨ a, b ⟩ ⟨ _, _ ⟩ (or.inr ⟨ rfl, rfl ⟩) := or.inr ⟨ rfl, rfl ⟩
-
   /-- Map over the contents of an unordered pair. -/
   protected def map {α β : Type u} (f : α → β) (p : upair α) : upair β
-    := quot.lift_on p (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p))
+    := upair.lift_on p (λ x y, upair.mk (f x) (f y)) (λ x y, mk.comm _ _ )
 
   protected lemma map_compose {α β γ : Type u} (f : α → β) (g : β → γ) (p : upair α)
     : upair.map g (upair.map f p) = upair.map (g ∘ f) p
@@ -97,17 +137,11 @@ namespace upair
     (inj : function.injective f) :
     ∀ {p q : upair α}, upair.map f p = upair.map f q → p = q
   | p q eq := begin
-    rcases quot.exists_rep p with ⟨ ⟨ a₁, b₁ ⟩, ⟨ _ ⟩ ⟩,
-    rcases quot.exists_rep q with ⟨ ⟨ a₂, b₂ ⟩, ⟨ _ ⟩ ⟩,
+    suffices : ∀ (a b a' b' : α), upair.mk (f a) (f b) = upair.mk (f a') (f b') → pair.mk a b ≈ pair.mk a' b',
+      from lift.inj _ _ this eq,
 
-    have eq' : ⟦pair_map f ⟨ a₁, b₁ ⟩⟧ = ⟦pair_map f ⟨ a₂, b₂ ⟩⟧,
-      have h := quot.lift_beta (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p)) ⟨ a₁, b₁ ⟩,
-      have g := quot.lift_beta (λ x, ⟦ pair_map f x ⟧) (λ _ _ p, quot.sound (pair_map_eq f p)) ⟨ a₂, b₂ ⟩,
-      from trans (symm h) (trans eq g),
-
-    cases quotient.exact eq',
-    case or.inl : h { cases inj h.1, cases inj h.2, from rfl },
-    case or.inr : h { cases inj h.1, cases inj h.2, from quot.sound (or.inr ⟨ rfl, rfl ⟩) },
+    assume a₁ b₁ a₂ b₂ eql,
+    refine or.imp _ _ (quotient.exact eql); from (λ x, ⟨ inj x.1, inj x.2 ⟩),
   end
 
   protected lemma map_beta
@@ -169,4 +203,4 @@ namespace upair
       eq
 end upair
 
-#lint -
+#lint-

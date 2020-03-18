@@ -1,4 +1,4 @@
-import data.pand data.fin data.fintype
+import data.pand data.fin data.fintype data.upair
 
 namespace cpi
 
@@ -14,6 +14,10 @@ structure affinity (ℍ : Type) := intro ::
   (symm : ∀ x y, f x y = f y x)
 
 variables {ℍ : Type}
+
+/-- Read a value from an affinity network using an unordered pair. -/
+def affinity.get (M : affinity ℍ) : upair (fin M.arity) → option ℍ
+| p := upair.lift_on p M.f M.symm
 
 end cpi
 

@@ -1,4 +1,4 @@
-import data.cpi.transition.basic data.multiset2
+import data.cpi.transition.basic data.multiset2 data.option2
 
 -- TODO: Move this somewhere sensible
 instance quot.lift.decidable_pred {α : Type*} [setoid α] (p : α → Prop) [dec : decidable_pred p] (h : ∀ a b, a ≈ b → p a = p b)
@@ -343,11 +343,20 @@ private def enumerate_parallel_ts {Γ} {ℓ : lookup ℍ ω Γ} (A B : species �
       },
     end)
 
-private lemma enumate_parallel_compute_l
+private lemma enumate_parallel_compute_l_species
     {Γ ℓ} {A B : species ℍ ω Γ} {l : label ℍ Γ kind.species} {E}
     (As : fintype (transition_from ℓ A)) (Bs : fintype (transition_from ℓ B))
     (t : transition A ℓ l (production.species E))
   : transition_from.mk (parL_species B t) ∈ enumerate_parallel_ts A B As Bs :=
+  let h := @fintype.complete _ As (transition_from.mk t) in
+  let g := finset.mem_map_of_mem (parL.embed A B) h in
+  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inl g)))
+
+private lemma enumate_parallel_compute_l_concretion
+    {Γ ℓ} {A B} {l : label ℍ Γ kind.concretion} {b y} {E : concretion ℍ ω Γ b y}
+    (As : fintype (transition_from ℓ A)) (Bs : fintype (transition_from ℓ B))
+    (t : transition A ℓ l (production.concretion E))
+  : transition_from.mk (parL_concretion B t) ∈ enumerate_parallel_ts A B As Bs :=
   let h := @fintype.complete _ As (transition_from.mk t) in
   let g := finset.mem_map_of_mem (parL.embed A B) h in
   finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inl g)))
@@ -364,11 +373,8 @@ private lemma enumate_parallel_compute_r_species
 private lemma enumerate_parallel_complete {Γ} {ℓ : lookup ℍ ω Γ} (A B : species ℍ ω Γ)
     (As : fintype (transition.transition_from ℓ A)) (Bs : fintype (transition.transition_from ℓ B))
   : ∀ x, x ∈ enumerate_parallel_ts A B As Bs
-| ⟨ k, α, E, parL_species _ t ⟩ := enumate_parallel_compute_l  As Bs t
-| ⟨ k, α, E, parL_concretion _ t ⟩ :=
-  let h := @fintype.complete _ As (transition_from.mk t) in
-  let g := finset.mem_map_of_mem (parL.embed A B) h in
-  finset.mem_union_disjoint.mpr (or.inr (finset.mem_union_disjoint.mpr (or.inl g)))
+| ⟨ k, α, E, parL_species _ t ⟩ := enumate_parallel_compute_l_species As Bs t
+| ⟨ k, α, E, parL_concretion _ t ⟩ := enumate_parallel_compute_l_concretion As Bs t
 | ⟨ k, α, E, parR_species _ t ⟩ := enumate_parallel_compute_r_species As Bs t
 | ⟨ k, α, E, parR_concretion _ t ⟩ :=
   let h := @fintype.complete _ Bs (transition_from.mk t) in
@@ -392,26 +398,22 @@ def enumerate_parallel {Γ} {ℓ : lookup ℍ ω Γ} {A B : species ℍ ω Γ}
 | As Bs := ⟨ enumerate_parallel_ts A B As Bs, enumerate_parallel_complete A B As Bs ⟩
 
 private def is_restriction_name {Γ} (M : affinity ℍ)
-  : upair.pair (name (context.extend M.arity Γ))
+  : name (context.extend M.arity Γ) → name (context.extend M.arity Γ)
   → Prop
-| ⟨ name.zero a, name.zero b ⟩ := option.is_some (M.f a b)
-| ⟨ name.extend _, name.extend _ ⟩ := true
-| ⟨ name.extend _, name.zero _ ⟩ := false
-| ⟨ name.zero _, name.extend _ ⟩ := false
+| (name.zero a) (name.zero b) := option.is_some' (M.f a b)
+| (name.extend _) (name.extend _) := true
+| (name.extend _) (name.zero _) := false
+| (name.zero _) (name.extend _) := false
 
-private def is_restriction_name.quot {Γ} (M : affinity ℍ)
-  : ∀ (a b : upair.pair (name (context.extend M.arity Γ)))
-  , setoid.r a b → is_restriction_name M a = is_restriction_name M b
-| ⟨ x₁, y₁ ⟩ ⟨ x₂, y₂ ⟩ r := begin
-  rcases r with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩ | ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩;
-  cases x₁; cases y₁;
-  from rfl <|> simp only [is_restriction_name, M.symm x₁_a y₁_a],
-end
+private def is_restriction_name.comm {Γ} (M : affinity ℍ)
+  : ∀ (a b : name (context.extend M.arity Γ))
+  , is_restriction_name M a b = is_restriction_name M b a
+| a b := by { cases a; cases b; from rfl <|> simp only [is_restriction_name, M.symm] }
 
 private def is_restriction_like {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
   : transition.transition_from (lookup.rename name.extend ℓ) A
   → Prop
-| ⟨ _, τ⟨ p ⟩, E, t ⟩ := quot.lift_on p (is_restriction_name M) (is_restriction_name.quot M)
+| ⟨ _, τ⟨ p ⟩, E, t ⟩ := upair.lift_on p (is_restriction_name M) (is_restriction_name.comm M)
 | ⟨ _, τ@' k, E, t ⟩ := true
 | ⟨ _, # (name.zero n), E, t ⟩ := false
 | ⟨ _, # (name.extend n), E, t ⟩ := true
@@ -422,70 +424,173 @@ private def is_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A :
 private def is_restriction.name_lift {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ)
   (A : species ℍ ω (context.extend M.arity Γ))
   (B : species ℍ ω (context.extend M.arity Γ)) :
-  ∀ (p : upair.pair (name (context.extend M.arity Γ)))
-  , is_restriction_name M p
-  → A [lookup.rename name.extend ℓ, τ⟨ ⟦ p ⟧ ⟩]⟶ (production.species B)
+  ∀ (a b : name (context.extend M.arity Γ))
+  , is_restriction_name M a b
+  → A [lookup.rename name.extend ℓ, τ⟨ a, b ⟩]⟶ (production.species B)
   → transition.transition_from ℓ (ν(M) A)
-| ⟨ name.zero a, name.zero b ⟩ is_some t :=
-  ⟨ _, _, _, com₂ M (option.get is_some) (option.eq_some_of_is_some is_some) t ⟩
-| ⟨ name.extend a, name.extend b ⟩ fls t := begin
-  have : A [lookup.rename name.extend ℓ, label.rename name.extend (τ⟨ a, b ⟩)]⟶ (production.species B),
-  { simp only [label.rename], from t },
-  from ⟨ _, _, _, ν₁_species M this ⟩,
+| (name.zero a) (name.zero b) is_some t :=
+  let this : M.get (upair.mk a b) = some (option.get' is_some) := option.eq_some_of_is_some' is_some in
+  ⟨ _, _, _, com₂ M (option.get' is_some) this rfl t ⟩
+| (name.extend a) (name.extend b) fls t := begin
+  have : τ⟨ name.extend a, name.extend b ⟩ = label.rename (@name.extend Γ M.arity) (τ⟨ a, b ⟩),
+  { simpa only [label.rename] },
+  from ⟨ _, _, _, ν₁_species M this t ⟩,
 end
-| ⟨ name.extend _, name.zero _ ⟩ fls t := false.elim fls
-| ⟨ name.zero a, name.extend b ⟩ fls t := false.elim fls
+| (name.extend _) (name.zero _) fls t := false.elim fls
+| (name.zero a) (name.extend b) fls t := false.elim fls
 
-private def is_restriction.name_lift.quot {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ)) :
-  ∀ (p q : upair.pair (name (context.extend M.arity Γ))) (r : p ≈ q)
-  ,  is_restriction.name_lift ℓ M A B p
-  == is_restriction.name_lift ℓ M A B q
-| ⟨ name.zero x, name.zero y ⟩ ⟨ _, _ ⟩ (or.inl ⟨ rfl, rfl ⟩) := heq.rfl
-| ⟨ name.zero x, name.extend y ⟩ ⟨ _, _ ⟩ (or.inl ⟨ rfl, rfl ⟩) := heq.rfl
-| ⟨ name.extend x, name.zero y ⟩ ⟨ _, _ ⟩ (or.inl ⟨ rfl, rfl ⟩) := heq.rfl
-| ⟨ name.extend x, name.extend y ⟩ ⟨ x₂, y₂ ⟩ (or.inl ⟨ rfl, rfl ⟩) := heq.rfl
+private lemma is_restriction_name_lift.comm_zero {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ))
+    {x y : fin M.arity}
+    {tL : A [lookup.rename name.extend ℓ, τ⟨ (upair.mk (name.zero x) (name.zero y)) ⟩]⟶ (production.species B)}
+    {tR : A [lookup.rename name.extend ℓ, τ⟨ (upair.mk (name.zero y) (name.zero x)) ⟩]⟶ (production.species B)}
+    (eT : tL == tR)
+    (k₁ k₂ : ℍ)
+    (e₁ : M.get (upair.mk x y) = some k₁)
+    (e₂ : M.get (upair.mk y x) = some k₂)
+  : transition.transition_from.mk (com₂ M k₁ e₁ rfl tL)  = transition.transition_from.mk (com₂ M k₂ e₂ rfl tR) := begin
+  have : k₁ = k₂,
+  {
+    rw upair.mk.comm at e₁,
+    from option.some.inj (trans e₁.symm e₂),
+  }, subst this,
 
-| ⟨ name.zero x, name.zero y ⟩ ⟨ _, _ ⟩ (or.inr ⟨ rfl, rfl ⟩) := sorry
-| ⟨ name.extend x, name.extend y ⟩ ⟨ x₂, y₂ ⟩ (or.inr ⟨ rfl, rfl ⟩) := sorry
-| ⟨ name.zero x, name.extend y ⟩ ⟨ _, _ ⟩ (or.inr ⟨ rfl, rfl ⟩) := function.hfunext rfl
-  (λ irlL irlR eIRL, function.hfunext (begin
-    have : ⟦ upair.pair.mk (name.zero x) (name.extend y) ⟧ = ⟦ upair.pair.mk (name.extend y) (name.zero x) ⟧
-      := quotient.sound (or.inr (and.intro rfl rfl)),
-    rw this,
-  end) (λ x b z, heq.rfl))
-| ⟨ name.extend x, name.zero y ⟩ ⟨ _, _ ⟩ (or.inr ⟨ rfl, rfl ⟩) := function.hfunext rfl
-  (λ irlL irlR eIRL, function.hfunext (begin
-    have : ⟦ upair.pair.mk (name.extend x) (name.zero y) ⟧ = ⟦ upair.pair.mk (name.zero y) (name.extend x) ⟧
-      := quotient.sound (or.inr (and.intro rfl rfl)),
-    rw this,
-  end) (λ x b z, heq.rfl))
+  refine psigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
+  from ⟨ rfl, ⟨ rfl, rfl ⟩, quot.sound (or.inr ⟨ rfl, rfl ⟩), quot.sound (or.inr ⟨ rfl, rfl ⟩), eT ⟩,
+end
+
+private lemma is_restriction_name_lift.comm_extend {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ))
+    {x y : name Γ}
+    {tL : A [lookup.rename name.extend ℓ, τ⟨ (upair.mk (name.extend x) (name.extend y)) ⟩]⟶ (production.species B)}
+    {tR : A [lookup.rename name.extend ℓ, τ⟨ (upair.mk (name.extend y) (name.extend x)) ⟩]⟶ (production.species B)}
+    (eT : tL == tR)
+    (l₁ l₂ : label ℍ Γ kind.species)
+    (e₁ : τ⟨ (upair.mk (name.extend x) (name.extend y)) ⟩ = label.rename name.extend l₁)
+    (e₂ : τ⟨ (upair.mk (name.extend y) (name.extend x)) ⟩ = label.rename name.extend l₂)
+  : transition.transition_from.mk (ν₁_species M e₁ tL) = transition.transition_from.mk (ν₁_species M e₂ tR) := begin
+  have : l₁ = l₂,
+  {
+    rw [upair.mk.comm] at e₁,
+    from label.rename.inj (@name.extend.inj _ _) (trans e₁.symm e₂),
+  }, subst this,
+
+  refine psigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
+  from ⟨ rfl, ⟨ rfl, rfl ⟩, quot.sound (or.inr ⟨ rfl, rfl ⟩), eT ⟩,
+end
+
+private lemma is_restriction.name_lift.comm {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ)) :
+  ∀ (a b : name (context.extend M.arity Γ))
+  ,  is_restriction.name_lift ℓ M A B a b
+  == is_restriction.name_lift ℓ M A B b a
+| (name.zero x) (name.zero y) := function.hfunext
+  (by { unfold is_restriction_name, rw M.symm })
+  (λ irlL irlR eIRL, function.hfunext
+    (by rw upair.mk.comm)
+    (λ tL tR eT, heq_of_eq (is_restriction_name_lift.comm_zero M A B eT _ _ _ _)))
+| (name.extend x) (name.extend y) := function.hfunext rfl
+  (λ irlL irlR eIRL, function.hfunext
+    (by rw upair.mk.comm)
+    (λ tL tR eT, heq_of_eq (is_restriction_name_lift.comm_extend M A B eT _ _ _ _)))
+| (name.zero x) (name.extend y) := function.hfunext rfl
+    (λ irlL irlR eIRL, function.hfunext (by rw upair.mk.comm) (λ x b z, heq.rfl))
+| (name.extend x) (name.zero y) := function.hfunext rfl
+    (λ irlL irlR eIRL, function.hfunext (by rw upair.mk.comm) (λ x b z, heq.rfl))
+
+lemma ν₁_species.inj' {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) {A} :
+  ∀ {E₁ E₂}
+    {l₁ : label ℍ Γ kind.species} {l'₁ : label ℍ (context.extend M.arity Γ) kind.species}
+    {l₂ : label ℍ Γ kind.species} {l'₂ : label ℍ (context.extend M.arity Γ) kind.species}
+    {e₁ : l'₁ = label.rename name.extend l₁}
+    {e₂ : l'₂ = label.rename name.extend l₂}
+    {t₁ : A [lookup.rename name.extend ℓ, l'₁]⟶ (production.species E₁)}
+    {t₂ : A [lookup.rename name.extend ℓ, l'₂]⟶ (production.species E₂)}
+  , transition_from.mk (ν₁_species M e₁ t₁) = transition_from.mk (ν₁_species M e₂ t₂)
+  → transition_from.mk t₁ = transition_from.mk t₂
+| E₁ E₂ l₁ l'₁ l₂ l'₂ e₁ e₂ t₁ t₂ eql := begin
+  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
+  have : l'₁ = l'₂ := trans e₁ e₂.symm, subst ‹l'₁ = l'₂›,
+
+  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases ν₁_species.inj (eq_of_heq eqT) with ⟨ _, ⟨ _ ⟩ ⟩,
+  from rfl,
+end
+
+lemma ν₁_concretion.inj' {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) {A} :
+  ∀ {a x b y} {E₁ : concretion ℍ ω _ a x} {E₂ : concretion ℍ ω _ b y}
+    {l₁ : label ℍ Γ kind.concretion} {l'₁ : label ℍ (context.extend M.arity Γ) kind.concretion}
+    {l₂ : label ℍ Γ kind.concretion} {l'₂ : label ℍ (context.extend M.arity Γ) kind.concretion}
+    {e₁ : l'₁ = label.rename name.extend l₁}
+    {e₂ : l'₂ = label.rename name.extend l₂}
+    {t₁ : A [lookup.rename name.extend ℓ, l'₁]⟶ (production.concretion E₁)}
+    {t₂ : A [lookup.rename name.extend ℓ, l'₂]⟶ (production.concretion E₂)}
+  , transition_from.mk (ν₁_concretion M e₁ t₁) = transition_from.mk (ν₁_concretion M e₂ t₂)
+  → transition_from.mk t₁ = transition_from.mk t₂
+| a x b y E₁ E₂ l₁ l'₁ l₂ l'₂ e₁ e₂ t₁ t₂ eql := begin
+  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
+  have : l'₁ = l'₂ := trans e₁ e₂.symm, subst ‹l'₁ = l'₂›,
+
+  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases ν₁_concretion.inj (eq_of_heq eqT) with ⟨ _, ⟨ _ ⟩ ⟩,
+  from rfl,
+end
+
+private lemma is_restriction.name_lift.inj_zero {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ)
+    (A : species ℍ ω (context.extend M.arity Γ)) :
+  ∀ {B₁ B₂ : species ℍ ω (context.extend M.arity Γ)}
+    {p q : upair (fin M.arity)}
+    {t₁ : A [lookup.rename name.extend ℓ, τ⟨ (upair.map name.zero p) ⟩]⟶ (production.species B₁)}
+    {t₂ : A [lookup.rename name.extend ℓ, τ⟨ (upair.map name.zero q) ⟩]⟶ (production.species B₂)}
+    {k₁ k₂ : ℍ} {e₁ : M.get p = some k₁} {e₂ : M.get q = some k₂}
+  , transition_from.mk (com₂ M k₁ e₁ rfl t₁) = transition_from.mk (com₂ M k₂ e₂ rfl t₂)
+  → transition_from.mk t₁ = transition_from.mk t₂
+| B₁ B₂ p q t₁ t₂ k₁ k₂ e₁ e₂ eql := begin
+  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ ⟨ _ ⟩, eqR ⟩,
+  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases com₂.inj (eq_of_heq eqT) with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+  from rfl,
+end
+
+private lemma is_restriction.name_lift.inj {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ)
+    (A : species ℍ ω (context.extend M.arity Γ)) {B₁ B₂ : species ℍ ω (context.extend M.arity Γ)} :
+  ∀ {a₁ b₁ a₂ b₂ : name (context.extend M.arity Γ)}
+    (t₁ : A [lookup.rename name.extend ℓ, τ⟨ a₁, b₁ ⟩]⟶ (production.species B₁))
+    (t₂ : A [lookup.rename name.extend ℓ, τ⟨ a₂, b₂ ⟩]⟶ (production.species B₂))
+    (irl₁ : is_restriction_name M a₁ b₁)
+    (irl₂ : is_restriction_name M a₂ b₂)
+  , is_restriction.name_lift ℓ M A B₁ a₁ b₁ irl₁ t₁ = is_restriction.name_lift ℓ M A B₂ a₂ b₂ irl₂ t₂
+  → transition_from.mk t₁ = transition_from.mk t₂
+| a₁ b₁ a₂ b₂ t₁ t₂ irl₁ irl₂ eql := begin
+  cases a₁; cases b₁; try { from false.elim irl₁ };
+  cases a₂; cases b₂; try { from false.elim irl₂ <|> cases eql };
+  simp only [is_restriction.name_lift] at eql,
+
+  case name.extend { from ν₁_species.inj' M eql },
+  case name.zero { from is_restriction.name_lift.inj_zero ℓ M A eql },
+end
 
 private def is_restriction.lift {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
   : is_restriction ℓ M A
   → transition.transition_from ℓ (ν(M) A)
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ := begin
-  have : A [lookup.rename name.extend ℓ, label.rename name.extend τ@' k]⟶ (production.species B),
-  { simp only [label.rename], from t },
-  from ⟨ _, _, _, ν₁_species M this ⟩,
+  have : τ@' k = label.rename (@name.extend Γ M.arity) (τ@' k), { simp only [label.rename] },
+  from ⟨ _, _, _, ν₁_species M this t ⟩,
 end
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, irl ⟩ := begin
   unfold is_restriction_like at irl,
-  from quot.hrec_on p
-    (λ p irl t, is_restriction.name_lift ℓ M A B p irl t)
-    (is_restriction.name_lift.quot ℓ M A B)
+  from upair.rec_on p
+    (λ a b irl t, is_restriction.name_lift ℓ M A B a b irl t)
+    (is_restriction.name_lift.comm ℓ M A B)
     irl t,
 end
 | ⟨ ⟨ _, # (name.zero n), E, t ⟩, irl ⟩ := false.elim irl
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ := begin
-  have : A [lookup.rename name.extend ℓ, label.rename name.extend (# n)]⟶ (production.concretion F),
-  { simp only [label.rename], from t },
-  from ⟨ _, # n, production.concretion (ν'(M) F), ν₁_concretion M this ⟩,
+  have : # (name.extend n) = label.rename (@name.extend Γ M.arity) (# n), { simp only [label.rename] },
+  from ⟨ _, # n, production.concretion (ν'(M) F), ν₁_concretion M this t ⟩,
 end
 
 private def is_restriction.lift.inj_both {Γ : context} {ℓ : lookup ℍ ω Γ}
-    (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ))
-    {B B' : species ℍ ω (context.extend M.arity Γ)} :
-  ∀ {p q : upair (name (context.extend M.arity Γ))}
+    (M : affinity ℍ) (A B : species ℍ ω (context.extend M.arity Γ)) :
+  ∀ {B B' : species ℍ ω (context.extend M.arity Γ)}
+    {p q : upair (name (context.extend M.arity Γ))}
 
     (t : A [lookup.rename name.extend ℓ, τ⟨ p ⟩]⟶ (production.species B))
     (irl : is_restriction_like ℓ M A ⟨kind.species, ⟨τ⟨ p ⟩, ⟨production.species B, t⟩⟩⟩)
@@ -497,19 +602,15 @@ private def is_restriction.lift.inj_both {Γ : context} {ℓ : lookup ℍ ω Γ}
   = is_restriction.lift ℓ M A ⟨⟨kind.species, ⟨τ⟨ q ⟩, ⟨production.species B', t'⟩⟩⟩, irl'⟩
   → (⟨⟨kind.species, ⟨τ⟨ p ⟩, ⟨production.species B, t⟩⟩⟩, irl⟩ : is_restriction ℓ M A)
   = ⟨⟨kind.species, ⟨τ⟨ q ⟩, ⟨production.species B', t'⟩⟩⟩, irl'⟩
-| p q t irl t' irl' eql := begin
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩, clear h,
-  rcases quot.exists_rep q with ⟨ ⟨ a', b' ⟩, ⟨ _ ⟩ ⟩, clear h,
+| B B' p q t irl t' irl' eql := begin
+  unfold is_restriction.lift at eql,
+  have : ∀ (a b : name (context.extend M.arity Γ)), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
+  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, h ⟩, rw this at h, subst h,
+  rcases quot.exists_rep q with ⟨ ⟨ a', b' ⟩, h ⟩, rw this at h, subst h,
+  clear this,
 
-  simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql ⊢,
-  cases a; cases b; try { from false.elim irl };
-  cases a'; cases b'; try { from false.elim irl' <|> cases eql };
-  simp only [is_restriction.name_lift] at eql irl irl',
-
-  case name.extend {
-    rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ eqα, eql₁ ⟩,
-  },
-  have this := eq_of_heq (psigma.mk.inj eql).2,
+  simp only [],
+  from is_restriction.name_lift.inj ℓ M A t t' irl irl' eql,
 end
 
 private def is_restriction.lift.inj {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ) (A : species ℍ ω (context.extend M.arity Γ))
@@ -517,7 +618,8 @@ private def is_restriction.lift.inj {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity 
 | ⟨ ⟨ _, # (name.zero n), E, t ⟩, irl ⟩ _ eql := false.elim irl
 
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.zero n), E, t' ⟩, irl ⟩ eql := false.elim irl
-| ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ rfl := rfl
+| ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ eql
+  := by { cases ν₁_species.inj' M eql, from rfl }
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, τ⟨ p ⟩, production.species B', t' ⟩, irl ⟩ eql := begin
   rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
   simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql,
@@ -539,7 +641,8 @@ end
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, irl ⟩ ⟨ ⟨ _, τ⟨ q ⟩, production.species B', t' ⟩, irl' ⟩ eql
   := is_restriction.lift.inj_both M A B t irl t' irl' eql
 
-| ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.extend n'), production.concretion F', t' ⟩, _ ⟩ rfl := rfl
+| ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.extend n'), production.concretion F', t' ⟩, _ ⟩ eql
+  := by { cases ν₁_concretion.inj' M eql, from rfl }
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.zero n'), E, t' ⟩, irl ⟩ eql := false.elim irl
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ eql := by cases eql
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, τ⟨ p ⟩, production.species B', t' ⟩, irl ⟩ eql := begin
@@ -554,7 +657,7 @@ private def is_restriction.embed {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity ℍ
   := ⟨ is_restriction.lift ℓ M A, is_restriction.lift.inj ℓ M A ⟩
 
 instance is_restriction_name.decide {Γ} (M : affinity ℍ)
-  : decidable_pred (@is_restriction_name ℍ Γ M)
+  : decidable_pred (λ (p : upair.pair (name (context.extend M.arity Γ))), is_restriction_name M p.fst p.snd)
 | ⟨ name.zero a, name.zero b ⟩ := by { unfold is_restriction_name, apply_instance }
 | ⟨ name.extend _, name.extend _ ⟩ := decidable.true
 | ⟨ name.extend _, name.zero _ ⟩ := decidable.false
@@ -576,34 +679,60 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
   , λ t, begin
     rcases t with ⟨ k, α, E, t ⟩,
     cases t,
-    case com₂ : a b B k eql t {
+    case com₂ : p p' B k eql eqp t {
+      have : ∀ (a b : fin M.arity), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
+      rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, h ⟩, rw this at h, subst h,
+
+      simp only [upair.map_beta] at eqp, subst eqp, cases eqp,
+
       have : is_restriction_like ℓ M A (transition_from.mk t),
       {
-        simp only [transition_from.mk, is_restriction_like, quot.lift_on, upair.mk, quotient.mk, is_restriction_name], unfold_coes,
-        rw eql, from rfl,
+        show option.is_some' (M.f a b),
+        have : M.f a b = some k := eql,
+        rw this, from true.intro,
+      },
+
+      have kdef : k = option.get' this := option.some.inj (trans eql.symm (option.eq_some_of_is_some' this)),
+      subst kdef,
+
+      let t' : is_restriction ℓ M A := ⟨ ⟨ _, _, _, t ⟩, this ⟩,
+      have this := finset.mem_map_of_mem (is_restriction.embed ℓ M A)
+        (finset.mem_subtype.mpr (@fintype.complete _ As t'.val)),
+      unfold_coes at this,
+      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_mk, is_restriction.name_lift] at this,
+
+      from this,
+    },
+    case ν₁_species : l l' B eql t {
+      have : is_restriction_like ℓ M A (transition_from.mk t),
+      {
+        cases l; simp only [label.rename] at eql; subst eql;
+        simp only [transition_from.mk, is_restriction_like],
+
+        rcases quot.exists_rep l_k with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
+        from true.intro,
       },
       let t' : is_restriction ℓ M A := ⟨ ⟨ _, _, _, t ⟩, this ⟩,
       have this := finset.mem_map_of_mem (is_restriction.embed ℓ M A)
         (finset.mem_subtype.mpr (@fintype.complete _ As t'.val)),
       unfold_coes at this,
-      simp only [is_restriction.embed, is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec, upair.mk] at this,
-      sorry,
 
+      cases l,
+      case label.spontanious { simp only [label.rename] at eql, subst eql, from this },
 
+      have up : ∀ (a b : name Γ), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
+      rcases quot.exists_rep l_k with ⟨ ⟨ a, b ⟩, h ⟩, rw up at h, subst h,
+      simp only [label.rename, upair.map_beta] at eql, subst eql,
+
+      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_mk, is_restriction.name_lift] at this,
+      from this,
     },
-    sorry,
-    -- case ν₁_species : α B t {
-    --   have : is_restriction_like ℓ M A (transition_from.mk t),
-    --   {
-    --     cases α; simp only [transition_from.mk, label.rename, is_restriction_like],
-
-
-    --     rw eql, from rfl,
-    --   },
-    --   let t' : is_restriction ℓ M A := ⟨ ⟨ _, _, _, t ⟩, this ⟩,
-    --   have this := finset.mem_map_of_mem (is_restriction.embed ℓ M A)
-    --     (finset.mem_subtype.mpr (@fintype.complete _ As t'.val)),
-    -- }
+    case ν₁_concretion : l l' b y B eql t {
+      cases l, simp only [label.rename] at eql, subst eql,
+      let t' : is_restriction ℓ M A := ⟨ ⟨ _, _, _, t ⟩, true.intro ⟩,
+      from finset.mem_map_of_mem (is_restriction.embed ℓ M A)
+        (finset.mem_subtype.mpr (@fintype.complete _ As t'.val)),
+    }
   end ⟩
 
 /-- Show that the available transitions from a species is finite and thus
@@ -623,8 +752,7 @@ using_well_founded {
 }
 
 instance {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ)
-  : fintype (transition_from ℓ A)
-  := enumerate ℓ A
+  : fintype (transition_from ℓ A) := enumerate ℓ A
 
 end transition
 end cpi

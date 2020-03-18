@@ -47,11 +47,12 @@ inductive transition :
   → transition (A |ₛ B) ℓ α (production.species FG)
 
 | com₂
-    {Γ ℓ} (M : affinity ℍ) {a b : fin M.arity}
+    {Γ ℓ} (M : affinity ℍ) {p : upair (fin M.arity)} {p' : upair (name (context.extend M.arity Γ))}
     {A B : species ℍ ω (context.extend M.arity Γ)}
     (k : ℍ)
-  : M.f a b = some k
-  → transition A (lookup.rename name.extend ℓ) τ⟨ name.zero a, name.zero b ⟩ (production.species B)
+  : M.get p = some k
+  → p' = p.map name.zero
+  → transition A (lookup.rename name.extend ℓ) τ⟨ p' ⟩ (production.species B)
   → transition (ν(M) A) ℓ τ@'k (production.species (ν(M) B))
 
 | parL_species
@@ -68,12 +69,15 @@ inductive transition :
   : transition B ℓ l (production.concretion E) → transition (A |ₛ B) ℓ l (production.concretion (A |₂ E))
 
 | ν₁_species
-    {Γ ℓ} (M : affinity ℍ) {A} {l : label ℍ Γ kind.species} {E}
-  : transition A (lookup.rename name.extend ℓ) (label.rename name.extend l) (production.species E)
+    {Γ ℓ} (M : affinity ℍ) {A} {l : label ℍ Γ kind.species} {l' : label ℍ (context.extend M.arity Γ) kind.species} {E}
+  : l' = label.rename name.extend l
+  → transition A (lookup.rename name.extend ℓ) l' (production.species E)
   → transition (ν(M) A) ℓ l (production.species (ν(M) E))
 | ν₁_concretion
-    {Γ ℓ} (M : affinity ℍ) {A} {l : label ℍ Γ kind.concretion} {b y} {E : concretion ℍ ω _ b y}
-  : transition A (lookup.rename name.extend ℓ) (label.rename name.extend l) (production.concretion E)
+    {Γ ℓ} (M : affinity ℍ) {A} {l : label ℍ Γ kind.concretion} {l' : label ℍ (context.extend M.arity Γ) kind.concretion}
+    {b y} {E : concretion ℍ ω _ b y}
+  : l' = label.rename name.extend l
+  → transition A (lookup.rename name.extend ℓ) l' (production.concretion E)
   → transition (ν(M) A) ℓ l (production.concretion (ν'(M) E))
 
 | defn
@@ -120,11 +124,14 @@ namespace transition
       from com₁ rfl rfl tf' tg',
     },
 
-    case com₂ : Γ ℓ M a b A B k eqK t ih {
+    case com₂ : Γ ℓ M p p' A B k eqK eqP t ih {
+      subst eqP,
       simp only [species.rename.restriction, production.rename],
       have t' := ih _ (name.ext ρ),
       rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
-      from com₂ M k eqK t',
+      simp only [label.rename] at t',
+      rw [upair.map_compose, name.ext_zero] at t',
+      from com₂ M k eqK rfl t',
     },
 
     case defn : Γ n k α ℓ D as B E eql t ih {
@@ -161,22 +168,24 @@ namespace transition
       from parR_concretion _ (ih _ ρ),
     },
 
-    case ν₁_species : Γ ℓ M A l E t ih {
+    case ν₁_species : Γ ℓ M A l l' E eql t ih {
+      subst eql,
       simp only [production.rename, species.rename.restriction],
       have t' := ih _ (name.ext ρ),
       rw [label.rename_compose, name.ext_extend, ← label.rename_compose] at t',
       rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
 
-      from ν₁_species M t',
+      from ν₁_species M rfl t',
     },
 
-    case ν₁_concretion : Γ ℓ M A l b y E t ih {
+    case ν₁_concretion : Γ ℓ M A l l' b y E eql t ih {
+      subst eql,
       simp only [production.rename, species.rename.restriction, concretion.rename],
       have t' := ih _ (name.ext ρ),
       rw [label.rename_compose, name.ext_extend, ← label.rename_compose] at t',
       rw [lookup.rename_compose, name.ext_extend, ← lookup.rename_compose] at t',
 
-      from ν₁_concretion M t',
+      from ν₁_concretion M rfl t',
     },
   end
 
