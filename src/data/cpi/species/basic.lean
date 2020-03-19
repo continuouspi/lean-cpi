@@ -155,7 +155,6 @@ section rename
   }
 
   /-- A simpler version of rename_with, which does not require a witness. -/
-  @[reducible]
   def rename {Γ Δ} {k} (ρ : name Γ → name Δ) (A : whole ℍ ω k Γ) : whole ℍ ω k Δ
     := rename_with A (λ a _, ρ a)
 

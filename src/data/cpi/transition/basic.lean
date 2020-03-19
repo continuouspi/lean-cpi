@@ -192,14 +192,12 @@ namespace transition
   /-- FIXME: Actually prove this. I'm 99% sure it exists, but showing it has
       proved to be rather annoying. -/
   protected constant rename_from :
-    ∀ {Γ Δ f k}
+    ∀ {Γ Δ ℓ k}
       {A : species ℍ ω Γ} {l : label ℍ Δ k} {E : production ℍ ω Δ k}
       (ρ : name Γ → name Δ)
-    , species.rename ρ A [f, l]⟶ E
-    → Σ' (f' : lookup ℍ ω Γ) (l' : label ℍ Γ k) (E' : production ℍ ω Γ k)
-    , pprod (A [f' , l']⟶ E')
-            (lookup.rename ρ f' = f ∧ label.rename ρ l' = l ∧ production.rename ρ E' = E)
-
+    , species.rename ρ A [lookup.rename ρ ℓ, l]⟶ E
+    → Σ'(l' : label ℍ Γ k) (E' : production ℍ ω Γ k)
+    , pprod (A [ℓ , l']⟶ E') (label.rename ρ l' = l ∧ production.rename ρ E' = E)
 
 /-- A transition from a specific species, to any production. -/
 @[nolint has_inhabited_instance]

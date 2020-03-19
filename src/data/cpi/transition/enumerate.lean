@@ -604,10 +604,8 @@ private def is_restriction.lift.inj_both {Γ : context} {ℓ : lookup ℍ ω Γ}
   = ⟨⟨kind.species, ⟨τ⟨ q ⟩, ⟨production.species B', t'⟩⟩⟩, irl'⟩
 | B B' p q t irl t' irl' eql := begin
   unfold is_restriction.lift at eql,
-  have : ∀ (a b : name (context.extend M.arity Γ)), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, h ⟩, rw this at h, subst h,
-  rcases quot.exists_rep q with ⟨ ⟨ a', b' ⟩, h ⟩, rw this at h, subst h,
-  clear this,
+  rcases upair.exists_rep p with ⟨ a, b, ⟨ _ ⟩ ⟩,
+  rcases upair.exists_rep q with ⟨ a', b', ⟨ _ ⟩ ⟩,
 
   simp only [],
   from is_restriction.name_lift.inj ℓ M A t t' irl irl' eql,
@@ -621,21 +619,21 @@ private def is_restriction.lift.inj {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity 
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ eql
   := by { cases ν₁_species.inj' M eql, from rfl }
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, τ⟨ p ⟩, production.species B', t' ⟩, irl ⟩ eql := begin
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
-  simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql,
+  rcases upair.exists_rep p with ⟨ a, b, ⟨ _ ⟩ ⟩,
+  simp only [is_restriction.lift, upair.rec_on_beta] at eql,
   cases a; cases b; cases eql <|> from false.elim irl,
 end
 | ⟨ ⟨ _, τ@' k, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.extend n), production.concretion F, t' ⟩, _ ⟩ eql := by cases eql
 
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.zero n'), E, t' ⟩, irl ⟩ eql := false.elim irl
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, irl ⟩ ⟨ ⟨ _, # (name.extend n'), production.concretion F', t' ⟩, _ ⟩ eql := begin
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
-  simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql,
+  rcases upair.exists_rep p with ⟨ a, b, ⟨ _ ⟩ ⟩,
+  simp only [is_restriction.lift, upair.rec_on_beta] at eql,
   cases a; cases b; cases eql <|> from false.elim irl,
 end
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, irl ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ eql := begin
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
-  simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql,
+  rcases upair.exists_rep p with ⟨ a, b, ⟨ _ ⟩ ⟩,
+  simp only [is_restriction.lift, upair.rec_on_beta] at eql,
   cases a; cases b; cases eql <|> from false.elim irl,
 end
 | ⟨ ⟨ _, τ⟨ p ⟩, production.species B, t ⟩, irl ⟩ ⟨ ⟨ _, τ⟨ q ⟩, production.species B', t' ⟩, irl' ⟩ eql
@@ -646,8 +644,8 @@ end
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, # (name.zero n'), E, t' ⟩, irl ⟩ eql := false.elim irl
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, τ@' k', production.species B', t' ⟩, _ ⟩ eql := by cases eql
 | ⟨ ⟨ _, # (name.extend n), production.concretion F, t ⟩, _ ⟩ ⟨ ⟨ _, τ⟨ p ⟩, production.species B', t' ⟩, irl ⟩ eql := begin
-  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
-  simp only [is_restriction.lift, quot.hrec_on, quot.rec_on, quot.rec] at eql,
+  rcases upair.exists_rep p with ⟨ a, b, ⟨ _ ⟩ ⟩,
+  simp only [is_restriction.lift, upair.rec_on_beta] at eql,
   cases a; cases b; cases eql <|> from false.elim irl,
 end
 
@@ -680,8 +678,7 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
     rcases t with ⟨ k, α, E, t ⟩,
     cases t,
     case com₂ : p p' B k eql eqp t {
-      have : ∀ (a b : fin M.arity), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
-      rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, h ⟩, rw this at h, subst h,
+      rcases upair.exists_rep p with ⟨ a, b, ep' ⟩, subst ep',
 
       simp only [upair.map_beta] at eqp, subst eqp, cases eqp,
 
@@ -699,7 +696,7 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
       have this := finset.mem_map_of_mem (is_restriction.embed ℓ M A)
         (finset.mem_subtype.mpr (@fintype.complete _ As t'.val)),
       unfold_coes at this,
-      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_mk, is_restriction.name_lift] at this,
+      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_beta, is_restriction.name_lift] at this,
 
       from this,
     },
@@ -709,7 +706,7 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
         cases l; simp only [label.rename] at eql; subst eql;
         simp only [transition_from.mk, is_restriction_like],
 
-        rcases quot.exists_rep l_k with ⟨ ⟨ a, b ⟩, ⟨ _ ⟩ ⟩,
+        rcases upair.exists_rep l_k with ⟨ a, b, ⟨ _ ⟩ ⟩,
         from true.intro,
       },
       let t' : is_restriction ℓ M A := ⟨ ⟨ _, _, _, t ⟩, this ⟩,
@@ -724,7 +721,7 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
       rcases quot.exists_rep l_k with ⟨ ⟨ a, b ⟩, h ⟩, rw up at h, subst h,
       simp only [label.rename, upair.map_beta] at eql, subst eql,
 
-      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_mk, is_restriction.name_lift] at this,
+      simp only [is_restriction.embed, is_restriction.lift, upair.rec_on_beta, is_restriction.name_lift] at this,
       from this,
     },
     case ν₁_concretion : l l' b y B eql t {

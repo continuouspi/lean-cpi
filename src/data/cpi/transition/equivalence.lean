@@ -8,12 +8,15 @@ open_locale congruence
 
 open species.equiv
 
-private def no_rename_zero :
-    ∀ {Γ} {n} {a b : fin n} {p : upair (name Γ)}
-    , upair.map name.extend p ≠ upair.mk (name.zero a) (name.zero b)
-  | Γ n a b p := quot.rec_on p
-      (λ ⟨ a₂, b₂ ⟩ eq, by { cases quotient.exact eq; cases h; contradiction })
-      (λ _ _ _, rfl)
+private def no_rename_zero {Γ} {n} {p : upair (fin n)} {q : upair (name Γ)}
+  : upair.map name.extend q ≠ upair.map name.zero p
+  := upair.rec_on q
+
+    (λ a b eql, begin
+      rcases upair.exists_rep p with ⟨ a', b', ⟨ _ ⟩ ⟩,
+      rcases quotient.exact eql with ⟨ l, _ ⟩ | ⟨ l, _ ⟩; cases l
+    end)
+    (λ a b, function.hfunext (by rw upair.mk.comm) (λ a₂ b₂ _, heq.rfl))
 
 private def on_parallel_assoc₁_left {Γ ℓ} {A B C : species ℍ ω Γ} :
   ∀ {α : label ℍ Γ kind.species} {E : species ℍ ω Γ}
@@ -61,248 +64,197 @@ private def on_parallel_symm {Γ ℓ} {A B : species ℍ ω Γ} :
 | k α ._ (parR_species _ t) := ⟨ _, production.equiv.species parallel_symm, parL_species A t ⟩
 | k α ._ (parR_concretion _ t) := ⟨ _, production.equiv.concretion (symm concretion.equiv.parallel_symm), parL_concretion A t ⟩
 
-/-
-private def on_parallel_assoc₂ :
-  ∀ {Γ ℓ k} {α : label ℍ Γ k}
-    {A B C : species ℍ ω Γ} {E : production ℍ ω Γ k}
+private def on_parallel_assoc₂_species {Γ ℓ} {A B C : species ℍ ω Γ} :
+  ∀ {α : label ℍ Γ kind.species} {E : species ℍ ω Γ}
+  , (B |ₛ C) [ℓ, α]⟶ (production.species E)
+  → Σ' (E' : production ℍ ω Γ kind.species) (eq : production.species (A |ₛ E) ≈ E')
+    , ((A |ₛ B) |ₛ C) [ℓ, α]⟶ E'
+| α E (parL_species _ t) :=
+  ⟨ _, production.equiv.species equiv.parallel_assoc₂, parL_species _ (parR_species _ t) ⟩
+| α E (parR_species _ t) :=
+  ⟨ _, production.equiv.species equiv.parallel_assoc₂, parR_species _ t ⟩
+| α E (com₁ rfl rfl tf tg) :=
+  ⟨ _, production.equiv.species (concretion.pseudo_apply.on_parallel₂' A _ _).symm,
+   com₁ rfl rfl (parR_concretion _ tf) tg ⟩
+
+private def on_parallel_assoc₂_concretion {Γ ℓ} {A B C : species ℍ ω Γ} {b y} :
+  ∀ {α : label ℍ Γ kind.concretion} {E : concretion ℍ ω Γ b y}
+  , (B |ₛ C) [ℓ, α]⟶ (production.concretion E)
+  → Σ' (E' : production ℍ ω Γ kind.concretion) (eq : production.concretion (A |₂ E) ≈ E')
+    , ((A |ₛ B) |ₛ C) [ℓ, α]⟶ E'
+| α E (parL_concretion _ t) :=
+  ⟨ _, production.equiv.concretion concretion.equiv.parallel_assoc₂.symm
+   , parL_concretion _ (parR_concretion _ t) ⟩
+| α E (parR_concretion _ t) :=
+  ⟨ _, production.equiv.concretion concretion.equiv.parallel_assoc₃.symm, parR_concretion _ t ⟩
+
+private def on_parallel_assoc₂ {Γ ℓ} {A B C : species ℍ ω Γ} :
+  ∀ {k} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
   , (A |ₛ B |ₛ C) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E'), ((A |ₛ B) |ₛ C) [ℓ, α]⟶ E'
-| Γ f ._ α A B C E (@com₁ _ _ _ _ x y _ _ a b F G tf tg) := begin
-    rcases com₁_unpair_con tg with ⟨ E', ⟨ t', eqE ⟩ | ⟨ t', eqE ⟩ ⟩;
-    cases E' with _ b y G';
-    cases eqE,
+| ._ α E (@com₁ _ _ _ _ x y _ _ a b F G _ _ rfl rfl tf (parL_concretion _ tg)) :=
+  ⟨ _, production.equiv.species (concretion.pseudo_apply.on_parallel₁ F _ C),
+   parL_species _ (com₁ rfl rfl tf tg) ⟩
+| ._ α E (@com₁ _ _ _ _ x y _ _ a b F G _ _ rfl rfl tf (parR_concretion _ tg)) :=
+  ⟨ _, production.equiv.species (concretion.pseudo_apply.parallel_shift F B _).symm,
+    com₁ rfl rfl (parL_concretion _ tf) tg ⟩
+| k α ._ (parL_species _ t) :=
+  ⟨ _, production.equiv.species equiv.parallel_assoc₂, parL_species _ (parL_species _ t) ⟩
+| k α ._ (parL_concretion _ t) :=
+  ⟨ _, production.equiv.concretion concretion.equiv.parallel_assoc₁.symm, parL_concretion _ (parL_concretion _ t) ⟩
+| k α ._ (parR_species _ t) := on_parallel_assoc₂_species t
+| k α ._ (parR_concretion _ t) := on_parallel_assoc₂_concretion t
 
-    suffices : concretion.pseudo_apply F (G' |₁ C) ≈ (concretion.pseudo_apply F G' |ₛ C),
-      have h := parL C (com₁ tf t'),
-      from ⟨ _, production.equiv.species this, h ⟩,
-    from concretion.pseudo_apply.on_parallel₁ F G' C,
-
-    suffices : concretion.pseudo_apply F (B |₂ G') ≈ concretion.pseudo_apply (F |₁ B) G',
-      have h := (parL B tf),
-      from ⟨ _, production.equiv.species this, com₁ h t' ⟩,
-    from symm (concretion.pseudo_apply.parallel_shift F B G'),
-  end
-| Γ ℓ k α A B C ._ (@parL _ _ _ _ _ _ _ _ E t) := begin
-    suffices
-      : production.map (λ x, x |ₛ B |ₛ C) (λ _ _ x, x |₁ B |ₛ C) E
-      ≈ production.map (λ x, x |ₛ C) (λ _ _ x, x |₁ C)
-          (production.map (λ x, x |ₛ B) (λ _ _ x, x |₁ B) E),
-      from ⟨ _, this, parL C (parL B t) ⟩,
-
-    simp only [production.map_compose],
-    from production.equiv.map_over
-      (λ _, equiv.parallel_assoc₂) (λ _ _ F, symm concretion.equiv.parallel_assoc₁) E,
-  end
-| Γ ℓ k α A B C ._ (@parR _ _ _ _ _ _ _ _ _ (@com₁ _ _ _ _ x y _ _ a b F G tf tg)) :=
-  let t' := parR A tf in
-  ⟨ _,
-    production.equiv.species (symm (concretion.pseudo_apply.on_parallel₂' A F G)),
-    com₁ t' tg ⟩
-| Γ ℓ k α A B C ._ (@parR _ _ _ _ _ _ _ _ _ (@parL _ _ _ _ _ _ _ _ E t)) := begin
-    suffices
-      : production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x)
-          (production.map (λ x, x |ₛ C) (λ _ _ x, x |₁ C) E)
-      ≈ production.map (λ x, x |ₛ C) (λ _ _ x, x |₁ C)
-          (production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x) E),
-      from ⟨ _, this, parL C (parR A t) ⟩,
-
-    simp only [production.map_compose],
-    from production.equiv.map_over
-      (λ _, parallel_assoc₂) (λ b y F, symm concretion.equiv.parallel_assoc₂) E
-  end
-| Γ ℓ k α A B C ._ (@parR _ _ _ _ _ _ _ _ _ (@parR _ _ _ _ _ _ _ _ E t)) := begin
-    suffices
-      : production.map (λ x, A |ₛ x) (λ _ _ x, A |₂ x)
-          (production.map (λ x, B |ₛ x) (λ _ _ x, B |₂ x) E)
-      ≈ production.map (λ x, (A |ₛ B) |ₛ x) (λ _ _ x, (A |ₛ B) |₂ x) E,
-      refine ⟨ _, this, parR (A |ₛ B) t ⟩,
-
-    simp only [production.map_compose],
-    from production.equiv.map_over
-      (λ _, parallel_assoc₂) (λ b y F, symm concretion.equiv.parallel_assoc₃) E,
-  end
-
-private def on_choice_swap  :
-  ∀ {Γ ℓ k f g} {α : label ℍ Γ k}
+private def on_choice_swap {Γ ℓ} {As : choices ℍ ω Γ} :
+  ∀ {k f g} {α : label ℍ Γ k}
     {π₁ : prefix_expr ℍ Γ f} {π₂ : prefix_expr ℍ Γ g}
     {A : species ℍ ω (f.apply Γ)} {B : species ℍ ω (g.apply Γ)}
-    {As : choices ℍ ω Γ}
     {E : production ℍ ω Γ k}
   , (Σ# whole.cons π₁ A (whole.cons π₂ B As)) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E')
     , (Σ# whole.cons π₂ B (whole.cons π₁ A As)) [ℓ, α]⟶ E'
-| Γ ℓ k α f g π₁ π₂ A B As E t:= begin
-  cases t,
+| ._ α f g π₁ π₂ A B E (choice₁ a b b_len y _ _) := ⟨ _, refl _, ξ_choice (choice₁ a b b_len y _ _) ⟩
+| ._ α f g π₁ π₂ A B E (choice₂ k _ _) := ⟨ _, refl _, ξ_choice (choice₂ k _ _) ⟩
+| ._ α f g π₁ π₂ A B E (ξ_choice (choice₁ a b b_len y _ _)) := ⟨ _, refl _, choice₁ a b b_len y _ _ ⟩
+| ._ α f g π₁ π₂ A B E (ξ_choice (choice₂ k _ _)) := ⟨ _, refl _, choice₂ k _ _ ⟩
+| k α f g π₁ π₂ A B E (ξ_choice (ξ_choice t)) := ⟨ _, refl _, ξ_choice (ξ_choice t) ⟩
 
-  case choice₁ : a b y A As { from ⟨ _, refl _, ξ_choice (choice₁ a b y A As) ⟩ },
-  case choice₂ : k A As { from ⟨ _, refl _, ξ_choice (choice₂ k A As) ⟩ },
-  case ξ_choice : t {
-    cases t,
-    case choice₁ : a b y A As { from ⟨ _, refl _, choice₁ a b y A _ ⟩ },
-    case choice₂ : k A As { from ⟨ _, refl _, choice₂ k A _ ⟩ },
-    case ξ_choice : t { from ⟨ _, refl _, ξ_choice (ξ_choice t) ⟩ },
-  },
-end
-
-private def ν₁_unpair :
-  ∀ {Γ ℓ} {α : label ℍ Γ kind.concretion} {M : affinity ℍ}
-    {A : species ℍ ω (context.extend M.arity Γ)}
-    {E : production ℍ ω Γ kind.concretion}
-  , (ν(M)A) [ℓ, α]⟶ E
-  → Σ' (E' : production ℍ ω (context.extend M.arity Γ) kind.concretion)
-       (α' : label ℍ (context.extend M.arity Γ) kind.concretion)
-    , pprod
-      (A [lookup.rename name.extend ℓ, α']⟶ E')
-      ( E = production.map (λ x, ν(M) x) (λ _ _ x, ν'(M) x) E'
-      ∧ label.rename name.extend α = α')
-| Γ f α M A ._ (@ν₁ _ _ _ _ _ _ _ _ (production.concretion E) t)
-:= ⟨ E, label.rename name.extend α, t, rfl, rfl ⟩
-
-private def on_ν_parallel₂ :
-  ∀ {Γ ℓ k} {α : label ℍ Γ k} {M : affinity ℍ}
-    {A : species ℍ ω Γ}
-    {B : species ℍ ω (context.extend (M.arity) Γ)}
-    {E : production ℍ ω Γ k}
+private def on_ν_parallel₂ {Γ ℓ} {M : affinity ℍ} {A : species ℍ ω Γ} {B : species ℍ ω (context.extend (M.arity) Γ)} :
+  ∀ {k} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
   , (A |ₛ ν(M) B) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E'), (ν(M) rename name.extend A |ₛ B) [ℓ, α]⟶ E'
-| Γ f ._ ._ M A B ._ (@com₁ _ _ _ _ x y _ _ a b F G tf tg) := begin
-    rcases ν₁_unpair tg with ⟨ E', α', tg', eqE, ⟨ eqα ⟩ ⟩,
-    cases E' with _ b' y' G', cases eqE,
+| ._ ._ _ (com₁ rfl rfl tf (ν₁_concretion M rfl tg)) :=
+  -- Slighty bizzare, but the separate binding helps this to TC
+  let tf' := transition.rename (@name.extend _ M.arity) tf in
+  ⟨ _, production.equiv.species (concretion.pseudo_apply.on_restriction _ _ _),
+    ν₁_species M rfl (com₁ rfl rfl tf' tg) ⟩
+| k α _ (parL_species E t) :=
+  let t' := transition.rename (@name.extend _ M.arity) t in
+  ⟨ _, production.equiv.species (ν_parallel₂ M), ν₁_species M rfl (parL_species _ t' ) ⟩
+| k α _ (parL_concretion E t) :=
+  let t' := transition.rename (@name.extend _ M.arity) t in
+  ⟨ _, production.equiv.concretion (concretion.equiv.ν_parallel₂ M).symm,
+   ν₁_concretion M rfl (parL_concretion _ t' ) ⟩
 
-    -- Slighty bizzare, but the type annotation allows this to check without
-    -- further intermediate steps.
-    have tf' := transition.rename name.extend tf,
-    have t'
-      : (species.rename name.extend A |ₛ B) [_, label.rename name.extend τ⟨ (upair.mk a b) ⟩]⟶ _
-      := com₁ tf' tg',
-    refine ⟨ _, _, ν₁ M t' ⟩,
-    from production.equiv.species (concretion.pseudo_apply.on_restriction F M G')
-  end
-| Γ ℓ k α M A B ._ (@parL _ _ _ _ _ _ _ _ E t) := begin
-    refine ⟨ _, _, ν₁ M (parL B (transition.rename name.extend t)) ⟩,
-    simp only [production.map_compose],
-    cases E,
-    case production.species : E {
-      from production.equiv.species (ν_parallel₂ M)
-    },
-    case production.concretion : b y E {
-      from production.equiv.concretion (symm (concretion.equiv.ν_parallel₂ M))
-    }
-  end
-| Γ f ._ ._ M ._ B ._ (parR A (@com₂ _ _ _ _ _ a b _ E k t)) :=
-    let this := parR (species.rename name.extend A) t in
-    ⟨ _, production.equiv.species (ν_parallel₂ M), com₂ M k this ⟩
-| Γ ℓ k ._ M ._ B ._ (parR A (@ν₁ _ _ _ _ _ _ _ α E t)) := begin
-    have this := parR (species.rename name.extend A) t,
-    refine ⟨ _, _, ν₁ M this ⟩,
-    simp only [production.map_compose],
-    from production.equiv.map_over
-      (λ _, ν_parallel₂ M) (λ _ _ _, symm (concretion.equiv.ν_parallel₁ M)) E
-  end
+| k α _ (parR_species A (com₂ M k' ek rfl t)) :=
+  ⟨ _, production.equiv.species (ν_parallel₂ M), com₂ M k' ek rfl (parR_species _ t) ⟩
+| k α _ (parR_species A (ν₁_species _ rfl t)) :=
+  ⟨ _, production.equiv.species (ν_parallel₂ M), ν₁_species M rfl (parR_species _ t) ⟩
+| k α _ (parR_concretion A (ν₁_concretion _ rfl t)) :=
+  ⟨ _, production.equiv.concretion (concretion.equiv.ν_parallel₁ M).symm,
+    ν₁_concretion M rfl (parR_concretion _ t) ⟩
 
-private noncomputable def on_ν_parallel₁ :
-  ∀ {Γ ℓ k} {α : label ℍ Γ k} {M : affinity ℍ}
-    {A : species ℍ ω Γ}
-    {B : species ℍ ω (context.extend (M.arity) Γ)}
-    {E : production ℍ ω Γ k}
+private def upair_extend {n} {Γ} :
+  ∀ {p : upair (name Γ)} {a b : name (context.extend n Γ)}
+  , upair.map name.extend p = upair.mk a b
+  → Σ' (a' b' : name Γ), p = upair.mk a' b' ∧ a = name.extend a' ∧ b = name.extend b'
+| p (name.zero _) (name.zero _) e := false.elim (begin
+  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ep ⟩, have : upair.mk a b = p := ep, subst this,
+  rcases quotient.exact e with ⟨ l, r ⟩ | ⟨ l, r ⟩; contradiction,
+end)
+| p (name.zero _) (name.extend _) e := false.elim (begin
+  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ep ⟩, have : upair.mk a b = p := ep, subst this,
+  rcases quotient.exact e with ⟨ l, r ⟩ | ⟨ l, r ⟩; contradiction,
+end)
+| p (name.extend _) (name.zero _) e := false.elim (begin
+  rcases quot.exists_rep p with ⟨ ⟨ a, b ⟩, ep ⟩, have : upair.mk a b = p := ep, subst this,
+  rcases quotient.exact e with ⟨ l, r ⟩ | ⟨ l, r ⟩; contradiction,
+end)
+| p (name.extend a) (name.extend b) e := ⟨ a, b, begin
+  have : upair.map name.extend p = upair.map name.extend (upair.mk a b) := e,
+  from ⟨ upair.map.inj (@name.extend.inj _ _) this, rfl, rfl ⟩,
+end ⟩
+
+private noncomputable def on_ν_parallel₁_species {Γ ℓ} {M : affinity ℍ} {A : species ℍ ω Γ}
+  {B : species ℍ ω (context.extend M.arity Γ)} :
+  ∀ {A' : species ℍ ω (context.extend (M.arity) Γ)}
+    {α' : label ℍ (context.extend M.arity Γ) kind.species}
+    {α : label ℍ Γ kind.species}
+    {E : species ℍ ω (context.extend M.arity Γ)}
+  , (A' |ₛ B) [lookup.rename name.extend ℓ, α']⟶ (production.species E)
+  → A' = rename name.extend A → α' = label.rename name.extend α
+  → Σ' E' (eq : production.species (ν(M)E) ≈ E')
+    , (A |ₛ ν(M) B) [ℓ, α]⟶ E'
+| A' α' α E (parL_species _ t) eqA eqα := begin
+  subst eqA, subst eqα,
+  rcases transition.rename_from name.extend t with ⟨ α₂, ⟨ B ⟩, t₂, eα, eB ⟩,
+  cases label.rename.inj (@name.extend.inj _ _) eα,
+  rw ← production.species.inj eB,
+  from ⟨ _, production.equiv.species (ν_parallel₁ M), parL_species _ t₂ ⟩,
+end
+| A' α' α E (parR_species _ t) eqA eqα := begin
+  subst eqA, subst eqα,
+  from ⟨ _, production.equiv.species (ν_parallel₁ M), parR_species _ (ν₁_species M rfl t) ⟩,
+end
+| A' α' α E (@com₁ _ _ _ _ x y _ _ a b F G _ _ rfl eα tf tg) eqA eqα := begin
+  subst eqA, subst eqα,
+
+  cases α with _ _ _ _ _ p,
+  case label.spontanious { cases eα },
+
+  rcases upair_extend (label.of_affinity.inj eα) with ⟨ a, b, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+  rcases transition.rename_from name.extend tf with ⟨ ⟨ a₂ ⟩, ⟨ F ⟩, tf₂, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
+
+  from ⟨ _, production.equiv.species (concretion.pseudo_apply.on_restriction _ M _).symm,
+    com₁ rfl rfl tf₂ (ν₁_concretion M rfl tg) ⟩,
+end
+
+private noncomputable def on_ν_parallel₁_concretion {Γ ℓ} {M : affinity ℍ} {A : species ℍ ω Γ}
+  {B : species ℍ ω (context.extend M.arity Γ)} {b y} :
+  ∀ {A' : species ℍ ω (context.extend (M.arity) Γ)}
+    {α' : label ℍ (context.extend M.arity Γ) kind.concretion}
+    {α : label ℍ Γ kind.concretion}
+    {E : concretion ℍ ω (context.extend M.arity Γ) b y}
+  , (A' |ₛ B) [lookup.rename name.extend ℓ, α']⟶ (production.concretion E)
+  → A' = rename name.extend A → α' = label.rename name.extend α
+  → Σ' E' (eq : production.concretion (ν'(M)E) ≈ E')
+    , (A |ₛ ν(M) B) [ℓ, α]⟶ E'
+| A' α' α E (parL_concretion _ t) eqA eqα := begin
+  subst eqA, subst eqα,
+  rcases transition.rename_from name.extend t with ⟨ α₂, ⟨ B ⟩, t₂, eα, ⟨ _ ⟩ ⟩,
+  cases label.rename.inj (@name.extend.inj _ _) eα,
+  from ⟨ _, production.equiv.concretion (concretion.equiv.ν_parallel₂ M), parL_concretion _ t₂ ⟩,
+end
+| A' α' α E (parR_concretion _ t) eqA eqα := begin
+  subst eqA, subst eqα,
+  from ⟨ _, production.equiv.concretion (concretion.equiv.ν_parallel₁ M), parR_concretion _ (ν₁_concretion M rfl t) ⟩,
+end
+
+private noncomputable def on_ν_parallel₁ {Γ ℓ} {M : affinity ℍ} {A : species ℍ ω Γ}
+  {B : species ℍ ω (context.extend (M.arity) Γ)} :
+  ∀ {k} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
   , (ν(M) rename name.extend A |ₛ B) [ℓ, α]⟶ E
   → Σ' E' (eq : E ≈ E'), (A |ₛ ν(M) B) [ℓ, α]⟶ E'
-| Γ ℓ k α M A B ._ (@ν₁ _ _ _ _ _ _ _ _ E t) := begin
-    generalize h₁ : label.rename (@name.extend _ M.arity) α = α',
-    generalize h₂ : species.rename (@name.extend _ M.arity) A = A',
-    rw [h₁, h₂] at t,
+| k α ._ (ν₁_species M rfl t) := on_ν_parallel₁_species t rfl rfl
+| k α ._ (ν₁_concretion M rfl t) := on_ν_parallel₁_concretion t rfl rfl
+| ._ α ._ (@com₂ _ _ _ _ M p q _ _ k ek rfl t) := begin
+  generalize eA : species.rename (@name.extend _ M.arity) A = A', rw eA at t,
 
-    cases t,
-    case com₁ : x y a b F G tf tg {
-      subst h₂,
-      cases α,
-      case label.spontanious { unfold label.rename at h₁, contradiction },
+  cases t,
+  case parL_species : E t {
+    rw ← eA at t, clear eA, exfalso,
+    rcases transition.rename_from name.extend t with ⟨ α₂, ⟨ E ⟩, tf₂, eα, eE ⟩, -- Annoying!
 
-      rcases transition.rename_from name.extend tf with ⟨ ℓ', lf, F', tf', eqℓ, eqlf, eqF' ⟩,
-      have : ℓ' = ℓ := lookup.rename.inj (@name.extend.inj _ _) eqℓ, subst this,
-      cases lf, cases F', unfold label.rename at eqlf,
-      cases eqlf, cases eqF',
-      simp only [label.rename] at h₁,
-      rcases upair.unpair₁ (@name.extend.inj _ _) h₁ with ⟨ b₂, eqB ⟩, cases eqB,
+    cases α₂; simp only [label.rename] at eα,
+    case label.spontanious { cases eα },
+    from absurd eα no_rename_zero,
+  },
+  case parR_species : E t {
+    rw ← eA,
+    from ⟨ _, production.equiv.species (ν_parallel₁ M), parR_species _ (com₂ M k ek rfl t ) ⟩,
+  },
+  case com₁ : x y a b F G eF eα tf tg {
+    rw ← eA at tf, clear eA, exfalso,
 
-      have eqα : α_k = upair.mk lf_a b₂,
-        suffices
-          : upair.map (@name.extend _ M.arity) α_k
-          = upair.map name.extend (upair.mk lf_a b₂),
-          from upair.map.inj (@name.extend.inj _ _) this,
-        rw upair.map_beta name.extend,
-        from h₁,
-      cases eqα,
+    rcases transition.rename_from name.extend tf with ⟨ α₂, ⟨ E ⟩, tf₂, eα', eE ⟩, -- Annoying!
+    cases α₂, simp only [label.rename] at eα', subst eα',
 
-      have tg' : B [_, label.rename name.extend (#b₂)]⟶ G := tg,
-      have this := ν₁ M tg',
-      from ⟨ _,
-             production.equiv.species (symm (concretion.pseudo_apply.on_restriction _ M G)),
-             com₁ tf' this ⟩,
-    },
+    rcases upair.exists_rep p with ⟨ p₁, p₂, h ⟩, subst h,
+    rcases quotient.exact (label.of_affinity.inj eα) with ⟨ l, r ⟩ | ⟨ l, r ⟩; contradiction,
+  }
+end
 
-    case parL : E t' {
-      subst h₁, subst h₂,
-      have this := transition.rename_from name.extend t',
-      rcases this with ⟨ ℓ₂, l₂, E₂ , t₂, eqℓ, eqL, ⟨ _ ⟩ ⟩,
-      cases (label.rename.inj (@name.extend.inj _ _) eqL),
-      have : ℓ₂ = ℓ := lookup.rename.inj (@name.extend.inj _ _) eqℓ, subst this,
-
-      have this := parL (ν(M) B) t₂,
-      refine ⟨ _, _, this ⟩,
-
-      cases E₂,
-      case production.species {
-        from production.equiv.species (ν_parallel₁ M),
-      },
-      case production.concretion {
-        from production.equiv.concretion (concretion.equiv.ν_parallel₂ M),
-      }
-    },
-    case parR : E t' {
-      subst h₁, subst h₂,
-      refine ⟨ _, _, parR _ (ν₁ M t') ⟩,
-      simp only [production.map_compose],
-      from production.equiv.map_over
-        (λ _, ν_parallel₁ M) (λ _ _ _, concretion.equiv.ν_parallel₁ M) E,
-    }
-  end
-| Γ f ._ ._ M A B ._ (@com₂ _ _ _ _ M' a b _ E k' t) := begin
-    -- Abstract some things away to allow us to case-split.
-    -- The renaming is strictly not needed, but we get a term explosion as
-    -- Lean erroneously inlines rename.
-    generalize h₁ : @label.of_affinity ℍ _ (upair.mk (name.zero a) (@name.zero Γ _ b)) = α',
-    generalize h₂ : production.species E = E',
-    generalize h₃ : species.rename (@name.extend _ M.arity) A = A',
-    unfold_coes at t, rw [h₁, h₂, h₃] at t,
-
-    cases t,
-    case com₁ : x y a' b' F G tf tg {
-      subst h₃,
-      rcases transition.rename_from name.extend tf with ⟨ ℓ₂, l₂, ⟨ E₂ ⟩ , t₂, eqℓ, eqL, eqE ⟩,
-
-      cases l₂, unfold label.rename at eqL; try { contradiction }, cases eqL,
-      exfalso,
-      have eq' := quotient.exact (label.of_affinity.inj h₁),
-      cases eq'; cases eq'; contradiction
-    },
-
-    case parL : E' t' {
-      subst h₁, subst h₃, cases E' with E', cases h₂, clear h₂,
-      rcases transition.rename_from name.extend t' with ⟨ ℓ₂, l₂, ⟨ E₂ ⟩ , t₂, eqℓ, eqL, eqE ⟩,
-
-      cases l₂; unfold label.rename at eqL; try { contradiction },
-      from false.elim (no_rename_zero (label.of_affinity.inj eqL))
-    },
-
-    case parR : E' t' {
-      subst h₁, subst h₃, cases E' with E', cases h₂, clear h₂,
-
-      have this := parR _ (com₂ M k' t' ),
-      refine ⟨ _, production.equiv.species (ν_parallel₁ M), this ⟩,
-    },
-  end
-
+/-
 private noncomputable def on_ν_drop₁ :
   ∀ {Γ ℓ k} {M : affinity ℍ}
     {A : species ℍ ω Γ} {α : label ℍ Γ k} {E : production ℍ ω Γ k}
