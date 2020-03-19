@@ -10,6 +10,7 @@ section instances
 
   instance [add_comm_group β] : add_comm_group (fin_poly α β) := fin_fn.add_comm_group _ β
   instance [has_zero β] : decidable_eq (fin_poly α β) := fin_fn.decidable_eq _ β
+  /-
   instance [comm_ring β] : monoid (fin_poly α β) :=
     { mul := λ f g, f.sum (λ a₁ b₁, g.sum (λ a₂ b₂, fin_fn.single (a₁ + a₂) (b₁ * b₂))),
       mul_assoc := λ f g h, begin
@@ -42,7 +43,7 @@ section instances
     --   mul_comm := _ ,
     -- .. fin_poly.add_comm_group _ _
     }
-
+    -/
 end instances
 
 #lint-
