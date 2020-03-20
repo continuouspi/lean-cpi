@@ -36,26 +36,10 @@ def ℓ : lookup ℚ ω Γ
 | ._ (reference.zero n) := species.rename name.extend (a # ⬝' (apply A vector.nil |ₛ apply A vector.nil))
 | ._ (reference.extend n) := species.rename name.extend (b # ⬝' nil)
 
-def As := (transition.enumerate_apply ℓ A vector.nil).elems
-def Bs := (transition.enumerate_apply ℓ B vector.nil).elems
-def Cs := (transition.enumerate_choices ℓ (τ@(1/6) ⬝' apply B vector.nil)).elems
-
+def C : choices ℚ ω Γ := (τ@(1/6) ⬝' apply B vector.nil)
 def conc := function.embedding.refl ℚ
 
-def potential_A : interaction_space ℚ ℚ ω Γ := finset.sum As potential_interaction_space
-def potential_B : interaction_space ℚ ℚ ω Γ := finset.sum Bs potential_interaction_space
-def potential_C : interaction_space ℚ ℚ ω Γ := finset.sum Cs potential_interaction_space
-
-def potential_AB : interaction_space ℚ ℚ ω Γ := potential_A + potential_B
-def potential_ABC : interaction_space ℚ ℚ ω Γ := potential_AB + potential_C
-
-def immediate_A : process_space ℚ ℚ ω Γ := finset.sum As (immediate_process_space conc) + (½ : ℚ) • (potential_A ⊘[conc] potential_A)
-def immediate_B : process_space ℚ ℚ ω Γ := finset.sum Bs (immediate_process_space conc) + (½ : ℚ) • (potential_B ⊘[conc] potential_B)
-def immediate_C : process_space ℚ ℚ ω Γ := finset.sum Cs (immediate_process_space conc) + (½ : ℚ) • (potential_C ⊘[conc] potential_C)
-
-def immediate_AB : process_space ℚ ℚ ω Γ
-  := immediate_A + immediate_B + (potential_A ⊘[conc] potential_B)
-def immediate_ABC : process_space ℚ ℚ ω Γ
-  := immediate_AB + immediate_C + (potential_AB ⊘[conc] potential_C)
+def immediate_ABC : process_space ℚ ℚ ω Γ := process_immediate aff ℓ conc
+  (1 ◯ (apply A vector.nil) |ₚ 1 ◯ (apply B vector.nil) |ₚ 1 ◯ (Σ# C))
 
 #eval immediate_ABC
