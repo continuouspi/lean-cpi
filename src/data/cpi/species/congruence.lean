@@ -61,7 +61,7 @@ inductive equivalent : ∀ {Γ} (A B : species ℍ ω Γ), Type
     {Γ} (M N : affinity ℍ)
     {A  : species ℍ ω (context.extend N.arity (context.extend M.arity Γ))}
   : equivalent (ν(M)ν(N) A) (ν(N)ν(M) rename name.swap A)
-| ν_swap₂ -- Strictly the same as ν_swap₁, as name.swap is symmetric, but...
+| ν_swap₂ -- Identical to ν_swap₁ but flipped. This is pointless, but makes symm_symm easier to show.
     {Γ} (M N : affinity ℍ)
     {A  : species ℍ ω (context.extend N.arity (context.extend M.arity Γ))}
   : @equivalent Γ (ν(N)ν(M) rename name.swap A) (ν(M)ν(N) A)

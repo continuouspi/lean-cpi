@@ -72,33 +72,17 @@ lemma production.equiv.unwrap_s :
   ∀ {Γ} {A B : species ℍ ω Γ}, production.species A ≈ production.species B → A ≈ B
 | Γ A B (production.equiv.species eq) := eq
 
-/-- If two concretions are equivalent under a production, cast one to the type
-    of the other. -/
-def production.cast_c :
+lemma production.equiv.arity :
   ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
-  → concretion ℍ ω Γ a x
-| Γ a b x y F G eq := cast (by { cases eq, from rfl }) G
+  → a = b ∧ x = y
+| Γ a b x y F G (production.equiv.concretion eq) := ⟨ rfl, rfl ⟩
 
-/-- An alternative to 'cast_c', which casts some other concretion of the same
-    type. -/
-def production.cast_with_c :
-  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G G' : concretion ℍ ω Γ b y}
+lemma production.equiv.unwrap_c :
+  ∀ {Γ} {b y} {F : concretion ℍ ω Γ b y} {G : concretion ℍ ω Γ b y}
   , production.concretion F ≈ production.concretion G
-  → concretion ℍ ω Γ a x
-| Γ a b x y F G G' eq := cast (by { cases eq, from rfl }) G' -- TODO: Remove this?
-
-lemma production.cast_c.equiv :
-  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
-    (eq : production.concretion F ≈ production.concretion G)
-  , F ≈ production.cast_c eq
-| Γ a b x y F G (production.equiv.concretion eq) := eq
-
-lemma production.cast_c.eq :
-  ∀ {Γ} {a b x y} {F : concretion ℍ ω Γ a x} {G : concretion ℍ ω Γ b y}
-    (eq : production.concretion F ≈ production.concretion G)
-  , production.concretion G = production.concretion (production.cast_c eq)
-| Γ a b x y F G (production.equiv.concretion eq) := rfl
+  → F ≈ G
+| Γ b y F G (production.equiv.concretion eq) := eq
 
 end equivalence
 

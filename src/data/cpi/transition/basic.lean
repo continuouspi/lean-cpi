@@ -84,7 +84,7 @@ inductive transition :
     {Γ k n} {α : label ℍ Γ k} (ℓ : lookup ℍ ω Γ)
     (D : reference n ω) (as : vector (name Γ) n)
     (B : species.choices ℍ ω Γ) {E}
-  : (B = species.rename (name.mk_apply as) (ℓ n D))
+  : B = species.rename (name.mk_apply as) (ℓ n D)
   → transition (Σ# B) ℓ α E
   → transition (species.apply D as) ℓ α E
 
