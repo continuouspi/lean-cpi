@@ -11,7 +11,7 @@ def has_iso {ℍ : Type} {ω Γ : context} [∀ Γ, setoid (species ℍ ω Γ)] 
     {A B : species ℍ ω Γ} (ℓ : lookup ℍ ω Γ)
   : A ≈ B → Type
 | c := ∀ k (α : label ℍ Γ k)
-       , Σ' (iso : (Σ' E, A [ℓ, α]⟶ E) ≃ (Σ' E, B [ℓ, α]⟶ E))
+       , Σ' (iso : (Σ E, A [ℓ, α]⟶ E) ≃ (Σ E, B [ℓ, α]⟶ E))
          , ∀ E (t : A [ℓ, α]⟶ E), E ≈ (iso.to_fun ⟨ E, t ⟩).1
 
 /-- An equivalence class over species and concretions, which allows for a notion of "prime
@@ -119,7 +119,7 @@ instance prime'.decidable_eq {ℍ ω Γ} [r : cpi_equiv ℍ ω] : decidable_eq (
     structural congruence. -/
 instance concretion_wrap.decidable_eq {ℍ ω Γ} [cpi_equiv ℍ ω] :
   decidable_eq ( species' ℍ ω Γ
-               × (Σ' (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
+               × (Σ (b y : ℕ), concretion' ℍ ω Γ b y) × name Γ)
 | ⟨ A, ⟨ a, x, F ⟩, e ⟩ ⟨ B, ⟨ b, y, G ⟩, f ⟩ := by apply_instance
 
 /-- A vector-space representation of processes, mapping prime species into their
@@ -174,7 +174,7 @@ end
 def interaction_space (ℂ ℍ : Type) (ω Γ : context) [add_monoid ℂ] [cpi_equiv ℍ ω] : Type
   := fin_fn
       ( species' ℍ ω Γ
-      × (Σ' (b y), concretion' ℍ ω Γ b y)
+      × (Σ (b y), concretion' ℍ ω Γ b y)
       × name Γ)
       ℂ
 
@@ -185,7 +185,7 @@ instance interaction_space.has_repr {ℂ} [add_monoid ℂ] [has_repr ℂ] {Γ}
   [has_repr (species' ℍ ω Γ)] [∀ b y, has_repr (concretion' ℍ ω Γ b y)]
   : has_repr (interaction_space ℂ ℍ ω Γ) := ⟨ @fin_fn.to_string
     ( species' ℍ ω Γ
-      × (Σ' (b y), concretion' ℍ ω Γ b y)
+      × (Σ (b y), concretion' ℍ ω Γ b y)
       × name Γ) ℂ _
     ⟨ λ ⟨ A, ⟨ _, _, F ⟩, a ⟩, "[" ++ repr A ++ "], [" ++ repr F ++ "], " ++ repr a ⟩
     _ "\n" ⟩
@@ -202,9 +202,7 @@ def process.from_space {ℂ} [add_comm_monoid ℂ] {Γ} : process_space ℂ ℍ 
 
 /-- Convert a class of equivalent processes into a process space. -/
 def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω Γ
-| P := begin
-  refine quot.lift_on P process.to_space _,
-  assume P Q eq,
+| P := quot.lift_on P process.to_space (λ P Q eq, begin
   induction eq,
   case process.equiv.refl { from rfl },
   case process.equiv.trans : P Q R _ _ pq qr { from trans pq qr },
@@ -222,7 +220,7 @@ def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω
   case process.equiv.parallel_symm { simp only [process.to_space, add_comm] },
   case process.equiv.parallel_assoc { simp only [process.to_space, add_assoc] },
   case cpi.process.equiv.join : A c d { simp only [process.to_space, add_smul] },
-end
+end)
 
 axiom process.from_inverse {Γ} :
   function.left_inverse process.to_space' (@process.from_space ℍ ω _ ℂ _ Γ)

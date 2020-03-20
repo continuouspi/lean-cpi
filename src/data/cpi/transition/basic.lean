@@ -202,7 +202,7 @@ namespace transition
 /-- A transition from a specific species, to any production. -/
 @[nolint has_inhabited_instance]
 def transition_from {Γ} (ℓ : lookup ℍ ω Γ) (A : species ℍ ω Γ) : Type
-  := (Σ' k (α : label ℍ Γ k) E, A [ℓ, α]⟶ E)
+  := Σ k (α : label ℍ Γ k) E, A [ℓ, α]⟶ E
 
 /-- Construct a new transition_from, wrapping a transition. -/
 @[pattern]

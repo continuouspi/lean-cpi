@@ -120,9 +120,9 @@ private def defn.embed {Γ n} (ℓ : lookup ℍ ω Γ) (D : reference n ω) (as 
     rcases t with ⟨ k, α, E, t ⟩, rcases t' with ⟨ k', α', E', t' ⟩,
     simp only [defn.from] at eql,
 
-    rcases psigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
-    rcases psigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
-    rcases psigma.mk.inj (eq_of_heq eql₂) with ⟨ ⟨ _ ⟩, eql₃ ⟩, clear eql₂,
+    rcases sigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
+    rcases sigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
+    rcases sigma.mk.inj (eq_of_heq eql₂) with ⟨ ⟨ _ ⟩, eql₃ ⟩, clear eql₂,
     have eql := eq_of_heq (defn.inj (eq_of_heq eql₃)).2, clear eql₃, subst eql,
   end ⟩
 
@@ -226,13 +226,13 @@ private lemma com₁.of_compatible.inj_help {Γ} {ℓ : lookup ℍ ω Γ} (A B :
     (tf₁ : A [ℓ, #a₁]⟶ (production.concretion F₁)) (tg₁ : B [ℓ, #b₁]⟶ (production.concretion G₁))
     (tf₂ : A [ℓ, #a₂]⟶ (production.concretion F₂)) (tg₂ : B [ℓ, #b₂]⟶ (production.concretion G₂))
   , (τ⟨ a₁, b₁ ⟩ = (τ⟨ a₂, b₂ ⟩ : label ℍ Γ _))
-  → psigma.mk (production.species FG₁) (com₁ eFG₁ eα₁ tf₁ tg₁)
-  == psigma.mk (production.species FG₂) (com₁ eFG₂ eα₂ tf₂ tg₂)
+  → sigma.mk (production.species FG₁) (com₁ eFG₁ eα₁ tf₁ tg₁)
+  == sigma.mk (production.species FG₂) (com₁ eFG₂ eα₂ tf₂ tg₂)
   → a = b ∧ x = y ∧ a₁ = a₂ ∧ b₁ = b₂ ∧ F₁ == F₂ ∧ G₁ == G₂ ∧ tf₁ == tf₂ ∧ tg₁ == tg₂
 | a x a₁ b₁ F₁ G₁ b y a₂ b₂ F₂ G₂ FG₁ FG₂ α₁ α₂ eFG₁ eFG₂ eα₁ eα₂
   tf₁ tg₁ tf₂ tg₂ eqα eqT := begin
   have : α₁ = α₂ := trans eα₁ (trans eqα eα₂.symm), subst this,
-  rcases psigma.mk.inj (eq_of_heq eqT) with ⟨ eqFG, eqT ⟩,
+  rcases sigma.mk.inj (eq_of_heq eqT) with ⟨ eqFG, eqT ⟩,
   have : FG₁ = FG₂ := production.species.inj eqFG, subst this,
 
   rcases com₁.inj (eq_of_heq eqT) with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, F, G, tf, tg ⟩,
@@ -251,7 +251,7 @@ private lemma com₁.of_compatible.inj {Γ} {ℓ : lookup ℍ ω Γ} (A B : spec
 
   simp only [com₁.of_compatible] at eql,
 
-  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ eqα, eqT ⟩,
+  rcases sigma.mk.inj (eq_of_heq (sigma.mk.inj eql).2) with ⟨ eqα, eqT ⟩,
   rcases com₁.of_compatible.inj_help A B rfl rfl rfl rfl t₁ t₁' t₂ t₂' eqα eqT
     with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
   from rfl,
@@ -320,26 +320,26 @@ private def enumerate_parallel_ts {Γ} {ℓ : lookup ℍ ω Γ} (A B : species �
         unfold_coes at eql, simp only [parL.embed] at eql,
         cases E,
         case production.species {
-          rcases psigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
-          rcases psigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
-          rcases psigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
+          rcases sigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
+          rcases sigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
+          rcases sigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
 
           from com₁.impossible_l ℓ A B t t₁ t₂ rfl (production.species.inj eqlE) eqlT,
         },
-        case production.concretion { cases (psigma.mk.inj eql).1 },
+        case production.concretion { cases (sigma.mk.inj eql).1 },
       },
       case or.inr {
         rcases finset.mem_map.mp h with ⟨ ⟨ k, α, E, t ⟩, mem, eql ⟩, clear mem memR,
         unfold_coes at eql, simp only [parR.embed] at eql,
         cases E,
         case production.species {
-          rcases psigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
-          rcases psigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
-          rcases psigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
+          rcases sigma.mk.inj eql with ⟨ ⟨ _ ⟩, eql₁ ⟩, clear eql,
+          rcases sigma.mk.inj (eq_of_heq eql₁) with ⟨ ⟨ _ ⟩, eql₂ ⟩, clear eql₁,
+          rcases sigma.mk.inj (eq_of_heq eql₂) with ⟨ eqlE, eqlT ⟩,
 
           from com₁.impossible_r ℓ A B t t₁ t₂ rfl (production.species.inj eqlE) eqlT,
         },
-        case production.concretion { cases (psigma.mk.inj eql).1 },
+        case production.concretion { cases (sigma.mk.inj eql).1 },
       },
     end)
 
@@ -454,7 +454,7 @@ private lemma is_restriction_name_lift.comm_zero {Γ} {ℓ : lookup ℍ ω Γ} (
     from option.some.inj (trans e₁.symm e₂),
   }, subst this,
 
-  refine psigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
+  refine sigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
   from ⟨ rfl, ⟨ rfl, rfl ⟩, quot.sound (or.inr ⟨ rfl, rfl ⟩), quot.sound (or.inr ⟨ rfl, rfl ⟩), eT ⟩,
 end
 
@@ -473,7 +473,7 @@ private lemma is_restriction_name_lift.comm_extend {Γ} {ℓ : lookup ℍ ω Γ}
     from label.rename.inj (@name.extend.inj _ _) (trans e₁.symm e₂),
   }, subst this,
 
-  refine psigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
+  refine sigma.mk.inj_iff.mpr ⟨ rfl, heq_of_eq _ ⟩, simp only [heq_iff_eq],
   from ⟨ rfl, ⟨ rfl, rfl ⟩, quot.sound (or.inr ⟨ rfl, rfl ⟩), eT ⟩,
 end
 
@@ -506,10 +506,10 @@ lemma ν₁_species.inj' {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) {A} :
   , transition_from.mk (ν₁_species M e₁ t₁) = transition_from.mk (ν₁_species M e₂ t₂)
   → transition_from.mk t₁ = transition_from.mk t₂
 | E₁ E₂ l₁ l'₁ l₂ l'₂ e₁ e₂ t₁ t₂ eql := begin
-  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
+  rcases sigma.mk.inj (eq_of_heq (sigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
   have : l'₁ = l'₂ := trans e₁ e₂.symm, subst ‹l'₁ = l'₂›,
 
-  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases sigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
   rcases ν₁_species.inj (eq_of_heq eqT) with ⟨ _, ⟨ _ ⟩ ⟩,
   from rfl,
 end
@@ -525,10 +525,10 @@ lemma ν₁_concretion.inj' {Γ} {ℓ : lookup ℍ ω Γ} (M : affinity ℍ) {A}
   , transition_from.mk (ν₁_concretion M e₁ t₁) = transition_from.mk (ν₁_concretion M e₂ t₂)
   → transition_from.mk t₁ = transition_from.mk t₂
 | a x b y E₁ E₂ l₁ l'₁ l₂ l'₂ e₁ e₂ t₁ t₂ eql := begin
-  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
+  rcases sigma.mk.inj (eq_of_heq (sigma.mk.inj eql).2) with ⟨ this, eqR ⟩, subst ‹l₁ = l₂›,
   have : l'₁ = l'₂ := trans e₁ e₂.symm, subst ‹l'₁ = l'₂›,
 
-  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases sigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
   rcases ν₁_concretion.inj (eq_of_heq eqT) with ⟨ _, ⟨ _ ⟩ ⟩,
   from rfl,
 end
@@ -543,8 +543,8 @@ private lemma is_restriction.name_lift.inj_zero {Γ} (ℓ : lookup ℍ ω Γ) (M
   , transition_from.mk (com₂ M k₁ e₁ rfl t₁) = transition_from.mk (com₂ M k₂ e₂ rfl t₂)
   → transition_from.mk t₁ = transition_from.mk t₂
 | B₁ B₂ p q t₁ t₂ k₁ k₂ e₁ e₂ eql := begin
-  rcases psigma.mk.inj (eq_of_heq (psigma.mk.inj eql).2) with ⟨ ⟨ _ ⟩, eqR ⟩,
-  rcases psigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
+  rcases sigma.mk.inj (eq_of_heq (sigma.mk.inj eql).2) with ⟨ ⟨ _ ⟩, eqR ⟩,
+  rcases sigma.mk.inj (eq_of_heq eqR) with ⟨ ⟨ _ ⟩, eqT ⟩,
   rcases com₂.inj (eq_of_heq eqT) with ⟨ ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
   from rfl,
 end

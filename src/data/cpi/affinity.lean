@@ -1,4 +1,4 @@
-import data.pand data.fin data.fintype data.upair
+import data.fin data.fintype data.upair
 
 namespace cpi
 

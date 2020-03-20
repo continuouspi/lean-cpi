@@ -27,8 +27,8 @@ variables {ℂ ℍ : Type} {ω : context} [half_ring ℂ] [cpi_equiv_prop ℍ ω
 
 /-- S standalone version of `transition.com₁` -/
 private def com₁_of {Γ} (ℓ : lookup ℍ ω Γ) (A B : species ℍ ω Γ) :=
-  (Σ' (x y : ℕ) (a b : name Γ)
-      (F : concretion ℍ ω Γ x y) (G : concretion ℍ ω Γ y x)
+  (Σ (x y : ℕ) (a b : name Γ)
+     (F : concretion ℍ ω Γ x y) (G : concretion ℍ ω Γ y x)
   , transition A ℓ (#a) (production.concretion F) × transition B ℓ (#b) (production.concretion G))
 
 /-- Mark com₁_of as decidable -/
