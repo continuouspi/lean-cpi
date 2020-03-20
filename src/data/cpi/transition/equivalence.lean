@@ -489,11 +489,9 @@ noncomputable def equivalent_of :
 end
 
 /-- Wraps 'equivalent_of' into a 'transition_from' -/
-noncomputable def equivalent_of.transition_from :
-  ∀ {Γ ℓ} {A : species ℍ ω Γ} {B : species ℍ ω Γ}
-  , species.equivalent A B
-  → transition_from ℓ A → transition_from ℓ B
-| Γ ℓ A B eq ⟨ k, α, E, t ⟩ :=
+noncomputable def equivalent_of.transition_from {Γ ℓ} {A B : species ℍ ω Γ} :
+  species.equivalent A B → transition_from ℓ A → transition_from ℓ B
+| eq ⟨ k, α, E, t ⟩ :=
   let ⟨ E', _, t' ⟩ := equivalent_of eq t in
   ⟨ k, α, E', t' ⟩
 
@@ -502,22 +500,19 @@ noncomputable def equivalent_of.transition_from :
 axiom equivalent_of.transition_from_eq :
   ∀ {Γ ℓ} {A : species ℍ ω Γ} {B : species ℍ ω Γ}
     (eq : species.equivalent A B) (t : transition_from ℓ A)
-  , t = equivalent_of.transition_from (species.equivalent.symm eq) (equivalent_of.transition_from eq t)
+  , equivalent_of.transition_from (species.equivalent.symm eq) (equivalent_of.transition_from eq t) = t
 
 /-- Show that two equivalent species's transition sets are equivalent. -/
-noncomputable def equivalent_of.is_equiv :
-  ∀ {Γ ℓ} {A : species ℍ ω Γ} {B : species ℍ ω Γ}
-  , species.equivalent A B
-  → transition_from ℓ A ≃ transition_from ℓ B
-| Γ ℓ A B eq :=
-{ to_fun := equivalent_of.transition_from eq,
-  inv_fun := equivalent_of.transition_from (species.equivalent.symm eq),
-  left_inv := λ x, symm (equivalent_of.transition_from_eq eq x),
-  right_inv := λ x, begin
-    have h := equivalent_of.transition_from_eq (species.equivalent.symm eq) x,
-    rw ← species.equivalent.symm_symm eq at h,
-    from symm h,
-  end }
+noncomputable def equivalent_of.is_equiv {Γ ℓ} {A B : species ℍ ω Γ} (eq : species.equivalent A B)
+  : transition_from ℓ A ≃ transition_from ℓ B
+  := { to_fun := equivalent_of.transition_from eq,
+       inv_fun := equivalent_of.transition_from (species.equivalent.symm eq),
+       left_inv := equivalent_of.transition_from_eq eq,
+       right_inv := λ x, begin
+         have h := equivalent_of.transition_from_eq eq.symm x,
+         rw ← species.equivalent.symm_symm eq at h,
+         from h,
+       end }
 
 end transition
 end cpi

@@ -1,4 +1,4 @@
-import data.cpi.semantics.space
+import data.cpi.semantics.relation
 
 namespace cpi
 namespace normalise
@@ -21,10 +21,11 @@ def cpi_equiv (ℍ : Type) (ω : context) [decidable_eq ℍ] : cpi_equiv ℍ ω 
     concretion_equiv := by apply_instance,
     decide_species := by apply_instance,
     decide_concretion := by apply_instance,
-    prime_decompose := λ Γ, species.normalise.prime_decompose',
-    prime_decompose_nil := λ Γ, species.normalise.prime_decompose'.nil,
-    prime_decompose_parallel := λ Γ, species.normalise.prime_decompose'.parallel,
-    prime_decompose_prime := λ Γ, species.normalise.prime_decompose'.prime,
+    prime_decompose := λ Γ A, species.normalise.prime_decompose A,
+    prime_decompose_equiv := λ Γ A B equ, by rw species.normalise.prime_decompose.equiv equ,
+    prime_decompose_nil := λ Γ, by { rw species.normalise.prime_decompose.nil, from rfl },
+    prime_decompose_parallel := λ Γ A B, by { rw species.normalise.prime_decompose.parallel, from rfl },
+    prime_decompose_prime := λ Γ A, by rw species.normalise.prime_decompose.prime,
     pseudo_apply := λ Γ b y F G, quotient.lift_on₂ F G
       (λ F G, ⟦ concretion.pseudo_apply F G ⟧)
       (λ F G F' G' eqF eqG, by { cases eqF, cases eqG, from rfl }) }

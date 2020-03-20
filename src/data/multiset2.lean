@@ -20,7 +20,6 @@ lemma fintype.sum_iso {α₁ α₂ β: Type} [add_comm_monoid β] [xs : fintype 
     (λ x _, fintype.complete (iso.to_fun x))
     (λ x _, fintype.complete (iso.inv_fun x))
 
-
 /-- Insert an item into a finset, given a proof it does not occur already. -/
 def finset.insert_nmem {α : Type*} : ∀ {xs : finset α} {a : α}, a ∉ xs → finset α
 | xs a nmem := ⟨ a :: xs.val, multiset.nodup_cons_of_nodup nmem xs.nodup ⟩
@@ -45,5 +44,25 @@ lemma finset.mem_union_disjoint {α : Type*} {a : α} {xs ys : finset α}
     {h : multiset.disjoint xs.val ys.val}
   : a ∈ finset.union_disjoint xs ys h ↔ a ∈ xs ∨ a ∈ ys
   := multiset.mem_add
+
+/-- A composition of `multiset.map` and `multiset.sum`, which has the same
+    signature as `finset.sum`. -/
+def multiset.sum' {α : Type*} {β : Type*} [add_comm_monoid β] (s : multiset α) (f : α → β) : β
+  := (multiset.map f s).sum
+
+@[simp]
+lemma multiset.sum'_zero {α : Type*} {β : Type*} [add_comm_monoid β] (f : α → β)
+  : multiset.sum' 0 f = 0
+  := rfl
+
+@[simp]
+lemma multiset.sum'_singleton {α : Type*} {β : Type*} [add_comm_monoid β] (f : α → β) (a : α)
+  : multiset.sum' [a] f = f a
+  := add_zero (f a)
+
+@[simp]
+lemma multiset.sum'_add {α : Type*} {β : Type*} [add_comm_monoid β] (s₁ s₂ : multiset α) (f : α → β)
+  : (s₁ + s₂).sum' f = s₁.sum' f + s₂.sum' f
+  := by simp only [multiset.sum', multiset.map_add, multiset.sum_add]
 
 #lint-

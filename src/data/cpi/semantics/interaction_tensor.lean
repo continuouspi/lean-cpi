@@ -7,10 +7,10 @@ variables {ℂ ℍ : Type} {ω : context} {M : affinity ℍ} {conc : ℍ ↪ ℂ
 /-- The main body of the interaction tensor. Split out into a separate function
     to make unfolding possible. -/
 private def interaction_tensor_worker [cpi_equiv ℍ ω] (conc : ℍ ↪ ℂ)
-  : ( species' ℍ ω (context.extend M.arity context.nil)
+  : ( prime_species' ℍ ω (context.extend M.arity context.nil)
     × (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
-  → ( species' ℍ ω (context.extend M.arity context.nil)
+  → ( prime_species' ℍ ω (context.extend M.arity context.nil)
     × (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
@@ -19,13 +19,13 @@ private def interaction_tensor_worker [cpi_equiv ℍ ω] (conc : ℍ ↪ ℂ)
     if h : bF = yG ∧ yF = bG then begin
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
       have fg := to_process_space (cpi_equiv.pseudo_apply F G),
-      from conc aff • (fg - to_process_space A - to_process_space B),
+      from conc aff • (fg - fin_fn.single A 1 - fin_fn.single B 1),
       assumption,
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
 private lemma interaction_tensor_worker.comm [cpi_equiv_prop ℍ ω]
-  : ∀ (A B : species' ℍ ω (context.extend M.arity context.nil)
+  : ∀ (A B : prime_species' ℍ ω (context.extend M.arity context.nil)
            × (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
            × name (context.extend M.arity context.nil))
   , interaction_tensor_worker conc A B = interaction_tensor_worker conc B A
@@ -114,12 +114,12 @@ lemma interaction_tensor.smul [cpi_equiv_prop ℍ ω]
   := fin_fn.bind_smul c A _
 
 lemma interaction_tensor.ext_single [cpi_equiv_prop ℍ ω] {bF yF}
-    (A B : species' ℍ ω (context.extend M.arity context.nil))
+    (A B : prime_species' ℍ ω (context.extend M.arity context.nil))
     (F F' : concretion' ℍ ω (context.extend M.arity context.nil) bF yF)
     (a : name (context.extend M.arity context.nil)) (c : ℂ)
-  : (∀ G, ( to_process_space (cpi_equiv.pseudo_apply F G) - to_process_space A
+  : (∀ G, ( to_process_space (cpi_equiv.pseudo_apply F G) - fin_fn.single A 1
           : process_space ℂ ℍ ω (context.extend M.arity context.nil) )
-        = to_process_space (cpi_equiv.pseudo_apply F' G) - to_process_space B)
+        = to_process_space (cpi_equiv.pseudo_apply F' G) - fin_fn.single B 1)
   → ∀ (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
   , fin_fn.single ( A, (⟨ bF, yF, F ⟩ : (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)), a ) c
     ⊘[conc] ξ
@@ -144,46 +144,6 @@ lemma interaction_tensor.ext_single [cpi_equiv_prop ℍ ω] {bF yF}
   },
   { simp only [dif_neg is_eq] },
 end
-
-lemma interaction_tensor.parallel₁ [cpi_equiv_prop ℍ ω]
-    (A B : species ℍ ω (context.extend M.arity context.nil))
-    {bF yF} (F : concretion ℍ ω (context.extend M.arity context.nil) bF yF)
-    (a : name (context.extend M.arity context.nil)) (c : ℂ)
-  : ∀ (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
-  , fin_fn.single ( ⟦A |ₛ B⟧, (⟨ bF, yF, ⟦ F |₁ B ⟧ ⟩ : (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)), a ) c
-    ⊘[conc] ξ
-  = fin_fn.single ( ⟦ A ⟧, ⟨bF, ⟨ yF, ⟦ F ⟧ ⟩ ⟩, a ) c ⊘[conc] ξ
-  := interaction_tensor.ext_single ⟦ A |ₛ B ⟧ ⟦ A ⟧ ⟦ F |₁ B ⟧ ⟦ F ⟧ a c (λ G, begin
-  have : ( to_process_space (cpi_equiv.pseudo_apply ⟦F |₁ B⟧ G)
-         : process_space ℂ ℍ ω _ )
-       = to_process_space (cpi_equiv.pseudo_apply ⟦F⟧ G) + to_process_space ⟦ B ⟧,
-  {
-    unfold to_process_space,
-    rw cpi_equiv_prop.pseudo₁,
-    simp only [multiset.map_add, multiset.sum_add],
-  },
-  rw [this, to_process_space.parallel], abel,
-end)
-
-lemma interaction_tensor.parallel₂ [cpi_equiv_prop ℍ ω]
-    (A B : species ℍ ω (context.extend M.arity context.nil))
-    {bF yF} (F : concretion ℍ ω (context.extend M.arity context.nil) bF yF)
-    (a : name (context.extend M.arity context.nil)) (c : ℂ)
-  : ∀ (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
-  , fin_fn.single ( ⟦A |ₛ B⟧, (⟨ bF, yF, ⟦ A |₂ F ⟧ ⟩ : (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)), a ) c
-    ⊘[conc] ξ
-  = fin_fn.single ( ⟦ B ⟧, ⟨bF, ⟨ yF, ⟦ F ⟧ ⟩ ⟩, a ) c ⊘[conc] ξ
-  := interaction_tensor.ext_single ⟦ A |ₛ B ⟧ ⟦ B ⟧ ⟦ A |₂ F ⟧ ⟦ F ⟧ a c (λ G, begin
-  have : ( to_process_space (cpi_equiv.pseudo_apply ⟦ A |₂ F ⟧ G)
-         : process_space ℂ ℍ ω _ )
-       = to_process_space ⟦ A ⟧ + to_process_space (cpi_equiv.pseudo_apply ⟦F⟧ G),
-  {
-    unfold to_process_space,
-    rw cpi_equiv_prop.pseudo₂,
-    simp only [multiset.map_add, multiset.sum_add],
-  },
-  rw [this, to_process_space.parallel], abel,
-end)
 
 instance interaction_tensor.monoid_hom_left [cpi_equiv_prop ℍ ω]
     (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
