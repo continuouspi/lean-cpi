@@ -91,18 +91,6 @@ class cpi_equiv_prop (ℍ : Type) (ω : context) extends cpi_equiv ℍ ω :=
   ( pseudo_apply_symm {Γ} {a b : ℕ} (F : concretion' ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
     : pseudo_apply F G = pseudo_apply G F )
 
-  /- More intuitively stated as (F|A)∘G ≈ (F∘G)|A, but this is annoying to do
-     given our abstraction. -/
-  ( pseudo₁ {Γ} {a b : ℕ}
-    (A : species ℍ ω Γ) (F : concretion ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
-    : cpi_equiv.prime_decompose' (pseudo_apply ⟦F |₁ A⟧ G)
-    = cpi_equiv.prime_decompose' (pseudo_apply ⟦ F ⟧ G ) + cpi_equiv.prime_decompose' ⟦ A ⟧)
-
-  ( pseudo₂ {Γ} {a b : ℕ}
-    (A : species ℍ ω Γ) (F : concretion ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
-    : cpi_equiv.prime_decompose' (pseudo_apply ⟦A |₂ F⟧ G)
-    = cpi_equiv.prime_decompose' ⟦ A ⟧ + cpi_equiv.prime_decompose' (pseudo_apply ⟦ F ⟧ G ) )
-
 /-- Build an equivalent transition in the forward direction. -/
 def cpi_equiv.transition_from_fwd {ℍ : Type} {ω Γ : context} [r : cpi_equiv ℍ ω] {A B : species ℍ ω Γ}
     {ℓ : lookup ℍ ω Γ} {eq : A ≈ B}

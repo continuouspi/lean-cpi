@@ -24,16 +24,13 @@ def prime_decompose {Γ} : species ℍ ω Γ → list (prime_species ℍ ω Γ)
 | (ν(M) A) := list.cons (⟨ ν(M) A, ⟨ λ x, by cases x, (λ A B eql, by cases eql) ⟩ ⟩) list.nil
 | (apply D as) := list.cons (⟨ apply D as, ⟨ λ x, by cases x, (λ A B eql, by cases eql) ⟩ ⟩) list.nil
 
-def prime_decompose' {Γ} : species' ℍ ω Γ → multiset (prime_species' ℍ ω Γ)
-  := quot.map (λ A, list.map quotient.mk (prime_decompose A))
-    (λ x y r, by { cases r, from refl _ })
-
 def cpi_equiv (ℍ : Type) (ω : context) [decidable_eq ℍ] : cpi_equiv ℍ ω :=
   { species_equiv := by apply_instance,
     concretion_equiv := by apply_instance,
     decide_species := by apply_instance,
     decide_concretion := by apply_instance,
-    prime_decompose := λ Γ, prime_decompose',
+    prime_decompose := λ Γ A, prime_decompose A,
+    prime_decompose_equiv := λ Γ A B r, by { cases r, from rfl },
     prime_decompose_nil := λ Γ, quot.sound (begin
       simp only [prime_decompose],
       from refl _

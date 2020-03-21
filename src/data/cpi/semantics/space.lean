@@ -98,6 +98,9 @@ def process.to_space' {Γ} : process' ℂ ℍ ω Γ → process_space ℂ ℍ ω
   case process.equiv.parallel_symm { simp only [process.to_space, add_comm] },
   case process.equiv.parallel_assoc { simp only [process.to_space, add_assoc] },
   case cpi.process.equiv.join : A c d { simp only [process.to_space, add_smul] },
+  case cpi.process.equiv.split : A B c {
+    simp only [process.to_space, to_process_space.parallel, smul_add],
+  }
 end)
 
 axiom process.from_inverse {Γ} :
