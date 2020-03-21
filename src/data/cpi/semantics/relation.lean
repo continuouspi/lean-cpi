@@ -36,7 +36,7 @@ class cpi_equiv (ℍ : Type) (ω : context) :=
   : prime_decompose (A |ₛ B) = prime_decompose A + prime_decompose B )
 
   ( prime_decompose_prime {Γ} (A : prime_species ℍ ω Γ)
-  : prime_decompose A.val = [ A ])
+  : prime_decompose A.val = [ A ] )
 
   ( pseudo_apply {Γ} {a b : ℕ}
   : concretion' ℍ ω Γ a b → concretion' ℍ ω Γ b a

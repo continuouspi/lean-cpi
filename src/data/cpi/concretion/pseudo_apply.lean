@@ -610,7 +610,7 @@ def pseudo_apply.quotient {Γ a b}
   (λ F G, ⟦ pseudo_apply F G ⟧)
   (λ F G F' G' eqF eqG, quot.sound (pseudo_apply.equiv eqF eqG))
 
-lemma psuedo_apply.quotient.symm {Γ a b} :
+lemma pseudo_apply.quotient.symm {Γ a b} :
   ∀ (F : concretion' ℍ ω Γ a b) (G : concretion' ℍ ω Γ b a)
   , pseudo_apply.quotient F G = pseudo_apply.quotient G F
 | F G := begin

@@ -1,5 +1,4 @@
 import data.cpi.semantics.basic
--- import data.cpi.semantics.with_exact
 import data.cpi.semantics.with_normalise
 
 open cpi

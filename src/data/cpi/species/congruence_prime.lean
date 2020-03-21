@@ -2,7 +2,7 @@ import data.cpi.species.congruence data.cpi.species.prime
 
 namespace cpi
 namespace species
-
+namespace equiv
 variables {ℍ : Type} {ω : context}
 open_locale congruence
 
@@ -73,21 +73,15 @@ section depth
   }
 end depth
 
-/-- Construct a species from a prime decomposition of species. -/
-def parallel.from_prime_decompose {Γ} : multiset (prime_species' ℍ ω Γ) → species' ℍ ω Γ
-| ms := quot.lift_on ms
-  (λ xs, parallel.quot.from_list (list.map prime_species.unwrap xs))
-  (λ _ _ eq, parallel.quot.permute (list.perm_map prime_species.unwrap eq))
-
-/-- A proof that a prime decomposition exists. -/
-lemma has_prime_decompose :
-  ∀ {Γ} (A : species ℍ ω Γ)
-  , ∃ (As : multiset (prime_species' ℍ ω Γ))
-  , ⟦ A ⟧ = parallel.from_prime_decompose As
-| Γ A :=
+/-- A procecure to compute the prime decomposition of a species using classical
+    logic. This is entirely undecidable! -/
+lemma has_prime_decompose {Γ} :
+  ∀ (A : species ℍ ω Γ)
+  , ∃ (As : list (prime_species ℍ ω Γ))
+    , A ≈ parallel.from_list (list.map subtype.val As)
+| A :=
   match classical.dec (A ≈ nil) with
-  | is_true is_nil :=
-    ⟨ [], quot.sound is_nil ⟩
+  | is_true is_nil := ⟨ [], is_nil ⟩
   | is_false non_nil :=
     match classical.dec (∃ B C, ¬ B ≈ nil ∧ ¬ C ≈ nil ∧ A ≈ (B |ₛ C)) with
     | is_true ⟨ B, C, nB, nC, eq ⟩ :=
@@ -102,23 +96,18 @@ lemma has_prime_decompose :
         begin
           rcases has_prime_decompose B with ⟨ Bs, eqB ⟩,
           rcases has_prime_decompose C with ⟨ Cs, eqC ⟩,
-          rcases quot.exists_rep Bs with ⟨ Bs, ⟨ _ ⟩ ⟩,
-          rcases quot.exists_rep Cs with ⟨ Cs, ⟨ _ ⟩ ⟩,
+          clear lB lC,
 
-          suffices : ⟦A⟧ = parallel.quot.from_list (list.map prime_species.unwrap (Bs ++ Cs)),
-            from ⟨ ⟦ Bs ++ Cs ⟧, this ⟩,
+          suffices : A ≈ parallel.from_list (list.map subtype.val (Bs ++ Cs)),
+            from ⟨ Bs ++ Cs, this ⟩,
 
-          suffices : ⟦ B |ₛ C ⟧ = parallel.quot.from_list (list.map prime_species.unwrap Bs ++ list.map prime_species.unwrap Cs),
-            rw list.map_append,
-            from trans (quot.sound eq) this,
-
-          suffices
-            : parallel.quot.mk (parallel.from_prime_decompose ⟦Bs⟧) (parallel.from_prime_decompose ⟦Cs⟧)
-            = parallel.quot.from_list (list.map prime_species.unwrap Bs ++ list.map prime_species.unwrap Cs),
-            unfold quotient.mk at this, rw [← eqB, ← eqC] at this, from this,
-
-          from symm (parallel.quot.from_append
-            (list.map prime_species.unwrap Bs) (list.map prime_species.unwrap Cs)),
+          calc  A
+              ≈ (B |ₛ C) : eq
+          ... ≈ (parallel.from_list (list.map subtype.val Bs) |ₛ parallel.from_list (list.map subtype.val Cs))
+              : trans (equiv.ξ_parallel₁ eqB) (equiv.ξ_parallel₂ eqC)
+          ... ≈ parallel.from_list (list.map subtype.val Bs ++ list.map subtype.val Cs)
+                : (parallel.from_append _ _).symm
+          ... ≈ parallel.from_list (list.map subtype.val (Bs ++ Cs)) : by rw list.map_append
       end
     | is_false no_decompose :=
       let this : prime A := ⟨ non_nil, λ B C eq,
@@ -127,27 +116,19 @@ lemma has_prime_decompose :
         | _, is_true is_nil := or.inr is_nil
         | is_false nnB, is_false nnC := false.elim (no_decompose ⟨ B, C, nnB, nnC, eq ⟩)
         end ⟩
-      in ⟨ quotient.mk [ ⟦ ⟨ A, this ⟩ ⟧ ], by from rfl ⟩
+      in ⟨ [ ⟨ A, this ⟩ ], refl _ ⟩
     end
   end
 using_well_founded {
-  rel_tac := λ _ _, `[exact ⟨_, measure_wf (λ x, depth x.2 ) ⟩ ],
+  rel_tac := λ _ _, `[exact ⟨_, measure_wf depth ⟩ ],
   dec_tac := tactic.fst_dec_tac,
 }
 
-/-- Decompose a species into its multiset of prime species. -/
-constant do_prime_decompose {Γ} :
-  ∀ (A : species' ℍ ω Γ)
-  , Σ' (As : multiset (prime_species' ℍ ω Γ))
-    , parallel.from_prime_decompose As = A
+/-- Decompose a species into its constituent primes. -/
+noncomputable def prime_decompose {Γ} (A : species ℍ ω Γ) : multiset (prime_species ℍ ω Γ)
+  := ⟦ classical.some (has_prime_decompose A) ⟧
 
--- This boils down to ¬ (nil ≈ (B | C)) when B and C are prime. Which, as we
--- know, is very hard to show.
-axiom parallel.from_prime_decompose.nil {Γ} :
-  ∀ {As : multiset (prime_species' ℍ ω Γ)}
-  , ⟦ nil ⟧ = parallel.from_prime_decompose As
-  → As = 0
-
+end equiv
 end species
 end cpi
 

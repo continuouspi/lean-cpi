@@ -488,31 +488,42 @@ noncomputable def equivalent_of :
   case species.equivalent.ν_swap₂ { from on_ν_swap₂ t₁ },
 end
 
-/-- Wraps 'equivalent_of' into a 'transition_from' -/
-noncomputable def equivalent_of.transition_from {Γ ℓ} {A B : species ℍ ω Γ} :
-  species.equivalent A B → transition_from ℓ A → transition_from ℓ B
-| eq ⟨ k, α, E, t ⟩ :=
-  let ⟨ E', _, t' ⟩ := equivalent_of eq t in
-  ⟨ k, α, E', t' ⟩
+/-- Drops the congruence restriction from `equivalent_of`. -/
+noncomputable def equivalent_of.map {Γ ℓ} {A B : species ℍ ω Γ} (h : species.equivalent A B)
+  {k} {α : label ℍ Γ k}
+  : (Σ (E : production ℍ ω Γ k), A [ℓ, α]⟶ E)
+  → (Σ (E : production ℍ ω Γ k), B [ℓ, α]⟶ E)
+| ⟨ E, t ⟩ :=
+  let ⟨ E', _, t' ⟩ := equivalent_of h t in
+  ⟨ E', t' ⟩
 
 /-- Show that 'equivalent_of' twice yields the same thing. This is not going to
     be fun. -/
-axiom equivalent_of.transition_from_eq :
-  ∀ {Γ ℓ} {A : species ℍ ω Γ} {B : species ℍ ω Γ}
-    (eq : species.equivalent A B) (t : transition_from ℓ A)
-  , equivalent_of.transition_from (species.equivalent.symm eq) (equivalent_of.transition_from eq t) = t
+axiom equivalent_of.map_map {Γ ℓ} {A B : species ℍ ω Γ} (h : species.equivalent A B)
+    {k} {α : label ℍ Γ k} (t : Σ (E : production ℍ ω Γ k), A [ℓ, α]⟶ E)
+  : equivalent_of.map h.symm (equivalent_of.map h t) = t
 
 /-- Show that two equivalent species's transition sets are equivalent. -/
-noncomputable def equivalent_of.is_equiv {Γ ℓ} {A B : species ℍ ω Γ} (eq : species.equivalent A B)
-  : transition_from ℓ A ≃ transition_from ℓ B
-  := { to_fun := equivalent_of.transition_from eq,
-       inv_fun := equivalent_of.transition_from (species.equivalent.symm eq),
-       left_inv := equivalent_of.transition_from_eq eq,
+noncomputable def equivalent_of.is_equiv {Γ ℓ} {A B : species ℍ ω Γ} (h : species.equivalent A B)
+    {k} {α : label ℍ Γ k}
+  : (Σ (E : production ℍ ω Γ k), A [ℓ, α]⟶ E) ≃ (Σ (E : production ℍ ω Γ k), B [ℓ, α]⟶ E)
+  := { to_fun := equivalent_of.map h,
+       inv_fun := equivalent_of.map h.symm,
+       left_inv := equivalent_of.map_map h,
        right_inv := λ x, begin
-         have h := equivalent_of.transition_from_eq eq.symm x,
-         rw ← species.equivalent.symm_symm eq at h,
-         from h,
+         have this := equivalent_of.map_map h.symm x,
+         rw ← species.equivalent.symm_symm h at this,
+         from this,
        end }
+
+lemma equivalent_of.map_equiv {Γ ℓ} {A B : species ℍ ω Γ} (h : species.equivalent A B)
+    {k} {α : label ℍ Γ k}
+    (E : production ℍ ω Γ k) (t : A [ℓ, α]⟶ E)
+  : E ≈ (equivalent_of.map h ⟨ E, t ⟩).1 := begin
+  unfold equivalent_of.map,
+  rcases (equivalent_of h t) with ⟨ E', eqE, t' ⟩,
+  from eqE,
+end
 
 end transition
 end cpi
