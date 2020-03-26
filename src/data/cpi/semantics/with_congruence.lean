@@ -9,19 +9,14 @@ variables {ℍ : Type} {ω : context}
 open_locale congruence
 open species.equiv
 
--- These are fairly obvious from the definition of has_prime_decompose, but
--- thanks to propositional irrelevence it's impossible.
---
--- I guess the alternative would be to make it correct by construction, but
--- that's annoying.
-axiom prime_decompose_nil {Γ} : prime_decompose (@nil ℍ ω Γ) = 0
 axiom prime_decompose_parallel {Γ} (A B : species ℍ ω Γ) : prime_decompose (A |ₛ B) = prime_decompose A + prime_decompose B
-axiom prime_decompose_prime {Γ} (A : prime_species ℍ ω Γ) : prime_decompose A.val = [ A ]
 axiom prime_decompose_equiv {Γ} {A B : species ℍ ω Γ}
   : A ≈ B
   → multiset.map quotient.mk (prime_decompose A)
   = multiset.map quotient.mk (prime_decompose B)
 
+/-- A relation for semantics evaluation using structrual congruence. This is non-computable due to using classical logic
+    in order to decide A≈B, and to compute the prime normalisation. -/
 noncomputable def cpi_equiv_prop (ℍ : Type) (ω : context) [decidable_eq ℍ] : cpi_equiv_prop ℍ ω :=
   { species_equiv := by apply_instance,
     concretion_equiv := by apply_instance,
@@ -42,3 +37,5 @@ localized "attribute [instance] cpi.congruence.cpi_equiv_prop" in congruence
 end congruence
 
 end cpi
+
+#lint-

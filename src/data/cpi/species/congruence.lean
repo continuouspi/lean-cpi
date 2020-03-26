@@ -138,45 +138,50 @@ namespace equivalent
       case ξ_parallel₁ : Γ A A' B eq ih { simp, from ξ_parallel₁ (ih _ ρ) },
       case ξ_parallel₂ : Γ A A' B eq ih { simp, from ξ_parallel₂ (ih _ ρ) },
       case ξ_restriction : Γ M A A' eq ih {
-        simp,
+        simp only [species.rename.restriction],
         from ξ_restriction M (ih _ (name.ext ρ))
       },
       case ξ_choice_here : Γ f π A A' As eq ih {
-        simp,
+        simp only [species.rename.choice, species.rename.cons],
         from ξ_choice_here (prefix_expr.rename ρ π) (ih _ (prefix_expr.ext π ρ))
       },
       case ξ_choice_there : Γ f π A As As' eq ih {
-        simp,
+        simp only [species.rename.choice, species.rename.cons],
         have h := ih _ ρ,
         have g : (Σ# species.rename ρ As) ~ (Σ# species.rename ρ As'), simp at h, from h,
         from ξ_choice_there (prefix_expr.rename ρ π) g
       },
 
       -- Choice
-      case choice_swap : Γ f g π₁ π₂ A B As { simp, from choice_swap _ _ },
+      case choice_swap : Γ f g π₁ π₂ A B As {
+        simp only [species.rename.choice, species.rename.cons],
+        from choice_swap _ _
+      },
 
       -- Parallel
-      case parallel_nil₁ : Γ A { simp, from parallel_nil₁ },
-      case parallel_nil₂ : Γ A { simp, from parallel_nil₂ },
-      case parallel_symm : Γ A B { simp, from parallel_symm },
-      case parallel_assoc₁ : Γ A B C { simp, from parallel_assoc₁ },
-      case parallel_assoc₂ : Γ A B C { simp, from parallel_assoc₂ },
+      case parallel_nil₁ : Γ A { simp only [species.rename.nil, species.rename.parallel], from parallel_nil₁ },
+      case parallel_nil₂ : Γ A { simp only [species.rename.nil, species.rename.parallel], from parallel_nil₂ },
+      case parallel_symm : Γ A B { simp only [species.rename.parallel], from parallel_symm },
+      case parallel_assoc₁ : Γ A B C { simp only [species.rename.parallel], from parallel_assoc₁ },
+      case parallel_assoc₂ : Γ A B C { simp only [species.rename.parallel], from parallel_assoc₂ },
 
       -- Restriction
       case ν_parallel₁ : Γ M A B {
-        simp, rw ← species.rename_ext _, from ν_parallel₁ M
+        simp only [species.rename.restriction, species.rename.parallel],
+        rw ← species.rename_ext _, from ν_parallel₁ M
       },
       case ν_parallel₂ : Γ M A B {
-        simp, rw ← species.rename_ext _, from ν_parallel₂ M
+        simp only [species.rename.restriction, species.rename.parallel],
+        rw ← species.rename_ext _, from ν_parallel₂ M
       },
       case ν_drop₁ : Γ M A {
-        simp, rw ← species.rename_ext _, from ν_drop₁ M
+        simp only [species.rename.restriction], rw ← species.rename_ext _, from ν_drop₁ M
       },
       case ν_drop₂ : Γ M A {
-        simp, rw ← species.rename_ext _, from ν_drop₂ M
+        simp only [species.rename.restriction], rw ← species.rename_ext _, from ν_drop₂ M
       },
-      case ν_swap₁ : Γ M N A { simp, rw rename_swap _, from ν_swap₁ M N },
-      case ν_swap₂ : Γ M N A { simp, rw rename_swap _, from ν_swap₂ M N },
+      case ν_swap₁ : Γ M N A { simp only [species.rename.restriction], rw rename_swap _, from ν_swap₁ M N },
+      case ν_swap₂ : Γ M N A { simp only [species.rename.restriction], rw rename_swap _, from ν_swap₂ M N },
     end
 end equivalent
 

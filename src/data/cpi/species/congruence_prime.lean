@@ -73,60 +73,67 @@ section depth
   }
 end depth
 
+open_locale classical
+
 /-- A procecure to compute the prime decomposition of a species using classical
-    logic. This is entirely undecidable! -/
-lemma has_prime_decompose {Γ} :
+    logic. This is sound, but non-computable. -/
+noncomputable def do_prime_decompose {Γ} :
   ∀ (A : species ℍ ω Γ)
-  , ∃ (As : list (prime_species ℍ ω Γ))
+  , Σ' (As : list (prime_species ℍ ω Γ))
     , A ≈ parallel.from_list (list.map subtype.val As)
 | A :=
-  match classical.dec (A ≈ nil) with
-  | is_true is_nil := ⟨ [], is_nil ⟩
-  | is_false non_nil :=
-    match classical.dec (∃ B C, ¬ B ≈ nil ∧ ¬ C ≈ nil ∧ A ≈ (B |ₛ C)) with
-    | is_true ⟨ B, C, nB, nC, eq ⟩ :=
-        let lB : depth B < depth A := begin
-            have : depth A = depth (B |ₛ C) := depth_eq eq, rw this, unfold depth,
-            from lt_add_of_pos_right _ (nat.pos_of_ne_zero (λ x, nC (depth_nil_rev x)))
-          end in
-        let lC : depth C < depth A := begin
-            have : depth A = depth (B |ₛ C) := depth_eq eq, rw this, unfold depth,
-            from lt_add_of_pos_left _ (nat.pos_of_ne_zero (λ x, nB (depth_nil_rev x)))
-          end in
-        begin
-          rcases has_prime_decompose B with ⟨ Bs, eqB ⟩,
-          rcases has_prime_decompose C with ⟨ Cs, eqC ⟩,
-          clear lB lC,
-
-          suffices : A ≈ parallel.from_list (list.map subtype.val (Bs ++ Cs)),
-            from ⟨ Bs ++ Cs, this ⟩,
-
-          calc  A
-              ≈ (B |ₛ C) : eq
-          ... ≈ (parallel.from_list (list.map subtype.val Bs) |ₛ parallel.from_list (list.map subtype.val Cs))
-              : trans (equiv.ξ_parallel₁ eqB) (equiv.ξ_parallel₂ eqC)
-          ... ≈ parallel.from_list (list.map subtype.val Bs ++ list.map subtype.val Cs)
-                : (parallel.from_append _ _).symm
-          ... ≈ parallel.from_list (list.map subtype.val (Bs ++ Cs)) : by rw list.map_append
-      end
-    | is_false no_decompose :=
-      let this : prime A := ⟨ non_nil, λ B C eq,
-        match classical.dec (B ≈ nil), classical.dec (C ≈ nil) with
-        | is_true is_nil, _ := or.inl is_nil
-        | _, is_true is_nil := or.inr is_nil
-        | is_false nnB, is_false nnC := false.elim (no_decompose ⟨ B, C, nnB, nnC, eq ⟩)
-        end ⟩
-      in ⟨ [ ⟨ A, this ⟩ ], refl _ ⟩
-    end
-  end
+  if is_nil : A ≈ nil then
+    ⟨ [], is_nil ⟩
+  else if has_decomp : ∃ B C, ¬ B ≈ nil ∧ ¬ C ≈ nil ∧ A ≈ (B |ₛ C) then
+    let B := classical.some has_decomp in
+    let C := classical.some (classical.some_spec has_decomp) in
+    have h : ¬B ≈ nil ∧ ¬C ≈ nil ∧ A ≈ (B |ₛ C) := classical.some_spec (classical.some_spec has_decomp),
+    have lB : depth B < depth A := begin
+        have : depth A = depth (B |ₛ C) := depth_eq h.2.2, rw this, unfold depth,
+        from lt_add_of_pos_right _ (nat.pos_of_ne_zero (λ x, h.2.1 (depth_nil_rev x)))
+      end,
+    have lC : depth C < depth A := begin
+        have : depth A = depth (B |ₛ C) := depth_eq h.2.2, rw this, unfold depth,
+        from lt_add_of_pos_left _ (nat.pos_of_ne_zero (λ x, h.1 (depth_nil_rev x)))
+      end,
+    let Bs := do_prime_decompose B in
+    let Cs := do_prime_decompose C in
+    suffices this : A ≈ parallel.from_list (list.map subtype.val (Bs.1 ++ Cs.1)),
+      from ⟨ Bs.1 ++ Cs.1, this ⟩,
+    calc  A
+        ≈ (B |ₛ C) : h.2.2
+    ... ≈ (parallel.from_list (list.map subtype.val Bs.1) |ₛ parallel.from_list (list.map subtype.val Cs.1))
+        : trans (equiv.ξ_parallel₁ Bs.2) (equiv.ξ_parallel₂ Cs.2)
+    ... ≈ parallel.from_list (list.map subtype.val Bs.1 ++ list.map subtype.val Cs.1)
+          : (parallel.from_append _ _).symm
+    ... ≈ parallel.from_list (list.map subtype.val (Bs.1 ++ Cs.1)) : by rw list.map_append
+  else
+    suffices this : prime A, from ⟨ [ ⟨ A, this ⟩ ], refl _ ⟩,
+    ⟨ is_nil, λ B C eq,
+      if nilB : B ≈ nil then or.inl nilB else
+      if nilC : C ≈ nil then or.inr nilC else
+      false.elim (has_decomp ⟨ B, C, nilB, nilC, eq ⟩) ⟩
 using_well_founded {
   rel_tac := λ _ _, `[exact ⟨_, measure_wf depth ⟩ ],
-  dec_tac := tactic.fst_dec_tac,
+  dec_tac := tactic.fst_dec_tac',
 }
 
 /-- Decompose a species into its constituent primes. -/
 noncomputable def prime_decompose {Γ} (A : species ℍ ω Γ) : multiset (prime_species ℍ ω Γ)
-  := ⟦ classical.some (has_prime_decompose A) ⟧
+  := ⟦ (do_prime_decompose A).1 ⟧
+
+lemma prime_decompose_nil {Γ} : prime_decompose (@nil ℍ ω Γ) = 0 := begin
+  unfold prime_decompose do_prime_decompose,
+  simpa only [dif_pos (refl nil)],
+end
+
+lemma prime_decompose_prime {Γ} : ∀ (A : prime_species ℍ ω Γ), prime_decompose A.val = [ A ]
+| ⟨ A, ⟨ n_nil, n_decompose ⟩ ⟩ := begin
+  have n_exist : ¬ ∃ (B C : whole ℍ ω kind.species Γ), ¬B ≈ nil ∧ ¬C ≈ nil ∧ A ≈ (B |ₛ C),
+  { rintros ⟨ B, C, nB, nC, r ⟩, from or.elim (n_decompose B C r) nB nC },
+  unfold prime_decompose do_prime_decompose,
+  simpa only [dif_neg n_nil, dif_neg n_exist],
+end
 
 end equiv
 end species
