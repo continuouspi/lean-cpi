@@ -14,13 +14,12 @@ private def interaction_tensor_worker [cpi_equiv ℍ ω] (conc : ℍ ↪ ℂ)
     × (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)
     × name (context.extend M.arity context.nil))
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
-| ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ :=
-  option.cases_on (M.f (name.to_idx a) (name.to_idx b)) 0 (λ aff,
+| ⟨ A, ⟨ bF, yF, F ⟩, x ⟩ ⟨ B, ⟨ bG, yG, G ⟩, y ⟩ :=
+  option.cases_on (M.f x.to_idx y.to_idx) 0 (λ aff,
     if h : bF = yG ∧ yF = bG then begin
       rcases h with ⟨ ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
-      have fg := to_process_space (cpi_equiv.pseudo_apply F G),
-      from conc aff • (fg - fin_fn.single A 1 - fin_fn.single B 1),
-      assumption,
+      from conc aff • ( to_process_space (cpi_equiv.pseudo_apply F G)
+                      - fin_fn.single A 1 - fin_fn.single B (1 : ℂ)),
     end else 0)
 
 /-- Show that the interaction tensor worker is commutitive. -/
@@ -31,9 +30,7 @@ private lemma interaction_tensor_worker.comm [cpi_equiv_prop ℍ ω]
   , interaction_tensor_worker conc A B = interaction_tensor_worker conc B A
 | ⟨ A, ⟨ bF, yF, F ⟩, a ⟩ ⟨ B, ⟨ bG, yG, G ⟩, b ⟩ := begin
   simp only [interaction_tensor_worker],
-  have : M.f (name.to_idx a) (name.to_idx b) = M.f (name.to_idx b) (name.to_idx a)
-       := M.symm _ _,
-  rw this,
+  rw M.symm a.to_idx b.to_idx,
 
   cases M.f (name.to_idx b) (name.to_idx a),
   case option.none { from rfl },
@@ -106,44 +103,6 @@ lemma interaction_tensor.right_distrib [cpi_equiv_prop ℍ ω]
          = (B + C) ⊘ A : interaction_tensor.comm A _
      ... = B ⊘ A + C ⊘ A : interaction_tensor.left_distrib B C A
      ... = A ⊘ B + A ⊘ C : by rw [interaction_tensor.comm B, interaction_tensor.comm C]
-
-
-lemma interaction_tensor.smul [cpi_equiv_prop ℍ ω]
-    (c : ℂ) (A B : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
-  : c • (A ⊘[conc] B) = (c • A) ⊘[conc] B
-  := fin_fn.bind_smul c A _
-
-lemma interaction_tensor.ext_single [cpi_equiv_prop ℍ ω] {bF yF}
-    (A B : prime_species' ℍ ω (context.extend M.arity context.nil))
-    (F F' : concretion' ℍ ω (context.extend M.arity context.nil) bF yF)
-    (a : name (context.extend M.arity context.nil)) (c : ℂ)
-  : (∀ G, ( to_process_space (cpi_equiv.pseudo_apply F G) - fin_fn.single A 1
-          : process_space ℂ ℍ ω (context.extend M.arity context.nil) )
-        = to_process_space (cpi_equiv.pseudo_apply F' G) - fin_fn.single B 1)
-  → ∀ (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))
-  , fin_fn.single ( A, (⟨ bF, yF, F ⟩ : (Σ (b y), concretion' ℍ ω (context.extend M.arity context.nil) b y)), a ) c
-    ⊘[conc] ξ
-  = fin_fn.single ( B, ⟨bF, ⟨ yF, F' ⟩ ⟩, a ) c ⊘[conc] ξ
-| f ξ := begin
-  simp only [interaction_tensor, fin_fn.bind₂, fin_fn.bind_single],
-  suffices : fin_fn.bind ξ (interaction_tensor_worker conc (A, ⟨bF, yF, F⟩, a))
-           = fin_fn.bind ξ (interaction_tensor_worker conc (B, ⟨bF, yF, F'⟩, a)),
-    from congr_arg _ this,
-
-  suffices : ∀ x, interaction_tensor_worker conc (A, ⟨bF, yF, F⟩, a) x
-                = interaction_tensor_worker conc (B, ⟨bF, yF, F'⟩, a) x,
-  { have h := funext this, simp only at h, rw h },
-
-  rintros ⟨ C, ⟨ bG, yG, G ⟩, b' ⟩,
-  simp only [interaction_tensor_worker],
-  cases (M.f (name.to_idx a) (name.to_idx b')); simp only [],
-  by_cases is_eq : (bF = yG ∧ yF = bG),
-  {
-    simp only [dif_pos is_eq], rcases is_eq with ⟨ l, r ⟩, subst l, subst r, simp only [],
-    rw f G,
-  },
-  { simp only [dif_neg is_eq] },
-end
 
 instance interaction_tensor.monoid_hom_left [cpi_equiv_prop ℍ ω]
     (ξ : interaction_space ℂ ℍ ω (context.extend M.arity context.nil))

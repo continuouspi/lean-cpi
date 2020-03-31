@@ -1,5 +1,5 @@
 import data.cpi.semantics.relation
-import data.fin_fn algebra.half_ring
+import data.fin_fn
 
 namespace cpi
 

@@ -1,5 +1,5 @@
 import data.cpi.semantics.interaction_tensor data.cpi.transition
-import tactic.abel algebra.distrib_embedding
+import tactic.abel
 
 namespace cpi
 
@@ -248,16 +248,16 @@ end
 
 private lemma process_immediate.split [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+)) (c : ℂ)
+    (conc : ℍ ↪ ℂ) (c : ℂ)
     (A B : species ℍ ω (context.extend M.arity context.nil))
-  : process_immediate M ℓ conc.to_embed (c ◯ (A |ₛ B))
-  = process_immediate M ℓ conc.to_embed (c ◯ A |ₚ c ◯ B) := begin
+  : process_immediate M ℓ conc (c ◯ (A |ₛ B))
+  = process_immediate M ℓ conc (c ◯ A |ₚ c ◯ B) := begin
   simp only [process_immediate, immediate_process_space.from_species,
              process_potential.equiv ℓ process.equiv.split,
              cpi_equiv.prime_decompose_parallel, multiset.sum'_add, smul_add],
 
-  generalize : multiset.sum' (cpi_equiv.prime_decompose A) (immediate_process_space.from_prime conc.to_embed ℓ) = dA,
-  generalize : multiset.sum' (cpi_equiv.prime_decompose B) (immediate_process_space.from_prime conc.to_embed ℓ) = dB,
+  generalize : multiset.sum' (cpi_equiv.prime_decompose A) (immediate_process_space.from_prime conc ℓ) = dA,
+  generalize : multiset.sum' (cpi_equiv.prime_decompose B) (immediate_process_space.from_prime conc ℓ) = dB,
 
   have : process_potential ℓ (c ◯ A |ₚ c ◯ B) = process_potential ℓ (c ◯ A) + process_potential ℓ (c ◯ B)
     := rfl,
@@ -269,9 +269,9 @@ private lemma process_immediate.split [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
   simp only [interaction_tensor.left_distrib, interaction_tensor.right_distrib, smul_add],
   rw interaction_tensor.comm pB pA,
 
-  generalize : ½ • pA ⊘[conc.to_embed] pA = iA,
-  generalize : ½ • pB ⊘[conc.to_embed] pB = iB,
-  generalize : pA ⊘[conc.to_embed] pB = iAB,
+  generalize : ½ • pA ⊘[conc] pA = iA,
+  generalize : ½ • pB ⊘[conc] pB = iB,
+  generalize : pA ⊘[conc] pB = iAB,
 
   calc  c • dA + c • dB + (iA + (½ : ℂ) • iAB + ((½ : ℂ) • iAB + iB))
       = c • dA + c • dB + (iA + iB + ((½ : ℂ) • iAB + (½ : ℂ) • iAB)) : by abel
@@ -282,11 +282,11 @@ end
 
 lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+))
+    (conc : ℍ ↪ ℂ)
   : ∀ {P Q : process ℂ ℍ ω (context.extend M.arity context.nil)}
   , P ≈ Q
-  → process_immediate M ℓ conc.to_embed P
-  = process_immediate M ℓ conc.to_embed Q
+  → process_immediate M ℓ conc P
+  = process_immediate M ℓ conc Q
 | P Q eq := begin
   induction eq,
   case process.equiv.refl { from rfl },
@@ -294,16 +294,16 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
   case process.equiv.trans : P Q R ab bc ih_ab ih_bc { from trans ih_ab ih_bc },
 
   case process.equiv.ξ_species : c A B equ {
-    suffices : immediate_process_space.from_species conc.to_embed ℓ A
-             = immediate_process_space.from_species conc.to_embed ℓ B,
+    suffices : immediate_process_space.from_species conc ℓ A
+             = immediate_process_space.from_species conc ℓ B,
     { simp only [process_immediate],
       rw [process_potential.equiv ℓ (process.equiv.ξ_species equ), this]
     },
 
-    calc  immediate_process_space.from_species conc.to_embed ℓ A
-        = immediate_process_space.from_species' conc.to_embed ℓ ⟦ A ⟧ : immediate_process_space.species_eq
-    ... = immediate_process_space.from_species' conc.to_embed ℓ ⟦ B ⟧ : by rw quotient.sound equ
-    ... = immediate_process_space.from_species conc.to_embed ℓ B : immediate_process_space.species_eq.symm
+    calc  immediate_process_space.from_species conc ℓ A
+        = immediate_process_space.from_species' conc ℓ ⟦ A ⟧ : immediate_process_space.species_eq
+    ... = immediate_process_space.from_species' conc ℓ ⟦ B ⟧ : by rw quotient.sound equ
+    ... = immediate_process_space.from_species conc ℓ B : immediate_process_space.species_eq.symm
   },
   case process.equiv.ξ_parallel₁ : P P' Q eq ih {
     simp only [process_immediate, process_potential.equiv ℓ eq, ih],
@@ -340,11 +340,11 @@ lemma process_immediate.equiv [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     simp only [process_immediate, process_potential],
 
     generalize : potential_interaction_space.from_species ℓ A = Ds,
-    generalize : immediate_process_space.from_species conc.to_embed ℓ A = Ps,
+    generalize : immediate_process_space.from_species conc ℓ A = Ps,
 
     suffices
-      : (c • Ds) ⊘[conc.to_embed] (d • Ds) + ((½ : ℂ) • ((c • Ds) ⊘[conc.to_embed] (c • Ds)) + (½ : ℂ) • (d • Ds) ⊘[conc.to_embed] (d • Ds))
-      = (½ : ℂ) • ((c • Ds + d • Ds) ⊘[conc.to_embed] (c • Ds + d • Ds)),
+      : (c • Ds) ⊘[conc] (d • Ds) + ((½ : ℂ) • ((c • Ds) ⊘[conc] (c • Ds)) + (½ : ℂ) • (d • Ds) ⊘[conc] (d • Ds))
+      = (½ : ℂ) • ((c • Ds + d • Ds) ⊘[conc] (c • Ds + d • Ds)),
       { simp only [add_assoc, add_comm, add_smul, add_left_comm, this] },
 
     from process_immediate.join M ℓ c d Ds Ps,
@@ -357,16 +357,16 @@ end
 /-- dP/dt lifted to quotients. -/
 def process_immediate.quot [cpi_equiv_prop ℍ ω] [add_monoid ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+))
+    (conc : ℍ ↪ ℂ)
   : process' ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
-| P := quot.lift_on P (process_immediate M ℓ conc.to_embed)
+| P := quot.lift_on P (process_immediate M ℓ conc)
     (λ P Q, process_immediate.equiv M ℓ conc)
 
 /-- dP/dt lifted to process spaces. -/
 def process_immediate.space [cpi_equiv_prop ℍ ω] [half_ring ℍ]
     (M : affinity ℍ) (ℓ : lookup ℍ ω (context.extend M.arity context.nil))
-    (conc : distrib_embedding ℍ ℂ (+) (+))
+    (conc : ℍ ↪ ℂ)
   : process_space ℂ ℍ ω (context.extend M.arity context.nil)
   → process_space ℂ ℍ ω (context.extend M.arity context.nil)
 | P := process_immediate.quot M ℓ conc (process.from_space P)

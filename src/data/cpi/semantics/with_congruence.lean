@@ -17,7 +17,7 @@ axiom prime_decompose_equiv {Γ} {A B : species ℍ ω Γ}
 
 /-- A relation for semantics evaluation using structrual congruence. This is non-computable due to using classical logic
     in order to decide A≈B, and to compute the prime normalisation. -/
-noncomputable def cpi_equiv_prop (ℍ : Type) (ω : context) [decidable_eq ℍ] : cpi_equiv_prop ℍ ω :=
+noncomputable def cpi_equiv_prop (ℍ : Type) (ω : context) : cpi_equiv_prop ℍ ω :=
   { species_equiv := by apply_instance,
     concretion_equiv := by apply_instance,
     decide_species := λ Γ, classical.dec_rel _,

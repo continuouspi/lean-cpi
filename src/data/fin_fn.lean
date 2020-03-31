@@ -1,18 +1,14 @@
-import algebra.pi_instances data.finset
+import algebra.pi_instances algebra.half_ring data.finset
 
 /-- A function which is defined everywhere, but only has "interesting" values in
     a finite set of locations.
 
     This is used to define a basic vector space, where every defined basis is
     known. -/
-@[nolint has_inhabited_instance]
 structure fin_fn (α : Type*) (β : Type*) [has_zero β] :=
   (space : α → β)
   (support : finset α)
   (support_iff : ∀ x, space x ≠ 0 ↔ x ∈ support)
-
-local attribute [pp_using_anonymous_constructor] fin_fn
-local attribute [pp_using_anonymous_constructor] finset
 
 namespace fin_fn
 
@@ -78,7 +74,7 @@ section helpers
   | sep x := string.intercalate sep ((x.support.val.map (λ a, repr (x.space a) ++ " • " ++ repr a)).sort (≤))
 end helpers
 
-section group_instances
+section monoid_instances
   variables (α : Type*) (β : Type*)
 
   instance [has_repr α] [has_repr β] [has_zero β] : has_repr (fin_fn α β) := ⟨ fin_fn.to_string "+" ⟩
@@ -88,8 +84,10 @@ section group_instances
           support := finset.empty,
           support_iff := λ x, ⟨ λ nZero, by contradiction, λ x, by cases x ⟩ } ⟩
 
+  instance [has_zero β] : inhabited (fin_fn α β) := ⟨ 0 ⟩
+
   instance [add_monoid β] [decidable_eq α] [decidable_eq β] : has_add (fin_fn α β) :=
-    { add := zip_with(+) (add_zero 0) }
+    { add := zip_with (+) (add_zero 0) }
 
   instance [add_monoid β] [decidable_eq α] [decidable_eq β] : add_monoid (fin_fn α β) :=
     { add_assoc := λ a b c, ext (λ x, add_assoc _ _ _),
@@ -148,13 +146,14 @@ section group_instances
   instance [add_monoid β] [decidable_eq α] [decidable_eq β] (a : α) : is_add_monoid_hom (λ f : fin_fn α β, f.space a)
     := { map_add := λ a b, rfl, map_zero := rfl }
 
-end group_instances
+end monoid_instances
 
+section bulk_operations
 variables {α : Type*} {β : Type*}
 
 /-- Construct a fin_fn from a single value A. This returns a unit vector in the
     basis of 'A'. -/
-def single [has_zero β] [decidable_eq α] [decidable_eq β] (A : α) (b : β): fin_fn α β :=
+def single [has_zero β] [decidable_eq α] [decidable_eq β] (A : α) (b : β) : fin_fn α β :=
   { space := λ B, if A = B then b else 0,
     support := if 0 = b then ∅ else finset.singleton A,
     support_iff := λ B, begin
@@ -165,6 +164,13 @@ def single [has_zero β] [decidable_eq α] [decidable_eq β] (A : α) (b : β): 
       { from ⟨ λ x, by contradiction, λ mem, absurd (finset.mem_singleton.mp mem).symm is_eq ⟩ },
     end }
 
+lemma single.inj [has_zero β] [decidable_eq α] [decidable_eq β] (A : α)
+  : function.injective (@single α β _ _ _ A)
+| b₁ b₂ eql := begin
+  have : (single A b₁).space A = (single A b₂).space A, rw eql,
+  simpa only [single, if_pos] using this,
+end
+
 @[simp]
 lemma single_zero [has_zero β] [decidable_eq α] [decidable_eq β] (a : α) : single a (0 : β) = 0
   := by { simp only [single, if_pos, if_t_t], from rfl }
@@ -173,6 +179,7 @@ lemma single_zero [has_zero β] [decidable_eq α] [decidable_eq β] (a : α) : s
 def sum {γ : Type*} [has_zero β] [add_comm_monoid γ] (f : fin_fn α β) (g : α → β → γ) : γ
   := f.support.sum (λa, g a (f.space a))
 
+@[simp]
 lemma sum_single_index {γ : Type*} [add_comm_monoid γ] [comm_ring β] [decidable_eq α] [decidable_eq β]
   (a : α) (b : β) (f : α → β → γ) (zero : ∀ x, f x 0 = 0): (single a b).sum f = f a b := begin
   by_cases 0 = b; simp only [sum, single, if_pos, if_false, h],
@@ -290,6 +297,110 @@ lemma bind_single {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ]
   ∀ (a : α) (b : β) (f : α → fin_fn γ β)
   , bind (single a b) f = b • f a
 | a b f := sum_single_index a b _ (λ x, zero_smul _ _)
+
+@[simp] lemma sum_single [decidable_eq α] [decidable_eq β] [add_comm_monoid β] (f : fin_fn α β)
+  : f.sum single = f := begin
+  suffices : ∀ (a : α), (sum f single).space a = f.space a, from ext this,
+  assume a,
+
+  suffices : finset.sum f.support (λ (x : α), ite (x = a) (f.space x) 0) = f.space a,
+  { have h := (f.support.sum_hom (λ f : fin_fn α β, f.space a)).symm,
+    refine trans h _,
+    simp only [single, this] },
+
+  by_cases h : a ∈ f.support,
+  { have : (finset.singleton a : finset α) ⊆ f.support,
+    { simpa only [finset.subset_iff, finset.mem_singleton, forall_eq] },
+
+    rw ← finset.sum_subset this (λ b mem not_mem, begin
+      show ite (b = a) (f.space b) 0 = 0,
+      simp only [if_neg (finset.not_mem_singleton.mp not_mem)],
+    end),
+    simp only [finset.sum_singleton, if_pos (eq.refl a)],
+  },
+
+  {
+    calc  finset.sum f.support (λ (x : α), ite (x = a) (f.space x) 0)
+        = f.support.sum (λ a, (0 : β)) : finset.sum_congr rfl (λ b mem, begin
+            by_cases (b = a), { subst h, contradiction },
+            simp only [if_neg h],
+          end)
+    ... = 0 : finset.sum_const_zero
+    ... = f.space a : (unsupported_zero.mp h).symm
+  },
+end
+
+end bulk_operations
+
+section group_instances
+  variables (α : Type*) (β : Type*)
+
+  instance [decidable_eq α] [decidable_eq β] [has_zero α] [has_zero β] [has_one β] : has_one (fin_fn α β) :=
+    { one := single 0 1 }
+
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : has_mul (fin_fn α β) :=
+    { mul := λ f g, f.sum $ λ a₁ b₁, g.sum $ λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂) }
+
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : semigroup (fin_fn α β)
+    := { mul_assoc := sorry,
+         ..fin_fn.has_mul α β }
+
+  instance [decidable_eq α] [decidable_eq β] [add_monoid α] [comm_ring β] : monoid (fin_fn α β) :=
+    { one_mul := λ a, begin
+        show sum (single 0 1) (λ a₁ b₁, sum a (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))) = a,
+        simp,
+      end,
+      mul_one := λ a, begin
+        show sum a (λ a₁ b₁, sum (single (0 : α) (1 : β)) (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))) = a,
+        simp,
+      end,
+      .. fin_fn.has_one α β,
+      .. fin_fn.semigroup α β }
+
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : mul_zero_class (fin_fn α β) :=
+    { zero_mul := λ x, by simp only [has_mul.mul, sum_zero],
+      mul_zero := λ x, by simp only [has_mul.mul, sum_zero, sum_const_zero],
+      ..fin_fn.has_zero α β,
+      ..fin_fn.has_mul α β }
+
+  /-λ a b c, begin
+        refine ext _, assume a,
+        unfold has_add.add, unfold has_mul.mul, simp only [zip_with, on_finset],
+        have : ∀ (a b : β), add_semigroup.add a b = a + b := λ _ _, rfl, rw this,
+      end-/
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : distrib (fin_fn α β) :=
+    { left_distrib := sorry,
+      right_distrib := sorry,
+      ..fin_fn.has_add α β,
+      ..fin_fn.has_mul α β }
+
+  instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [comm_ring β] : comm_ring (fin_fn α β) :=
+    { mul_comm := λ a b, begin
+        show sum a (λ a₁ b₁, sum b (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
+           = sum b (λ a₁ b₁, sum a (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))),
+
+        suffices : sum a (λ a₁ b₁, sum b (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
+                 = sum b (λ a₁ b₁, sum a (λ a₂ b₂, single (a₂ + a₁) (b₂ * b₁))),
+        { simpa only [add_comm, mul_comm] using this },
+
+        simp only [sum, finset.sum_eq_multiset_sum],
+
+        from multiset.sum_map_sum_map a.support.val b.support.val,
+      end,
+      ..fin_fn.add_comm_group α β,
+      ..fin_fn.monoid α β,
+      ..fin_fn.distrib α β }
+
+  instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [half_ring β] : half_ring (fin_fn α β) :=
+    { half := fin_fn.single 0 ½,
+      one_is_two_halves := ext (λ a, begin
+        show ite (0 = a) (1 : β) 0 = ite (0 = a) ½ 0 + ite (0 = a) ½ 0,
+        by_cases h : 0 = a; simp only [if_pos, if_false, h],
+        from half_ring.one_is_two_halves _,
+        from (add_zero 0).symm,
+      end),
+      ..fin_fn.comm_ring _ β }
+end group_instances
 
 end fin_fn
 

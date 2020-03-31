@@ -1,16 +1,20 @@
-import data.cpi.semantics.with_normalise data.cpi.semantics.basic
+import data.cpi.semantics.with_normalise data.cpi.semantics.ode
 
 open cpi
 open cpi.species
 
 open_locale normalise
 
-def k_bind : ℚ := 1/3
-def k_degrade : ℚ := 1/5
-def k_unbind : ℚ := 1/2
-def k_react : ℚ := 1/4
+def ℍ : Type := fin_poly string ℚ
+instance : half_ring ℍ := fin_poly.half_ring string ℚ
+instance : has_repr ℍ := fin_poly.has_repr string ℚ
 
-def aff : affinity ℚ :=
+def k_bind : ℍ := fin_poly.X "k_bind"
+def k_degrade : ℍ := fin_poly.X "k_degrade"
+def k_unbind : ℍ := fin_poly.X "k_unbind"
+def k_react : ℍ := fin_poly.X "k_react"
+
+def aff : affinity ℍ :=
   { arity := 2, -- x, y
     f := λ x y,
       if (x = 0 ∧ y = 1) ∨ (y = 0 ∧ x = 1) then some k_bind
@@ -21,7 +25,7 @@ def aff : affinity ℚ :=
       simp only [if_neg h, if_neg (h ∘ or.swap)],
     end }
 
-def M : affinity ℚ :=
+def M : affinity ℍ :=
   { arity := 3, -- u, r, t
     f := λ x y,
       if (x = 0 ∧ y = 2) ∨ (y = 0 ∧ x = 2) then some k_unbind -- u - t
@@ -62,33 +66,30 @@ local notation a ` ⬝' ` b := whole.cons a b whole.empty
 instance vector.has_empty {α : Type} : has_emptyc (vector α 0) := { emptyc := vector.nil }
 
 -- S = s(x, y). (x. S + y. (P|P'))
-def Sₛ_ : species ℚ ω Γ :=
+def Sₛ_ : species ℍ ω Γ :=
   s #( 2 ) ⬝ Σ# ( whole.cons (x #) (apply S ∅)
                 $ whole.cons (y #) (apply P₁ ∅ |ₛ apply P₂ ∅)
                 $ whole.empty )
 
-def S_ : choices ℚ ω Γ :=
+def S_ : choices ℍ ω Γ :=
   s #( 2 ) ⬝' Σ# ( whole.cons (x #) (apply S ∅)
                  ∘ whole.cons (y #) (apply P₁ ∅ |ₛ apply P₂ ∅)
                  $ whole.empty )
 
 -- E = ν(u, r, t : M) . e⟨u, r⟩. t. E)
-def Eₛ_ : species ℚ ω Γ :=
+def Eₛ_ : species ℍ ω Γ :=
   ν(M) (name.extend e #⟨ [u, r] ⟩) ⬝ (name.extend t # ⬝ apply Eₛ ∅)
 
-def E_ : choices ℚ ω (context.extend M.arity Γ) :=
+def E_ : choices ℍ ω (context.extend M.arity Γ) :=
   (name.extend e #⟨ [u, r] ⟩) ⬝' (name.extend t # ⬝ ν(M) apply E (u :: r :: t :: ∅))
 
-def S'_ : species ℚ ω Γ := Σ# S_
-def E'_ : species ℚ ω Γ := ν(M) apply E (u :: r :: t :: ∅)
-
 -- P = P' = τ@k_degrade. 0
-def Pₛ_ : species ℚ ω Γ := τ@k_degrade ⬝ nil
+def Pₛ_ : species ℍ ω Γ := τ@k_degrade ⬝ nil
 
-def P_ : choices ℚ ω Γ := τ@k_degrade ⬝' nil
-def P'_ : species ℚ ω Γ := Σ# P_
+def P_ : choices ℍ ω Γ := τ@k_degrade ⬝' nil
+def P'_ : species ℍ ω Γ := Σ# P_
 
-def ℓ : lookup ℚ ω Γ
+def ℓ : lookup ℍ ω Γ
 | _ S := species.rename name.extend S_
 | _ E := E_
 | _ P₁ := species.rename name.extend P_
@@ -96,7 +97,7 @@ def ℓ : lookup ℚ ω Γ
 | (nat.succ n) (reference.extend (reference.extend a)) := by { cases a, cases a_a, cases a_a_a }
 
 -- S [s]—→ (; x, y) (x.S + y.(P|P'))
-example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
+example : (Σ# S_) [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
   Σ# ( whole.cons (x#) (apply S ∅)
      ∘ whole.cons (y#) (apply P₁ ∅ |ₛ apply P₂ ∅)
      $ whole.empty )))
@@ -106,6 +107,37 @@ example : S'_ [ℓ, # s]⟶ (production.concretion (#( vector.nil; 2 )
 example : P'_ [ℓ, τ@' k_degrade]⟶ (production.species nil)
   := transition.choice₂ k_degrade whole.nil whole.empty
 
-def conc := function.embedding.refl ℚ
+/- Various intermediates -/
+def E'_ {Γ} : species ℍ ω Γ := ν(M) apply E (u :: r :: t :: ∅)
+def C'_ : species ℍ ω Γ :=
+  ν(M) ( ( Σ# ( whole.cons (u#) (apply S ∅)
+              $ whole.cons (r#) (apply P₁ ∅ |ₛ apply P₂ ∅)
+              $ whole.empty ) )
+       |ₛ t# ⬝ E'_)
 
-#eval (process_immediate aff ℓ conc ((2 : ℚ) ◯ E'_ |ₚ 2 ◯ S'_ ))
+def ℂ : Type := fin_poly (species ℍ ω Γ) ℍ
+instance : half_ring ℂ := fin_poly.half_ring _ _
+instance : has_repr ℂ := fin_poly.has_repr _ _
+
+def conc : ℍ ↪ ℂ := fin_poly.C.embed
+
+#eval process_immediate aff ℓ conc ((2 : ℂ) ◯ E'_ |ₚ 2 ◯ (apply S ∅) )
+
+def system : process ℂ ℍ ω Γ :=
+  (fin_poly.X (apply S ∅)) ◯ (apply S ∅) |ₚ
+  (fin_poly.X E'_) ◯ E'_ |ₚ
+  (fin_poly.X C'_) ◯ C'_ |ₚ
+  (fin_poly.X (apply P₁ ∅)) ◯ (apply P₁ ∅) |ₚ
+  (fin_poly.X (apply P₂ ∅)) ◯ (apply P₂ ∅)
+
+#eval process_immediate aff ℓ conc system
+
+/-
+-- Run the result of the above through enzyme.py
+
+((-1•("k_bind"))•(E•S) + (1•("k_react") + 1•("k_unbind"))•(C)) • E
+((-1•("k_bind"))•(E•S) + (1•("k_unbind"))•(C)) • S
+((-1•("k_degrade"))•(P₁) + (1•("k_react"))•(C)) • P₁
+((-1•("k_degrade"))•(P₂) + (1•("k_react"))•(C)) • P₂
+((-1•("k_react") + -1•("k_unbind"))•(C) + (1•("k_bind"))•(E•S)) • C
+-/
