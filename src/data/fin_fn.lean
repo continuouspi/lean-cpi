@@ -175,6 +175,14 @@ end
 lemma single_zero [has_zero β] [decidable_eq α] [decidable_eq β] (a : α) : single a (0 : β) = 0
   := by { simp only [single, if_pos, if_t_t], from rfl }
 
+@[simp]
+lemma single_add [add_monoid β] [decidable_eq α] [decidable_eq β] (a : α) (b₁ b₂ : β) :
+  single a (b₁ + b₂) = single a b₁ + single a b₂
+  := ext (λ x, begin
+    show ite (a = x) (b₁ + b₂) 0 = ite (a = x) b₁ 0 + ite (a = x) b₂ 0,
+    by_cases a = x; simp only [h, if_pos, if_false, add_zero],
+  end)
+
 /-- `sum f g` is the sum of `g a (f a)` over the support of `f`. -/
 def sum {γ : Type*} [has_zero β] [add_comm_monoid γ] (f : fin_fn α β) (g : α → β → γ) : γ
   := f.support.sum (λa, g a (f.space a))
@@ -185,6 +193,36 @@ lemma sum_single_index {γ : Type*} [add_comm_monoid γ] [comm_ring β] [decidab
   by_cases 0 = b; simp only [sum, single, if_pos, if_false, h],
   { simp only [finset.sum_empty, h.symm, zero] },
   { simp only [finset.sum_singleton, if_pos] },
+end
+
+lemma sum_distrib {γ : Type*} [decidable_eq α] [decidable_eq β] [add_comm_monoid β] [add_comm_monoid γ] {x y : fin_fn α β}
+  {h : α → β → γ} (h_zero : ∀ a, h a 0 = 0) (h_add : ∀a b₁ b₂, h a (b₁ + b₂) = h a b₁ + h a b₂) :
+  (x + y).sum h = x.sum h + y.sum h := begin
+  show finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
+          (λ a, h a (x.space a + y.space a))
+     = x.sum h + y.sum h,
+
+  have : finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
+           (λ a, h a (x.space a + y.space a))
+       = finset.sum (x.support ∪ y.support) (λ a, h a (x.space a + y.space a))
+       := finset.sum_subset (finset.filter_subset (x.support ∪ y.support)) (λ a mem not_mem, begin
+      suffices : x.space a + y.space a = 0, simp only [h_zero, this],
+
+      by_contradiction not_zero,
+      have h := finset.mem_sdiff.mpr ⟨ mem, not_mem ⟩,
+      rw ← finset.filter_not at h,
+      from (finset.mem_filter.mp h).2 not_zero,
+    end),
+  rw this,
+
+  have hx : x.sum h = finset.sum (x.support ∪ y.support) (λ a, h a (x.space a))
+    := finset.sum_subset (finset.subset_union_left x.support y.support)
+        (λ a mem not_x, by simp only [unsupported_zero.mp not_x, h_zero]),
+  have hy : y.sum h = finset.sum (x.support ∪ y.support) (λ a, h a (y.space a))
+    := finset.sum_subset (finset.subset_union_right x.support y.support)
+        (λ a mem not_y, by simp only [unsupported_zero.mp not_y, h_zero]),
+
+  simp only [hx, hy, h_add, finset.sum_add_distrib],
 end
 
 @[simp]
@@ -204,37 +242,29 @@ lemma bind_zero {γ : Type} [decidable_eq γ] [decidable_eq β] [semiring β] (f
 lemma empty_zero [has_zero β] [decidable_eq β] : ∀ (f : fin_fn α β), f.support = ∅ → f = 0
 | ⟨ f, _, iff ⟩ ⟨ _ ⟩ := ext (λ x, by_contradiction (iff x).mp)
 
+@[simp]
+lemma sum_sum_index {γ : Type*} {α₁: Type*} {β₁ : Type*} [decidable_eq α] [decidable_eq α₁] [decidable_eq β]
+  [add_comm_monoid β₁] [add_comm_monoid β] [add_comm_monoid γ]
+  {f : fin_fn α₁ β₁} {g : α₁ → β₁ → fin_fn α β}
+  {h : α → β → γ} (h_zero : ∀a, h a 0 = 0) (h_add : ∀a b₁ b₂, h a (b₁ + b₂) = h a b₁ + h a b₂) :
+  (f.sum g).sum h = f.sum (λa b, (g a b).sum h) := begin
+    show (finset.sum f.support (λ (a : α₁), g a (f.space a))).sum h
+       = finset.sum f.support _,
+    induction f.support using finset.induction_on with a s not_mem ih,
+    from rfl,
+    { rw [finset.sum_insert not_mem, finset.sum_insert not_mem, ← ih, sum_distrib h_zero h_add], },
+  end
+
 lemma bind_distrib {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
   ∀ (x y : fin_fn α β) (f : α → fin_fn γ β)
   , bind (x + y) f = bind x f + bind y f
 | x y f := begin
-  show finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
-        (λ a, (x.space a + y.space a) • f a)
-     = finset.sum x.support (λ a, x.space a • f a) + finset.sum y.support (λ a, y.space a • f a),
-
-  have : finset.sum (finset.filter (λ a, x.space a + y.space a ≠ 0) (x.support ∪ y.support))
-           (λ a, (x.space a + y.space a) • f a)
-       = finset.sum (x.support ∪ y.support) (λ a, (x.space a + y.space a) • f a)
-       := finset.sum_subset (finset.filter_subset (x.support ∪ y.support)) (λ a mem not_mem, begin
-      suffices : x.space a + y.space a = 0, simp only [this, zero_smul],
-
-      by_contradiction not_zero,
-      have h := finset.mem_sdiff.mpr ⟨ mem, not_mem ⟩,
-      rw ← finset.filter_not at h,
-      from (finset.mem_filter.mp h).2 not_zero,
-    end),
-  rw this,
-
-  rw finset.sum_subset (finset.subset_union_left x.support y.support) (λ a mem not_x, begin
-    show (λ a, x.space a • f a) a = 0,
-    simp only [unsupported_zero.mp not_x, zero_smul],
-  end),
-  rw finset.sum_subset (finset.subset_union_right x.support y.support) (λ a mem not_y, begin
-    show (λ a, y.space a • f a) a = 0,
-    simp only [unsupported_zero.mp not_y, zero_smul],
-  end),
-
-  simp only [add_smul, finset.sum_add_distrib],
+  have zero : ∀ a, (λ (x : α) (c : β), c • f x) a 0 = 0 := λ _, by simp only [zero_smul],
+  have add : ∀ (a : α) (b₁ b₂ : β)
+           , (λ (x : α) (c : β), c • f x) a (b₁ + b₂)
+           = (λ (x : α) (c : β), c • f x) a b₁ + (λ (x : α) (c : β), c • f x) a b₂
+           := λ _ _ _, by simp only [add_smul],
+  simp only [sum_distrib zero add, bind],
 end
 
 lemma bind_smul {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ] [decidable_eq β] :
@@ -298,7 +328,8 @@ lemma bind_single {γ : Type} [comm_ring β] [decidable_eq α] [decidable_eq γ]
   , bind (single a b) f = b • f a
 | a b f := sum_single_index a b _ (λ x, zero_smul _ _)
 
-@[simp] lemma sum_single [decidable_eq α] [decidable_eq β] [add_comm_monoid β] (f : fin_fn α β)
+@[simp]
+lemma sum_single [decidable_eq α] [decidable_eq β] [add_comm_monoid β] (f : fin_fn α β)
   : f.sum single = f := begin
   suffices : ∀ (a : α), (sum f single).space a = f.space a, from ext this,
   assume a,
@@ -341,9 +372,34 @@ section group_instances
   instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : has_mul (fin_fn α β) :=
     { mul := λ f g, f.sum $ λ a₁ b₁, g.sum $ λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂) }
 
-  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : semigroup (fin_fn α β)
-    := { mul_assoc := sorry,
-         ..fin_fn.has_mul α β }
+  instance [decidable_eq α] [decidable_eq β] [add_semigroup α] [comm_ring β] : semigroup (fin_fn α β)
+    := { mul_assoc := λ a b c, begin
+      show sum
+        (sum a (λ (a₁ : α) (b₁ : β), sum b (λ (a₂ : α) (b₂ : β), single (a₁ + a₂) (b₁ * b₂))))
+          (λ (a₁ : α) (b₁ : β), sum c (λ (a₂ : α) (b₂ : β), single (a₁ + a₂) (b₁ * b₂)))
+      = sum a (λ (a₁ : α) (b₁ : β)
+              , sum (sum b (λ (a₁ : α) (b₁ : β), sum c (λ (a₂ : α) (b₂ : β), single (a₁ + a₂) (b₁ * b₂))))
+                    (λ (a₂ : α) (b₂ : β), single (a₁ + a₂) (b₁ * b₂))),
+
+      have zero : ∀ (a' : α) (b' : β) a, (λ a b, single (a' + a) (b' * b)) a 0 = 0
+        := λ _ _ a, by simp only [mul_zero, single_zero, sum_const_zero],
+
+      have add : ∀ (a' : α) (b' : β) (a : α) (b₁ b₂ : β)
+               , single (a' + a) (b' * (b₁ + b₂))
+               = single (a' + a) (b' * b₁) + single (a' + a) (b' * b₂)
+        := λ _ _ a b₁ b₂, by simp only [left_distrib, single_add],
+
+      have this :
+        ∀ (a : fin_fn α β) (f : α → β → fin_fn α β)
+        , sum (sum a f) (λ a₁ b₁, sum c (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
+        = sum a (λ a b, sum (f a b) (λ a₁ b₁, sum c (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))))
+        := λ a f, sum_sum_index
+            (λ a, by { simp only [zero_mul, single_zero, sum_const_zero] })
+            (λ a b₁ b₂, by simp only [sum, right_distrib, single_add, finset.sum_add_distrib]),
+      simp only [this], clear this,
+      simp [sum_single_index, sum_sum_index (zero _ _) (add _ _), mul_assoc],
+    end,
+    ..fin_fn.has_mul α β }
 
   instance [decidable_eq α] [decidable_eq β] [add_monoid α] [comm_ring β] : monoid (fin_fn α β) :=
     { one_mul := λ a, begin
@@ -354,27 +410,10 @@ section group_instances
         show sum a (λ a₁ b₁, sum (single (0 : α) (1 : β)) (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))) = a,
         simp,
       end,
-      .. fin_fn.has_one α β,
-      .. fin_fn.semigroup α β }
+      ..fin_fn.has_one α β,
+      ..fin_fn.semigroup α β }
 
-  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : mul_zero_class (fin_fn α β) :=
-    { zero_mul := λ x, by simp only [has_mul.mul, sum_zero],
-      mul_zero := λ x, by simp only [has_mul.mul, sum_zero, sum_const_zero],
-      ..fin_fn.has_zero α β,
-      ..fin_fn.has_mul α β }
-
-  /-λ a b c, begin
-        refine ext _, assume a,
-        unfold has_add.add, unfold has_mul.mul, simp only [zip_with, on_finset],
-        have : ∀ (a b : β), add_semigroup.add a b = a + b := λ _ _, rfl, rw this,
-      end-/
-  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : distrib (fin_fn α β) :=
-    { left_distrib := sorry,
-      right_distrib := sorry,
-      ..fin_fn.has_add α β,
-      ..fin_fn.has_mul α β }
-
-  instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [comm_ring β] : comm_ring (fin_fn α β) :=
+  instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [comm_ring β] : comm_monoid (fin_fn α β) :=
     { mul_comm := λ a b, begin
         show sum a (λ a₁ b₁, sum b (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
            = sum b (λ a₁ b₁, sum a (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))),
@@ -384,11 +423,42 @@ section group_instances
         { simpa only [add_comm, mul_comm] using this },
 
         simp only [sum, finset.sum_eq_multiset_sum],
-
         from multiset.sum_map_sum_map a.support.val b.support.val,
+      end
+      ..fin_fn.monoid α β }
+
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : mul_zero_class (fin_fn α β) :=
+    { zero_mul := λ x, by simp only [has_mul.mul, sum_zero],
+      mul_zero := λ x, by simp only [has_mul.mul, sum_zero, sum_const_zero],
+      ..fin_fn.has_zero α β,
+      ..fin_fn.has_mul α β }
+
+  instance [decidable_eq α] [decidable_eq β] [has_add α] [semiring β] : distrib (fin_fn α β) :=
+    { left_distrib := λ a b c, begin
+        show sum a (λ a₁ b₁, sum (b + c) (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
+           = sum a (λ a₁ b₁, sum b (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂)))
+           + sum a (λ a₁ b₁, sum c (λ a₂ b₂, single (a₁ + a₂) (b₁ * b₂))),
+
+        have zero : ∀ (a' : α) (b' : β) a, (λ a b, single (a' + a) (b' * b)) a 0 = 0
+          := λ _ _ a, by simp only [mul_zero, single_zero, sum_const_zero],
+
+        have add : ∀ (a' : α) (b' : β) (a : α) (b₁ b₂ : β)
+                , single (a' + a) (b' * (b₁ + b₂))
+                = single (a' + a) (b' * b₁) + single (a' + a) (b' * b₂)
+          := λ _ _ a b₁ b₂, by simp only [left_distrib, single_add],
+
+        simp only [sum_distrib (zero _ _) (add _ _)],
+        from finset.sum_add_distrib,
       end,
-      ..fin_fn.add_comm_group α β,
-      ..fin_fn.monoid α β,
+      right_distrib := λ a b c, sum_distrib
+          (λ a, by { simp only [zero_mul, single_zero, sum_const_zero] })
+          (λ a b₁ b₂, by simp only [sum, right_distrib, single_add, finset.sum_add_distrib]),
+      ..fin_fn.has_add α β,
+      ..fin_fn.has_mul α β }
+
+  instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [comm_ring β] : comm_ring (fin_fn α β) :=
+    { ..fin_fn.add_comm_group α β,
+      ..fin_fn.comm_monoid α β,
       ..fin_fn.distrib α β }
 
   instance [decidable_eq α] [decidable_eq β] [add_comm_monoid α] [half_ring β] : half_ring (fin_fn α β) :=
@@ -400,6 +470,7 @@ section group_instances
         from (add_zero 0).symm,
       end),
       ..fin_fn.comm_ring _ β }
+
 end group_instances
 
 end fin_fn
