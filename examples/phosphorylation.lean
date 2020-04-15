@@ -10,38 +10,36 @@ def k_degrade : ℍ := fin_poly.X "k₂"
 
 def aff : affinity ℍ := affinity.mk_pair k_react
 
-def ω : context := context.extend 1 (context.extend 1 (context.extend 1 context.nil))
+def ω : context := context.extend 0 (context.extend 0 (context.extend 0 context.nil))
 def Γ : context := context.extend aff.arity context.nil
 
-@[pattern] def R : reference 1 ω := reference.zero 1
-@[pattern] def S : reference 1 ω := reference.extend $ reference.zero 1
-@[pattern] def RP : reference 1 ω := reference.extend ∘ reference.extend $ reference.zero 1
+@[pattern] def R : reference 0 ω := reference.zero 0
+@[pattern] def S : reference 0 ω := reference.extend $ reference.zero 0
+@[pattern] def RP : reference 0 ω := reference.extend ∘ reference.extend $ reference.zero 0
 
 def a {Γ} : name (context.extend 2 Γ) := name.zero 0
 def b {Γ} : name (context.extend 2 Γ) := name.zero 1
 
-def x {Γ} : name (context.extend 1 Γ) := name.zero 0 /-- An arbitrary name, used in binders. -/
+-- R = a.RP
+def R_ : choices ℍ ω Γ := a# ⬝' apply RP ∅
 
--- R(a) = a.RP(a)
-def R_ : choices ℍ ω (context.extend 1 Γ) := x# ⬝' apply RP (name.extend x :: ∅)
+-- S = b.S
+def S_ : choices ℍ ω Γ := b# ⬝' apply S ∅
 
--- S(b) = b.S(b)
-def S_ : choices ℍ ω (context.extend 1 Γ) := x# ⬝' apply S (name.extend x :: ∅)
-
--- RP(a) = τ@k₂.R(a)
-def RP_ : choices ℍ ω (context.extend 1 Γ) := τ@k_degrade ⬝' apply R (x :: ∅)
+-- RP = τ@k₂.R
+def RP_ : choices ℍ ω Γ := τ@k_degrade ⬝' apply R ∅
 
 def ℓ : lookup ℍ ω Γ := λ n a, begin
-  cases a with _ _ _ _ _ a, from R_,
-  cases a with _ _ _ _ _ a, from S_,
-  cases a with _ _ _ _ _ a, from RP_,
+  cases a with _ _ _ _ _ a, from species.rename name.extend R_,
+  cases a with _ _ _ _ _ a, from species.rename name.extend S_,
+  cases a with _ _ _ _ _ a, from species.rename name.extend RP_,
   cases a with _ _ _ _ _ a,
 end
 
 def system : process ℂ ℍ ω Γ :=
-  fin_poly.X "S" ◯ (apply S (b :: ∅)) |ₚ
-  fin_poly.X "R" ◯ (apply R (a :: ∅)) |ₚ
-  fin_poly.X "RP" ◯ (apply RP (a :: ∅))
+  fin_poly.X "S" ◯ (apply S ∅) |ₚ
+  fin_poly.X "R" ◯ (apply R ∅) |ₚ
+  fin_poly.X "RP" ◯ (apply RP ∅)
 
 #eval process_immediate aff ℓ conc system
 
