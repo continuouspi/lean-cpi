@@ -1,46 +1,20 @@
-import data.cpi.semantics.with_normalise data.cpi.semantics.ode
+import .common
 
 open cpi
 open cpi.species
 
 open_locale normalise
 
-def ℍ : Type := fin_poly string ℚ
-instance : half_ring ℍ := fin_poly.half_ring string ℚ
-instance : has_repr ℍ := fin_poly.has_repr string ℚ
-
 def k_bind : ℍ := fin_poly.X "k_bind"
 def k_degrade : ℍ := fin_poly.X "k_degrade"
 def k_unbind : ℍ := fin_poly.X "k_unbind"
 def k_react : ℍ := fin_poly.X "k_react"
 
-def aff : affinity ℍ :=
-  { arity := 2, -- x, y
-    f := λ x y,
-      if (x = 0 ∧ y = 1) ∨ (y = 0 ∧ x = 1) then some k_bind
-      else none,
-    symm := λ x y, begin
-      by_cases x = 0 ∧ y = 1 ∨ y = 0 ∧ x = 1,
-      simp only [if_pos h, if_pos (or.swap h)],
-      simp only [if_neg h, if_neg (h ∘ or.swap)],
-    end }
+def aff : affinity ℍ := affinity.mk_pair k_bind -- x, y
 
-def M : affinity ℍ :=
-  { arity := 3, -- u, r, t
-    f := λ x y,
-      if (x = 0 ∧ y = 2) ∨ (y = 0 ∧ x = 2) then some k_unbind -- u - t
-      else if (x = 1 ∧ y = 2) ∨ (y = 1 ∧ x = 2) then some k_react -- r - t
-      else none,
-    symm := λ x y, begin
-      by_cases (x = 0 ∧ y = 2) ∨ (y = 0 ∧ x = 2),
-      simp only [if_pos h, if_pos (or.swap h)],
-      simp only [if_neg h, if_neg (h ∘ or.swap)],
-      clear h,
-
-      by_cases  (x = 1 ∧ y = 2) ∨ (y = 1 ∧ x = 2),
-      simp only [if_pos h, if_pos (or.swap h)],
-      simp only [if_neg h, if_neg (h ∘ or.swap)],
-    end }
+def M : affinity ℍ -- u, r, t
+  :=  affinity.mk 3 0 2 k_unbind -- u - t
+  ∘[] affinity.mk 3 1 2 k_react -- r - t
 
 def ω : context := context.extend 0 (context.extend M.arity (context.extend 0 (context.extend 0 context.nil)))
 def Γ : context := context.extend aff.arity context.nil
@@ -50,7 +24,6 @@ def e : name Γ := name.zero ⟨ 1, lt_add_one 1 ⟩
 
 @[pattern] def S : reference 0 ω := reference.zero 0
 @[pattern] def E : reference M.arity ω := reference.extend $ reference.zero M.arity
-@[pattern] def Eₛ : reference 0 ω := reference.zero 0
 @[pattern] def P₁ : reference 0 ω := reference.extend ∘ reference.extend $ reference.zero 0
 @[pattern] def P₂ : reference 0 ω := reference.extend ∘ reference.extend ∘ reference.extend $ reference.zero 0
 
@@ -60,10 +33,6 @@ def y {Γ} : name (context.extend 2 Γ) := name.zero ⟨ 1, lt_add_one 1 ⟩
 def u {Γ} : name (context.extend M.arity Γ) := name.zero ⟨ 0, nat.succ_pos 2 ⟩
 def r {Γ} : name (context.extend M.arity Γ) := name.zero ⟨ 1, int.coe_nat_lt.mp trivial ⟩
 def t {Γ} : name (context.extend M.arity Γ) := name.zero ⟨ 2, lt_add_one 2 ⟩
-
-local notation a ` ⬝' ` b := whole.cons a b whole.empty
-
-instance vector.has_empty {α : Type} : has_emptyc (vector α 0) := { emptyc := vector.nil }
 
 -- S = s(x, y). (x. S + y. (P|P'))
 def Sₛ_ : species ℍ ω Γ :=
@@ -77,6 +46,7 @@ def S_ : choices ℍ ω Γ :=
                  $ whole.empty )
 
 -- E = ν(u, r, t : M) . e⟨u, r⟩. t. E)
+def Eₛ : reference 0 ω := reference.zero 0
 def Eₛ_ : species ℍ ω Γ :=
   ν(M) (name.extend e #⟨ [u, r] ⟩) ⬝ (name.extend t # ⬝ apply Eₛ ∅)
 
@@ -115,29 +85,23 @@ def C'_ : species ℍ ω Γ :=
               $ whole.empty ) )
        |ₛ t# ⬝ E'_)
 
-def ℂ : Type := fin_poly (species ℍ ω Γ) ℍ
-instance : half_ring ℂ := fin_poly.half_ring _ _
-instance : has_repr ℂ := fin_poly.has_repr _ _
-
-def conc : ℍ ↪ ℂ := fin_poly.C.embed
-
 #eval process_immediate aff ℓ conc ((2 : ℂ) ◯ E'_ |ₚ 2 ◯ (apply S ∅) )
 
 def system : process ℂ ℍ ω Γ :=
-  (fin_poly.X (apply S ∅)) ◯ (apply S ∅) |ₚ
-  (fin_poly.X E'_) ◯ E'_ |ₚ
-  (fin_poly.X C'_) ◯ C'_ |ₚ
-  (fin_poly.X (apply P₁ ∅)) ◯ (apply P₁ ∅) |ₚ
-  (fin_poly.X (apply P₂ ∅)) ◯ (apply P₂ ∅)
+  fin_poly.X "S" ◯ (apply S ∅) |ₚ
+  fin_poly.X "E" ◯ E'_ |ₚ
+  fin_poly.X "S" ◯ C'_ |ₚ
+  fin_poly.X "P₁" ◯ (apply P₁ ∅) |ₚ
+  fin_poly.X "P₂" ◯ (apply P₂ ∅)
 
 #eval process_immediate aff ℓ conc system
 
 /-
 -- Run the result of the above through enzyme.py
 
-((-1•("k_bind"))•(E•S) + (1•("k_react") + 1•("k_unbind"))•(C)) • E
-((-1•("k_bind"))•(E•S) + (1•("k_unbind"))•(C)) • S
-((-1•("k_degrade"))•(P₁) + (1•("k_react"))•(C)) • P₁
-((-1•("k_degrade"))•(P₂) + (1•("k_react"))•(C)) • P₂
-((-1•("k_react") + -1•("k_unbind"))•(C) + (1•("k_bind"))•(E•S)) • C
+((-1•(k_bind))•(E•S) + (1•(k_react) + 1•(k_unbind))•(S)) • E
+((-1•(k_bind))•(E•S) + (1•(k_unbind))•(S)) • S
+((-1•(k_degrade))•(P₁) + (1•(k_react))•(S)) • P₁
+((-1•(k_degrade))•(P₂) + (1•(k_react))•(S)) • P₂
+((-1•(k_react) + -1•(k_unbind))•(S) + (1•(k_bind))•(E•S)) • C
 -/

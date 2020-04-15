@@ -38,4 +38,9 @@ def X [ring β] (x : α) : fin_poly α β := fin_fn.single (fin_fn.single x 1) 1
 
 end fin_poly
 
+/-- A string, which will not be printed with quotes when used with has_repr. -/
+def raw_string := string
+instance : inhabited raw_string := ⟨ "" ⟩
+instance : has_repr raw_string := ⟨ id ⟩
+
 #lint-

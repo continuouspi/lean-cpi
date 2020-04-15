@@ -1,6 +1,8 @@
 import data.cpi.prefix_expr data.cpi.affinity
 import tactic.custom_wf tactic.known_induct
 
+instance vector.has_empty {α : Type} : has_emptyc (vector α 0) := { emptyc := vector.nil }
+
 namespace cpi
 
 namespace species
@@ -69,10 +71,17 @@ reserve prefix `Σ#`: 40
 prefix `Σ# ` := choice
 
 /-- Construct a singleton choice from a prefix and species. -/
+def choices.mk_one' {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ))
+  := whole.cons π A whole.empty
+
+/-- Construct a singleton sum from a prefix and species. -/
 def choices.mk_one {Γ f} (π : prefix_expr ℍ Γ f) (A : species ℍ ω (f.apply Γ))
-  := Σ# (whole.cons π A whole.empty)
+  := Σ# (choices.mk_one' π A)
+
+reserve infixr ` ⬝' `:75
 
 infixr ` ⬝ ` := choices.mk_one
+infixr ` ⬝' ` := choices.mk_one'
 
 /-- Convert a species to a string. Can use `repr` normally. -/
 protected def to_string [has_repr ℍ] : ∀ {k Γ}, whole ℍ ω k Γ → string
