@@ -99,9 +99,9 @@ def system : process ℂ ℍ ω Γ :=
 /-
 -- Run the result of the above through enzyme.py
 
-((-1•(k_bind))•(E•S) + (1•(k_react) + 1•(k_unbind))•(S)) • E
-((-1•(k_bind))•(E•S) + (1•(k_unbind))•(S)) • S
-((-1•(k_degrade))•(P₁) + (1•(k_react))•(S)) • P₁
-((-1•(k_degrade))•(P₂) + (1•(k_react))•(S)) • P₂
-((-1•(k_react) + -1•(k_unbind))•(S) + (1•(k_bind))•(E•S)) • C
+(-1•(E•S•k_bind) + 1•(S•k_react) + 1•(S•k_unbind)) • E
+(-1•(E•S•k_bind) + 1•(S•k_unbind)) • S
+(-1•(P₁•k_degrade) + 1•(S•k_react)) • P₁
+(-1•(P₂•k_degrade) + 1•(S•k_react)) • P₂
+(-1•(S•k_react) + -1•(S•k_unbind) + 1•(E•S•k_bind)) • C
 -/

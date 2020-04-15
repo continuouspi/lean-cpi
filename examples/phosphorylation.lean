@@ -44,8 +44,8 @@ def system : process ℂ ℍ ω Γ :=
 #eval process_immediate aff ℓ conc system
 
 /-
-  ((-1•(k₁))•(R•S) + (1•(k₂))•(RP)) • 0([0.0])
-  ((-1•(k₂))•(RP) + (1•(k₁))•(R•S)) • 2([0.0])
+(-1•(RP•k₂) + 1•(R•S•k₁)) • 2([])
+(-1•(R•S•k₁) + 1•(RP•k₂)) • 0([])
 
 ⇒ dRP/dt = k₁S•R -k₂RP
 
