@@ -21,7 +21,7 @@ def telescope.apply : telescope → context → context
   - A communication prefix (send a series of variables on a channel, and then
     recieve, binding $n$ variables).
 
-  - A spontanious or silent prefix: a spontanious reaction with some rate $k$.
+  - A spontaneous or silent prefix: a spontaneous reaction with some rate $k$.
     Used to model when a molecule may decompose into a simpler one.
 
   The prefix is parameterised by two types: the context it exists in, a function
@@ -34,7 +34,7 @@ def telescope.apply : telescope → context → context
 @[derive decidable_eq, nolint has_inhabited_instance]
 inductive prefix_expr (ℍ : Type) : context → telescope → Type
 | communicate {} {Γ} (a :  name Γ) (b : list (name Γ)) (y : ℕ) : prefix_expr Γ (telescope.extend y)
-| spontanious {} {Γ} (k : ℍ) : prefix_expr Γ telescope.preserve
+| spontaneous {} {Γ} (k : ℍ) : prefix_expr Γ telescope.preserve
 
 variables {ℍ : Type}
 
@@ -44,7 +44,7 @@ notation a `#(` y `)` := prefix_expr.communicate a [] y
 notation a `#⟨` b `⟩` := prefix_expr.communicate a b 0
 notation a `#` := prefix_expr.communicate a [] 0
 
-notation `τ@`:max k:max := prefix_expr.spontanious k
+notation `τ@`:max k:max := prefix_expr.spontaneous k
 
 namespace prefix_expr
   /-- Convert a prefix expression to a string. Can use `repr` normally. -/
@@ -261,7 +261,7 @@ namespace prefix_expr
       := by simp [rename, rename_with, list.map_witness_to_map]
 
     @[simp]
-    lemma rename_spontanious (k : ℍ)
+    lemma rename_spontaneous (k : ℍ)
       : rename ρ τ@k = τ@k
       := by simp only [rename, rename_with]
 
@@ -271,8 +271,8 @@ namespace prefix_expr
       := funext $ λ x, by { unfold ext ext_with, from rfl }
 
     @[simp]
-    lemma ext_spontanious {η} (k : ℍ)
-      : ext (@spontanious ℍ η k) ρ = ρ
+    lemma ext_spontaneous {η} (k : ℍ)
+      : ext (@spontaneous ℍ η k) ρ = ρ
       := funext $ λ x, by unfold ext ext_with
 
     private lemma rename_inj {Γ Δ} {ρ : name Γ → name Δ} (inj : function.injective ρ)
@@ -286,15 +286,15 @@ namespace prefix_expr
         from ⟨ inj eqπ.left, list.injective_map_iff.mpr inj eqπ.right ⟩,
       end
     | _ _ (a#(b; y)) τ@k eq := begin
-      simp only [rename_communicate, rename_spontanious] at eq,
+      simp only [rename_communicate, rename_spontaneous] at eq,
       exfalso, from eq.1,
     end
     | _ _ τ@k (a#(b; y)) eq := begin
-        simp only [rename_communicate, rename_spontanious] at eq,
+        simp only [rename_communicate, rename_spontaneous] at eq,
         exfalso, from eq.1,
       end
     | _ _ τ@k τ@k' eq := begin
-        simp only [rename_spontanious] at eq,
+        simp only [rename_spontaneous] at eq,
         rcases eq with ⟨ eqC, eqπ ⟩,
         cases eqπ, from heq.refl _,
       end
@@ -309,7 +309,7 @@ namespace prefix_expr
         simp only [ext_communicate] at eq,
         from name.ext.inj inj eq,
       end
-    | ._ (τ@_) inj a b eq := by { simp only [ext_spontanious] at eq, from inj eq, }
+    | ._ (τ@_) inj a b eq := by { simp only [ext_spontaneous] at eq, from inj eq, }
   end rename_equations
 end prefix_expr
 

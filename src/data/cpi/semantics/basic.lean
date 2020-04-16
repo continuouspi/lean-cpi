@@ -68,7 +68,7 @@ lemma potential_interaction_space.species_eq [cpi_equiv_prop ℍ ω] {Γ} {ℓ :
      quot.lift_on, quotient.mk, cpi_equiv.prime_decompose', multiset.sum',
      function.comp, multiset.map_map]
 
-/-- Maps a spontanious/immediate transition to a process space.
+/-- Maps a spontaneous/immediate transition to a process space.
 
     This computes the Σ[x ∈ B [τ@k]—→ C] k and Σ[x ∈ B [τ⟨ a, b ⟩]—→ C] M(a, b)
     components of the definition of d(c ◯ A)/dt. -/

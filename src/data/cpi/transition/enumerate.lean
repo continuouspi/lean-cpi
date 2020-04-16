@@ -65,7 +65,7 @@ private def enumerate_choice_communicate {Γ} (ℓ : lookup ℍ ω Γ) :
       },
     end }
 
-private def enumerate_choice_spontanious_ts {Γ} (ℓ : lookup ℍ ω Γ) :
+private def enumerate_choice_spontaneous_ts {Γ} (ℓ : lookup ℍ ω Γ) :
   ∀ (k : ℍ) (A : species ℍ ω Γ) {As : species.choices ℍ ω Γ}
   , fintype (transition_from ℓ (Σ# As))
   → finset (transition_from ℓ (Σ# (whole.cons (τ@k) A As)))
@@ -82,12 +82,12 @@ private def enumerate_choice_spontanious_ts {Γ} (ℓ : lookup ℍ ω Γ) :
       cases eql,
     end)
 
-private def enumerate_choice_spontanious {Γ} (ℓ : lookup ℍ ω Γ) :
+private def enumerate_choice_spontaneous {Γ} (ℓ : lookup ℍ ω Γ) :
   ∀ (k : ℍ) (A : species ℍ ω Γ) {As : species.choices ℍ ω Γ}
   , fintype (transition_from ℓ (Σ# As))
   → fintype (transition_from ℓ (Σ# (whole.cons (τ@k) A As)))
 | k A As child :=
-  { elems := enumerate_choice_spontanious_ts ℓ k A child,
+  { elems := enumerate_choice_spontaneous_ts ℓ k A child,
     complete := λ x, begin
       rcases x with ⟨ k', α, E, t ⟩,
       cases t,
@@ -106,7 +106,7 @@ def enumerate_choices {Γ} (ℓ : lookup ℍ ω Γ) :
   { elems := finset.empty,
     complete := λ ⟨ k, α, E, t ⟩, by cases t }
 | (species.whole.cons (a#(b; y)) A As) := enumerate_choice_communicate ℓ a b y A (enumerate_choices As)
-| (species.whole.cons (τ@k) A As) := enumerate_choice_spontanious ℓ k A (enumerate_choices As)
+| (species.whole.cons (τ@k) A As) := enumerate_choice_spontaneous ℓ k A (enumerate_choices As)
 
 private def defn.from {Γ n} (ℓ : lookup ℍ ω Γ) (D : reference n ω) (as : vector (name Γ) n)
   : transition_from ℓ (Σ# (species.rename (name.mk_apply as) (ℓ _ D)))
@@ -715,7 +715,7 @@ private def enumerate_restriction {Γ} (ℓ : lookup ℍ ω Γ) (M : affinity �
       unfold_coes at this,
 
       cases l,
-      case label.spontanious { simp only [label.rename] at eql, subst eql, from this },
+      case label.spontaneous { simp only [label.rename] at eql, subst eql, from this },
 
       have up : ∀ (a b : name Γ), (quot.mk setoid.r (upair.pair.mk a b)) = upair.mk a b := λ a b, rfl,
       rcases quot.exists_rep l_k with ⟨ ⟨ a, b ⟩, h ⟩, rw up at h, subst h,

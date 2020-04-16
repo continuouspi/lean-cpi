@@ -20,15 +20,15 @@ inductive label (ℍ : Type) : context → kind → Type
 
 /- Evolution from one species to another species without any other interaction,
    at a specific rate. -/
-| spontanious {Γ} (rate : ℍ) : label Γ kind.species
+| spontaneous {Γ} (rate : ℍ) : label Γ kind.species
 
 /- Evolution from one species to another, with a rate determined by an affinity
-   network. This is converted into a spontanious interaction when the names
+   network. This is converted into a spontaneous interaction when the names
    refer to a global affinity network. -/
 | of_affinity {} {Γ} (k : upair (name Γ)) : label Γ kind.species
 
 notation `#`:max a:max := label.apply a
-notation `τ@'`:max k:max  := label.spontanious k
+notation `τ@'`:max k:max  := label.spontaneous k
 notation `τ⟨ `:max a `, ` b ` ⟩`:max := label.of_affinity (upair.mk a b)
 notation `τ⟨ `:max p ` ⟩`:max := label.of_affinity p
 

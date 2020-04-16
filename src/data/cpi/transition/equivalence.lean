@@ -190,7 +190,7 @@ end
   subst eqA, subst eqα,
 
   cases α with _ _ _ _ _ p,
-  case label.spontanious { cases eα },
+  case label.spontaneous { cases eα },
 
   rcases upair_extend (label.of_affinity.inj eα) with ⟨ a, b, ⟨ _ ⟩, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
   rcases transition.rename_from name.extend tf with ⟨ ⟨ a₂ ⟩, ⟨ F ⟩, tf₂, ⟨ _ ⟩, ⟨ _ ⟩ ⟩,
@@ -236,7 +236,7 @@ private noncomputable def on_ν_parallel₁ {Γ ℓ} {M : affinity ℍ} {A : spe
     rcases transition.rename_from name.extend t with ⟨ α₂, ⟨ E ⟩, tf₂, eα, eE ⟩, -- Annoying!
 
     cases α₂; simp only [label.rename] at eα,
-    case label.spontanious { cases eα },
+    case label.spontaneous { cases eα },
     from absurd eα no_rename_zero,
   },
   case parR_species : E t {
@@ -267,7 +267,7 @@ private noncomputable def on_ν_drop₁ {Γ ℓ} {M : affinity ℍ} {A : species
 
     rcases transition.rename_from name.extend t' with ⟨ α₂, ⟨ E₂ ⟩ , t₂, eqα, eqE ⟩,
     cases α₂; simp only [label.rename] at eqα,
-    case label.spontanious { cases eqα },
+    case label.spontaneous { cases eqα },
     from absurd eqα no_rename_zero,
   },
   case ν₁_species : α₁ α₂ E eα t' {
